@@ -42,6 +42,7 @@ CONVERSATION_PROJECT_ID=YOUR_PROJECT_ID
 CONVERSATION_KEY_ID=YOUR_ACCESS_KEY_ID
 CONVERSATION_KEY_SECRET=YOUR_ACCESS_KEY_SECRET
 GEOAPIFY_API_KEY=YOUR_GEOAPIFY_API_KEY // Needed only if you want to send location messages: it converts an address to a lat/lon
+CALLING_LINE_IDENTIFICATION=YOUR_CALLING_NUMBER // Needed only to make calls: it is the number that will be displayed to the user when they receive a call
 ```
 
 #### 2.1 Build the MCP server
@@ -58,14 +59,23 @@ npm run build
 
 ```json
 {
-    "mcpServers": {
-        "sinch": {
-            "command": "node",
-            "args": [
-                "/your/path/to/sinch-mcp-server/packages/mcp/dist/index.js"
-            ]
-        }
+  "mcpServers": {
+    "sinch": {
+      "command": "node",
+      "args": [
+        "/your/path/to/sinch-mcp-server/packages/mcp/dist/index.js"
+      ],
+      "env": {
+        "VERIFICATION_APPLICATION_KEY": "YOUR_APP_KEY",
+        "VERIFICATION_APPLICATION_SECRET": "YOUR_APP_SECRET",
+        "CONVERSATION_PROJECT_ID": "YOUR_PROJECT_ID",
+        "CONVERSATION_KEY_ID": "YOUR_ACCESS_KEY_ID",
+        "CONVERSATION_KEY_SECRET": "YOUR_ACCESS_KEY_SECRET",
+        "GEOAPIFY_API_KEY": "YOUR_GEOAPIFY_API_KEY",
+        "CALLING_LINE_IDENTIFICATION": "YOUR_CALLING_NUMBER"
+      }
     }
+  }
 }
 ```
 
@@ -77,14 +87,23 @@ npm run start
 You can then configure the MCP server in the Claude configuration file as follows:
 ```json
 {
-    "mcpServers": {
-        "sinch": {
-            "command": "npx",
-            "args": [
-              "-y", "mcp-remote", "http://localhost:8000/sse"
-            ]
-        }
+  "mcpServers": {
+    "sinch": {
+      "command": "npx",
+      "args": [
+        "-y", "mcp-remote", "http://localhost:8000/sse"
+      ],
+      "env": {
+        "VERIFICATION_APPLICATION_KEY": "YOUR_APP_KEY",
+        "VERIFICATION_APPLICATION_SECRET": "YOUR_APP_SECRET",
+        "CONVERSATION_PROJECT_ID": "YOUR_PROJECT_ID",
+        "CONVERSATION_KEY_ID": "YOUR_ACCESS_KEY_ID",
+        "CONVERSATION_KEY_SECRET": "YOUR_ACCESS_KEY_SECRET",
+        "GEOAPIFY_API_KEY": "YOUR_GEOAPIFY_API_KEY",
+        "CALLING_LINE_IDENTIFICATION": "YOUR_CALLING_NUMBER"
+      }
     }
+  }
 }
 ```
 (Replace the `http://localhost:8000/sse` with the URL of your MCP server if it is not running locally)
@@ -140,28 +159,28 @@ npm run start
 
 ```json
 {
-    "mcpServers": {
-        "sinch": {
-            "command": "npx",
-            "args": [
-              "-y", "supergateway", "-sse", "https://your.domain.com/sse"
-            ]
-        }
+  "mcpServers": {
+    "sinch": {
+      "command": "npx",
+      "args": [
+        "-y", "supergateway", "-sse", "https://your.domain.com/sse"
+      ]
     }
+  }
 }
 ```
 
  - With [`mcp-remote`](https://www.npmjs.com/package/mcp-remote):
 ```json
 {
-    "mcpServers": {
-        "sinch": {
-            "command": "npx",
-            "args": [
-              "-y", "mcp-remote", "https://your.domain.com/sse"
-            ]
-        }
+  "mcpServers": {
+    "sinch": {
+      "command": "npx",
+      "args": [
+        "-y", "mcp-remote", "https://your.domain.com/sse"
+      ]
     }
+  }
 }
 ```
 
@@ -174,3 +193,4 @@ Tools are registered in the `src/mcp/server.ts` file.
 Tools are defined under `src/mcp/tools/` and are registered in the `index.ts` file of their respective domain folder.
  - Verification tools: `src/mcp/tools/verification/index.ts`
  - Conversation tools: `src/mcp/tools/conversation/index.ts`
+ - Voice tools: `src/mcp/tools/voice/index.ts`
