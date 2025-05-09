@@ -17,8 +17,6 @@ export const getVerificationCredentials = async (sessionId: string | undefined):
     };
   }
 
-  console.error(JSON.stringify(credentials, null, 2));
-
   // If we are running the SaaS version, we need to get the credentials from the session
   const sid = sessionId || crypto.randomUUID();
   if (!credentials) {
