@@ -91,17 +91,8 @@ You can then configure the MCP server in the Claude configuration file as follow
     "sinch": {
       "command": "npx",
       "args": [
-        "-y", "mcp-remote", "http://localhost:8000/sse"
-      ],
-      "env": {
-        "VERIFICATION_APPLICATION_KEY": "YOUR_APP_KEY",
-        "VERIFICATION_APPLICATION_SECRET": "YOUR_APP_SECRET",
-        "CONVERSATION_PROJECT_ID": "YOUR_PROJECT_ID",
-        "CONVERSATION_KEY_ID": "YOUR_ACCESS_KEY_ID",
-        "CONVERSATION_KEY_SECRET": "YOUR_ACCESS_KEY_SECRET",
-        "GEOAPIFY_API_KEY": "YOUR_GEOAPIFY_API_KEY",
-        "CALLING_LINE_IDENTIFICATION": "YOUR_CALLING_NUMBER"
-      }
+        "-y", "supergateway", "-sse", "http://localhost:8000/sse"
+      ]
     }
   }
 }
