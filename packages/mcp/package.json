@@ -17,6 +17,7 @@
     "@modelcontextprotocol/sdk": "^1.10.1",
     "@sinch/sdk-core": "^1.2.0",
     "axios": "^1.8.4",
+    "better-sqlite3": "^11.9.1",
     "cors": "^2.8.5",
     "dotenv": "^16.5.0",
     "express": "^5.1.0",
@@ -24,6 +25,7 @@
     "zod": "^3.24.2"
   },
   "devDependencies": {
+    "@types/better-sqlite3": "^7.6.13",
     "@types/cors": "^2.8.17",
     "@types/express": "^5.0.1",
     "@types/jest": "^29.5.14",
