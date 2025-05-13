@@ -91,7 +91,7 @@ You can then configure the MCP server in the Claude configuration file as follow
     "sinch": {
       "command": "npx",
       "args": [
-        "-y", "supergateway", "-sse", "http://localhost:8000/sse"
+        "-y", "supergateway", "--sse", "http://localhost:8000/sse"
       ]
     }
   }
