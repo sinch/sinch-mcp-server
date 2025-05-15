@@ -6,9 +6,9 @@ import { buildSinchClient, getConversationCredentials } from './credentials.js';
 export const registerSendLocationMessage = (server: McpServer) => {
   server.tool(
     'send-location-message',
-    'Send a location message from an address given in parameter to a contact on the specified channel. The contact can be a contact ID, a phone number for the SMS or RCS channel, or a name to associate with a contact in the address book.',
+    'Send a location message from an address given in parameter to a contact on the specified channel. The contact ccan be a phone number in E.164 format, or the identifier for the specified channel.',
     {
-      contact: z.string().describe('The contact to send the media message to. This can be a contact ID, a phone number in E.164 format, or a name to associate with a contact in the address book.'),
+      contact: z.string().describe('The contact to send the media message to. This can be a phone number in E.164 format, or the identifier for the specified channel.'),
       address: z.string().describe('The address to be converted into longitude / latitude and sent as the body of the location message.'),
       channel: z.enum(['WHATSAPP', 'RCS', 'SMS', 'MESSENGER', 'VIBER', 'VIBERBM', 'MMS', 'INSTAGRAM', 'TELEGRAM', 'KAKAOTALK', 'KAKAOTALKCHAT', 'LINE', 'WECHAT', 'APPLEBC'])
         .describe('The channel to use for sending the message. Can be \'WHATSAPP\', \'RCS\', \'SMS\', \'MESSENGER\', \'VIBER\', \'VIBERBM\', \'MMS\', \'INSTAGRAM\', \'TELEGRAM\', \'KAKAOTALK\', \'KAKAOTALKCHAT\', \'LINE\', \'WECHAT\' or \'APPLEBC\'.'),
@@ -44,7 +44,8 @@ export const registerSendLocationMessage = (server: McpServer) => {
           },
           recipient: {
             contact_id: contact
-          }
+          },
+          processing_strategy: 'DISPATCH_ONLY'
         }
       });
 
