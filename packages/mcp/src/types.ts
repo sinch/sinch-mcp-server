@@ -7,7 +7,7 @@ interface TextResponseContent {
     text: string;
 }
 
-interface PromptResponse {
+export interface PromptResponse {
     [x: string]: unknown;
     content: TextResponseContent[];
 }
@@ -19,3 +19,10 @@ export type SessionConversationCredentials =
 export type SessionVerificationCredentials =
     SinchVerificationCredentials & { sessionId: string }
     | { sessionId: string, promptResponse: PromptResponse };
+
+export type MailgunCredentials = {
+    domain: string;
+    apiKey: string;
+}
+
+export type SessionMailgunCredentials = MailgunCredentials | { promptResponse: PromptResponse }

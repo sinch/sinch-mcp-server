@@ -1,6 +1,8 @@
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
+import { Conversation } from '@sinch/sdk-core';
 import { z } from 'zod';
-import { buildSinchClient, getConversationCredentials } from './credentials.js';
+import { buildSinchClient, getConversationAppId, getConversationCredentials } from './credentials.js';
+import { buildMessageBase } from './messageBuilder.js';
 
 export const registerSendMediaMessage = (server: McpServer) => {
   server.tool(
@@ -11,10 +13,11 @@ export const registerSendMediaMessage = (server: McpServer) => {
       url: z.string().describe('The URL of the media that will be the content of the message.'),
       channel: z.enum(['WHATSAPP', 'RCS', 'SMS', 'MESSENGER', 'VIBER', 'VIBERBM', 'MMS', 'INSTAGRAM', 'TELEGRAM', 'KAKAOTALK', 'KAKAOTALKCHAT', 'LINE', 'WECHAT', 'APPLEBC'])
         .describe('The channel to use for sending the message. Can be \'WHATSAPP\', \'RCS\', \'SMS\', \'MESSENGER\', \'VIBER\', \'VIBERBM\', \'MMS\', \'INSTAGRAM\', \'TELEGRAM\', \'KAKAOTALK\', \'KAKAOTALKCHAT\', \'LINE\', \'WECHAT\' or \'APPLEBC\'.'),
-      appId: z.string().describe('The ID of the app to use for the Sinch conversation API.'),
+      appId: z.string().optional().describe('The ID of the app to use for the Sinch conversation API.'),
+      sender: z.string().optional().describe('(Optional) The sender of the message. It is a phone number in E.164 format.'),
       sessionId: z.string().optional().describe('Optional session ID to track the user')
     },
-    async ({ url, contact, channel, appId, sessionId }) => {
+    async ({ url, contact, channel, appId, sender, sessionId }) => {
       // Send media message
       console.error(`Sending media message to ${contact} on channel ${channel}: ${url}`);
 
@@ -24,22 +27,35 @@ export const registerSendMediaMessage = (server: McpServer) => {
         return credentials.promptResponse;
       }
 
-      const sinchClient = buildSinchClient(credentials);
+      const conversationAppId = getConversationAppId(appId);
+      if (typeof conversationAppId !== 'string') {
+        console.error('No app ID provided.');
+        return conversationAppId;
+      }
 
-      const response = await sinchClient.conversation.messages.sendMediaMessage({
+      const sinchClient = buildSinchClient(credentials);
+      const requestBase = buildMessageBase(conversationAppId, contact, channel);
+      const request: Conversation.SendMediaMessageRequestData<Conversation.IdentifiedBy> = {
         sendMessageRequestBody: {
-          app_id: appId,
+          ...requestBase,
           message: {
             media_message: {
               url: url
             }
-          },
-          recipient: {
-            contact_id: contact
-          },
-          processing_strategy: 'DISPATCH_ONLY'
+          }
         }
-      });
+      };
+
+      if(!sender) {
+        sender = process.env.DEFAULT_SMS_ORIGINATOR;
+      }
+      if (sender) {
+        request.sendMessageRequestBody.channel_properties = {
+          'SMS_SENDER': sender
+        };
+      }
+
+      const response = await sinchClient.conversation.messages.sendMediaMessage(request);
 
       return {
         content: [

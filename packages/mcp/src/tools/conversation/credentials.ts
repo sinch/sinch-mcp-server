@@ -8,7 +8,7 @@ import {
   SinchClient
 } from '@sinch/sdk-core';
 import { getCredential, SinchConversationCredentials, storeCredential } from '../../db-utils.js';
-import { SessionConversationCredentials } from '../../types';
+import { PromptResponse, SessionConversationCredentials } from '../../types';
 
 const fetchToken = async (keyId: string, keySecret: string) => {
   const credentials = Buffer.from(`${keyId}:${keySecret}`).toString('base64');
@@ -86,6 +86,23 @@ export const buildSinchClient = (credentials: SinchConversationCredentials) => {
   addPropertiesToApi((sinchClient.conversation.transcoding as unknown as ApiService), apiFetchClient, hostname);
   addPropertiesToApi((sinchClient.conversation.webhooks as unknown as ApiService), apiFetchClient, hostname);
   return sinchClient;
+};
+
+export const getConversationAppId = (appId: string | undefined): string | PromptResponse => {
+  if (!appId) {
+    appId = process.env.CONVERSATION_APP_ID;
+    if (!appId) {
+      return {
+        content: [
+          {
+            type: 'text',
+            text: 'The "appId" is not provided and CONVERSATION_APP_ID is not set in the environment variables.'
+          }
+        ]
+      };
+    }
+  }
+  return appId;
 };
 
 // Hack: ConversationDomainApi is not exposed

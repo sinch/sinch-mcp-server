@@ -3,6 +3,7 @@ import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js'
 import dotenv from 'dotenv';
 import { registerPrompts } from './prompts/index.js';
 import { registerConversationTools } from './tools/conversation/index.js';
+import { registerEmailTools } from './tools/email/index.js';
 import { registerVerificationTools } from './tools/verification/index.js';
 import { registerVoiceTools } from './tools/voice/index.js';
 dotenv.config();
@@ -24,6 +25,7 @@ registerPrompts(server);
 registerVerificationTools(server);
 registerConversationTools(server);
 registerVoiceTools(server);
+registerEmailTools(server);
 
 const main = async() => {
   const transport = new StdioServerTransport();
