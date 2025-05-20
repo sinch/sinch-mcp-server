@@ -20,15 +20,25 @@ export const registerListAllApps = (server: McpServer) => {
       }
 
       const sinchClient = buildSinchClient(credentials);
-      const response = await sinchClient.conversation.app.list({});
+      const responseUS = await sinchClient.conversation.app.list({});
 
-      console.error(JSON.stringify(stripChannelsCredentials(response), null, 2));
+      sinchClient.conversation.setRegion('eu');
+      const responseEU = await sinchClient.conversation.app.list({});
+
+      sinchClient.conversation.setRegion('br');
+      const responseBR = await sinchClient.conversation.app.list({});
+
+      let reply = `List of conversations apps in the US region: ${JSON.stringify(stripChannelsCredentials(responseUS))}`;
+      reply += `\nList of conversations apps in the EU region: ${JSON.stringify(stripChannelsCredentials(responseEU))}`;
+      reply += `\nList of conversations apps in the BR region: ${JSON.stringify(stripChannelsCredentials(responseBR))}`;
 
       return {
         content: [
           {
             type: 'text',
-            text: `Here is the list of all the apps: ${JSON.stringify(stripChannelsCredentials(response), null, 2)}. Please present them in a form of an array with these columns: ID / Display name / channels names`
+            text: `${reply}.\nPlease return the data in a structured array format with each item on a separate line. Just display the Id, display name, channels and region columns. Example:
+| ID   | Display name | Channels       | Region |
+| 0123 | My app name  | SMS, MESSENGER | US     |`
           }
         ]
       };
