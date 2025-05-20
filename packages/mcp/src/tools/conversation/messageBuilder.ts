@@ -3,7 +3,8 @@ import { Conversation } from '@sinch/sdk-core';
 export const buildMessageBase = (
   appId: string,
   contact: string,
-  channel: string
+  channel: string,
+  sender?: string
 ): Omit<Conversation.SendMessageRequest<Conversation.IdentifiedBy>, 'message'> => {
 
   const messageBase: Omit<Conversation.SendMessageRequest<Conversation.IdentifiedBy>, 'message' | 'recipient'> = {
@@ -25,6 +26,15 @@ export const buildMessageBase = (
     });
   }
 
+  if(!sender) {
+    sender = process.env.DEFAULT_SMS_ORIGINATOR;
+  }
+  if (sender) {
+    messageBase.channel_properties = {
+      'SMS_SENDER': sender
+    };
+  }
+
   return {
     ...messageBase,
     recipient: {
@@ -34,4 +44,4 @@ export const buildMessageBase = (
     }
   };
 
-}
+};

@@ -115,3 +115,13 @@ const addPropertiesToApi = (api: ApiService, client: ApiFetchClient, hostname: s
   api.client = client;
   api.setHostname(hostname);
 };
+
+export const getConversationRegion = (region: string | undefined): string => {
+  if (!region) {
+    region = process.env.CONVERSATION_REGION;
+    if (!region) {
+      return ConversationRegion.UNITED_STATES;
+    }
+  }
+  return region;
+};

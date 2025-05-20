@@ -1,7 +1,12 @@
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { Conversation } from '@sinch/sdk-core';
 import { z } from 'zod';
-import { buildSinchClient, getConversationAppId, getConversationCredentials } from './credentials.js';
+import {
+  buildSinchClient,
+  getConversationAppId,
+  getConversationCredentials,
+  getConversationRegion
+} from './credentials.js';
 import { buildMessageBase } from './messageBuilder.js';
 
 export const registerSendMediaMessage = (server: McpServer) => {
@@ -15,9 +20,10 @@ export const registerSendMediaMessage = (server: McpServer) => {
         .describe('The channel to use for sending the message. Can be \'WHATSAPP\', \'RCS\', \'SMS\', \'MESSENGER\', \'VIBER\', \'VIBERBM\', \'MMS\', \'INSTAGRAM\', \'TELEGRAM\', \'KAKAOTALK\', \'KAKAOTALKCHAT\', \'LINE\', \'WECHAT\' or \'APPLEBC\'.'),
       appId: z.string().optional().describe('The ID of the app to use for the Sinch conversation API.'),
       sender: z.string().optional().describe('(Optional) The sender of the message. It is a phone number in E.164 format.'),
+      region: z.enum(['us', 'eu', 'br']).optional().describe('The region to use for the Sinch conversation API. If set, it will override the value from the environment variable CONVERSATION_REGION.'),
       sessionId: z.string().optional().describe('Optional session ID to track the user')
     },
-    async ({ url, contact, channel, appId, sender, sessionId }) => {
+    async ({ url, contact, channel, appId, sender, region, sessionId }) => {
       // Send media message
       console.error(`Sending media message to ${contact} on channel ${channel}: ${url}`);
 
@@ -34,7 +40,10 @@ export const registerSendMediaMessage = (server: McpServer) => {
       }
 
       const sinchClient = buildSinchClient(credentials);
-      const requestBase = buildMessageBase(conversationAppId, contact, channel);
+      const conversationRegion = getConversationRegion(region);
+      sinchClient.conversation.setRegion(conversationRegion);
+
+      const requestBase = buildMessageBase(conversationAppId, contact, channel, sender);
       const request: Conversation.SendMediaMessageRequestData<Conversation.IdentifiedBy> = {
         sendMessageRequestBody: {
           ...requestBase,
@@ -46,22 +55,20 @@ export const registerSendMediaMessage = (server: McpServer) => {
         }
       };
 
-      if(!sender) {
-        sender = process.env.DEFAULT_SMS_ORIGINATOR;
+      let response: Conversation.SendMessageResponse;
+      let reply: string;
+      try{
+        response = await sinchClient.conversation.messages.sendMediaMessage(request);
+        reply = `Media message submitted on channel ${channel}! The message ID is ${response.message_id}`;
+      } catch (error) {
+        reply = `An error occurred when trying to send the media message: ${JSON.stringify(error)}. Are you sure you are using the right region to send your message? The current region is ${region}.`;
       }
-      if (sender) {
-        request.sendMessageRequestBody.channel_properties = {
-          'SMS_SENDER': sender
-        };
-      }
-
-      const response = await sinchClient.conversation.messages.sendMediaMessage(request);
 
       return {
         content: [
           {
             type: 'text',
-            text: `Media message submitted on channel ${channel}! The message ID is ${response.message_id}`
+            text: reply
           }
         ]
       };

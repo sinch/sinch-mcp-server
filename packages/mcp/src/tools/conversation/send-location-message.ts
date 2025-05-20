@@ -2,7 +2,12 @@ import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { Conversation } from '@sinch/sdk-core';
 import axios from 'axios';
 import { z } from 'zod';
-import { buildSinchClient, getConversationAppId, getConversationCredentials } from './credentials.js';
+import {
+  buildSinchClient,
+  getConversationAppId,
+  getConversationCredentials,
+  getConversationRegion
+} from './credentials.js';
 import { buildMessageBase } from './messageBuilder.js';
 
 export const registerSendLocationMessage = (server: McpServer) => {
@@ -16,9 +21,10 @@ export const registerSendLocationMessage = (server: McpServer) => {
         .describe('The channel to use for sending the message. Can be \'WHATSAPP\', \'RCS\', \'SMS\', \'MESSENGER\', \'VIBER\', \'VIBERBM\', \'MMS\', \'INSTAGRAM\', \'TELEGRAM\', \'KAKAOTALK\', \'KAKAOTALKCHAT\', \'LINE\', \'WECHAT\' or \'APPLEBC\'.'),
       appId: z.string().optional().describe('The ID of the app to use for the Sinch conversation API.'),
       sender: z.string().optional().describe('(Optional) The sender of the message. It is a phone number in E.164 format.'),
+      region: z.enum(['us', 'eu', 'br']).optional().describe('The region to use for the Sinch conversation API. If set, it will override the value from the environment variable CONVERSATION_REGION.'),
       sessionId: z.string().optional().describe('Optional session ID to track the user')
     },
-    async ({ address, contact, channel, appId, sender, sessionId }) => {
+    async ({ address, contact, channel, appId, sender, region, sessionId }) => {
       // Send location message
       console.error(`Sending location message to ${contact} on channel ${channel}: ${address}`);
 
@@ -35,8 +41,11 @@ export const registerSendLocationMessage = (server: McpServer) => {
       }
 
       const sinchClient = buildSinchClient(credentials);
+      const conversationRegion = getConversationRegion(region);
+      sinchClient.conversation.setRegion(conversationRegion);
+
       const [longitude, latitude, formattedAddress] = await getCoordinatesFromAddress(address);
-      const requestBase = buildMessageBase(conversationAppId, contact, channel);
+      const requestBase = buildMessageBase(conversationAppId, contact, channel, sender);
       const request: Conversation.SendLocationMessageRequestData<Conversation.IdentifiedBy> = {
         sendMessageRequestBody: {
           ...requestBase,
@@ -53,22 +62,20 @@ export const registerSendLocationMessage = (server: McpServer) => {
         }
       };
 
-      if(!sender) {
-        sender = process.env.DEFAULT_SMS_ORIGINATOR;
+      let response: Conversation.SendMessageResponse;
+      let reply: string;
+      try{
+        response = await sinchClient.conversation.messages.sendLocationMessage(request);
+        reply = `Location message (${longitude}, ${latitude}) submitted on channel ${channel}! The message ID is ${response.message_id}`;
+      } catch (error) {
+        reply = `An error occurred when trying to send the location message: ${JSON.stringify(error)}. Are you sure you are using the right region to send your message? The current region is ${region}.`;
       }
-      if (sender) {
-        request.sendMessageRequestBody.channel_properties = {
-          'SMS_SENDER': sender
-        };
-      }
-
-      const response = await sinchClient.conversation.messages.sendLocationMessage(request);
 
       return {
         content: [
           {
             type: 'text',
-            text: `Location message (${longitude}, ${latitude}) submitted on channel ${channel}! The message ID is ${response.message_id}`
+            text: reply
           }
         ]
       };
