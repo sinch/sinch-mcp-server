@@ -23,6 +23,8 @@ export const registerConferenceCallout = (server: McpServer) => {
       applicationSecret: credentials.appSecret
     });
 
+    const cli = process.env.CALLING_LINE_IDENTIFICATION;
+
     if (!conferenceId) {
       conferenceId = crypto.randomUUID();
     }
@@ -43,6 +45,9 @@ export const registerConferenceCallout = (server: McpServer) => {
           }
         }
       };
+      if(cli) {
+        request.conferenceCalloutRequestBody.conferenceCallout.cli = cli;
+      }
 
       try {
         const response = await sinchClient.voice.callouts.conference(request);
