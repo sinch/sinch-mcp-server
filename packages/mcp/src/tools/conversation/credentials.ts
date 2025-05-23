@@ -3,6 +3,7 @@ import {
   ApiFetchClient,
   ApiTokenRequest,
   CONVERSATION_HOSTNAME,
+  CONVERSATION_TEMPLATES_HOSTNAME,
   ConversationRegion,
   REGION_PATTERN,
   SinchClient
@@ -85,6 +86,19 @@ export const buildSinchClient = (credentials: SinchConversationCredentials) => {
   addPropertiesToApi((sinchClient.conversation.capability as unknown as ApiService), apiFetchClient, hostname);
   addPropertiesToApi((sinchClient.conversation.transcoding as unknown as ApiService), apiFetchClient, hostname);
   addPropertiesToApi((sinchClient.conversation.webhooks as unknown as ApiService), apiFetchClient, hostname);
+  return sinchClient;
+};
+
+export const buildSinchClientForTemplates = (credentials: SinchConversationCredentials) => {
+  const sinchClient = new SinchClient({});
+  const apiFetchClient = new ApiFetchClient({
+    projectId: credentials.projectId,
+    requestPlugins: [
+      new ApiTokenRequest(credentials.token.access_token)
+    ]
+  });
+  const templateHostname = CONVERSATION_TEMPLATES_HOSTNAME.replace(REGION_PATTERN, `${ConversationRegion.UNITED_STATES}.`);
+  addPropertiesToApi((sinchClient.conversation.templatesV2 as unknown as ApiService), apiFetchClient, templateHostname);
   return sinchClient;
 };
 
