@@ -43,7 +43,7 @@ export const registerSendTextMessage = (server: McpServer) => {
       const conversationRegion = getConversationRegion(region);
       sinchClient.conversation.setRegion(conversationRegion);
 
-      const requestBase = buildMessageBase(conversationAppId, contact, channel, sender);
+      const requestBase = await buildMessageBase(sinchClient, conversationAppId, contact, channel, sender);
       const request: Conversation.SendTextMessageRequestData<Conversation.IdentifiedBy> = {
         sendMessageRequestBody: {
           ...requestBase,
