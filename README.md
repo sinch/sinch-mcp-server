@@ -42,7 +42,7 @@ CONVERSATION_PROJECT_ID=YOUR_PROJECT_ID
 CONVERSATION_KEY_ID=YOUR_ACCESS_KEY_ID
 CONVERSATION_KEY_SECRET=YOUR_ACCESS_KEY_SECRET
 CONVERSATION_REGION=YOUR_REGION // Optional, defaults to "us"
-GEOAPIFY_API_KEY=YOUR_GEOAPIFY_API_KEY // Needed only if you want to send location messages: it converts an address to a lat/lon
+GEOCODING_API_KEY=YOUR_GOOGLE_GEOCODING_API_KEY // Needed only if you want to send location messages: it converts an address to a lat/lon
 CALLING_LINE_IDENTIFICATION=YOUR_CALLING_NUMBER // Needed only to make calls: it is the number that will be displayed to the user when they receive a call
 MAILGUN_DOMAIN=YOUR_MAILGUN_DOMAIN
 MAILGUN_API_KEY=YOUR_MAILGUN_API_KEY
@@ -77,7 +77,7 @@ npm run build
         "CONVERSATION_KEY_SECRET": "YOUR_ACCESS_KEY_SECRET",
         "CONVERSATION_REGION": "YOUR_REGION", // Optional, defaults to "us"
         "DEFAULT_SMS_ORIGINATOR": "YOUR_DEFAULT_SMS_ORIGINATOR",
-        "GEOAPIFY_API_KEY": "YOUR_GEOAPIFY_API_KEY",
+        "GEOCODING_API_KEY": "YOUR_GOOGLE_GEOCODING_API_KEY",
         "CALLING_LINE_IDENTIFICATION": "YOUR_CALLING_NUMBER",
         "MAILGUN_DOMAIN": "YOUR_MAILGUN_DOMAIN",
         "MAILGUN_API_KEY": "YOUR_MAILGUN_API_KEY",

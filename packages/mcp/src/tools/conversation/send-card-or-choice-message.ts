@@ -7,6 +7,7 @@ import {
   getConversationCredentials,
   getConversationRegion
 } from './credentials.js';
+import { getLatitudeLongitudeFromAddress } from './geocoding.js';
 import { buildMessageBase } from './messageBuilder.js';
 
 const callChoice = z.object({
@@ -14,11 +15,17 @@ const callChoice = z.object({
   title: z.string()
 });
 
-const locationChoice = z.object({
+const locationAsCoordinates = z.object({
   lat: z.number(),
   long: z.number(),
   title: z.string()
 });
+
+const locationAsAddress = z.object({
+  address: z.string()
+});
+
+const locationChoice = z.union([locationAsAddress, locationAsCoordinates]);
 
 const textChoice = z.object({
   text: z.string()
@@ -85,6 +92,17 @@ export const registerSendCardOrChoiceMessage = (server: McpServer) => {
               title: choice.title
             }
           } as Conversation.LocationMessageChoice);
+        } else if ('address' in choice) {
+          const coordinates = await getLatitudeLongitudeFromAddress(choice.address);
+          choices.push({
+            location_message: {
+              coordinates: {
+                latitude: coordinates.latitude,
+                longitude: coordinates.longitude
+              },
+              title: coordinates.formattedAddress
+            }
+          } as Conversation.LocationMessageChoice);
         } else if ('text' in choice) {
           choices.push({
             text_message: {
@@ -105,7 +123,7 @@ export const registerSendCardOrChoiceMessage = (server: McpServer) => {
       const conversationRegion = getConversationRegion(region);
       sinchClient.conversation.setRegion(conversationRegion);
 
-      const requestBase = buildMessageBase(conversationAppId, contact, channel, sender);
+      const requestBase = await buildMessageBase(sinchClient, conversationAppId, contact, channel, sender);
 
       let request: Conversation.SendChoiceMessageRequestData<Conversation.IdentifiedBy> | Conversation.SendCardMessageRequestData<Conversation.IdentifiedBy>;
 
