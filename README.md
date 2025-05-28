@@ -36,9 +36,9 @@ To use the APIs used by the MCP tools, you will need the following credentials:
   - MAILGUN_API_KEY
   - MAILGUN_SENDER_ADDRESS
 
-## 2. Start the MCP server on stdio with Claude Desktop (Option 1)
+## Option 1: Start the MCP server with stdio using Claude Desktop
 
-### 2.1 Build the MCP server
+### Step 1: Build the MCP server
 
 ```bash
 cd sinch-mcp-server/mcp
@@ -46,9 +46,9 @@ npm install
 npm run build
 ```
 
-### 2.2 Setup Claude Desktop configuration
+### Step 2: Setup Claude Desktop configuration
 
-Here is an example of how to configure the MCP server in the Claude Desktop configuration file (`claude_desktop_config.json`):
+Here is an example of how to configure the MCP server in the [Claude Desktop](https://claude.ai/download) configuration file (`claude_desktop_config.json`):
 
 ```json
 {
@@ -79,9 +79,12 @@ Here is an example of how to configure the MCP server in the Claude Desktop conf
 }
 ```
 
-## 3. Start the MCP server remotely and connect it using SSE  (Option 2)
+## Option 2: Start the MCP server remotely and connect to it using SSE
 
-### 3.1 Build the MCP server
+With this option, you can run the MCP server on a remote machine and connect to it using Server-Sent Events (SSE). This is useful if you want to run the MCP server on a cloud server or a dedicated machine.
+By default, Claude Desktop will connect to the MCP server using STDIO; we will use the [supergateway library](https://github.com/supercorp-ai/supergateway) to connect to the MCP server using SSE.
+
+### Step 1: Build the MCP server
 
 ```bash
 cd sinch-mcp-server/mcp
@@ -89,9 +92,9 @@ npm install
 npm run build
 ```
 
-### 3.2 Setup the MCP server configuration
+### Step 2: Set up the MCP server configuration
 
-Copy the following lines at `<your_project_root>/mcp/.env` and replace the values with your own credentials:
+Create a `.env` file at `<your_project_root>/mcp` and replace the placeholders with your own credentials:
 ```bash
 # Conversation tools related environment variables
 CONVERSATION_PROJECT_ID=YOUR_PROJECT_ID
@@ -113,13 +116,13 @@ MAILGUN_API_KEY=YOUR_MAILGUN_API_KEY
 MAILGUN_SENDER_ADDRESS=YOUR_MAILGUN_SENDER_ADDRESS
 ```
 
-### 3.3 Start the MCP server
+### Step 3: Start the MCP server
 
 ```bash
 npm run start
 ```
 
-### 3.4 Configure the MCP server in Claude Desktop
+### Step 4: Configure the MCP server in Claude Desktop
 
 You can then configure the MCP server in the Claude configuration file as follows:
 ```json
@@ -137,16 +140,16 @@ You can then configure the MCP server in the Claude configuration file as follow
 (Replace the `http://localhost:8000/sse` with the URL of your MCP server if it is not running locally)
 
 
-## Defining new tools
+## Contributing: Defining new tools
 
-Tools are registered in the `src/mcp/server.ts` file.
+Tools are registered in the `src/index.ts` file.
  - Conversation tools: send various types of messages, list conversations apps, templates
  - Verification tools: lookup for a number, perform a verification flow
  - Voice tools: make a TTS call, create a conference call, manage participants
  - Email tools: send emails, retrieve email information
 
-Tools are defined under `src/mcp/tools/` and are registered in the `index.ts` file of their respective domain folder.
- - Verification tools: `src/mcp/tools/verification/index.ts`
- - Conversation tools: `src/mcp/tools/conversation/index.ts`
- - Voice tools: `src/mcp/tools/voice/index.ts`
- - Email tools: `src/mcp/tools/email/index.ts`
+Tools are defined under `src/tools/` and are registered in the `index.ts` file of their respective domain folder.
+ - Conversation tools: `src/tools/conversation/index.ts`
+ - Verification tools: `src/tools/verification/index.ts`
+ - Voice tools: `src/tools/voice/index.ts`
+ - Email tools: `src/tools/email/index.ts`
