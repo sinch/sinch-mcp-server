@@ -1,6 +1,10 @@
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { isPromptResponse } from '../../utils';
-import { formatListAllTemplatesResponse } from './utils/format-list-all-templates-response';
+import {
+  formatChannelSpecificTemplates,
+  formatOmniChannelTemplates,
+  renderInstructions,
+} from './utils/format-list-all-templates-response';
 import { getConversationTemplateService } from './utils/conversation-service-helper';
 import { IPromptResponse, PromptResponse } from '../../types';
 
@@ -28,21 +32,13 @@ export const listAllTemplatesHandler = async (): Promise<IPromptResponse> => {
   sinchClient.conversation.setRegion('br');
   const responseBR = await sinchClient.conversation.templatesV2.list({});
 
-  let reply = `List of omni-channels templates in the US region: ${JSON.stringify(formatListAllTemplatesResponse(responseUS))}`;
-  reply += `\nList of omni-channels templates in the EU region: ${JSON.stringify(formatListAllTemplatesResponse(responseEU))}`;
-  reply += `\nList of omni-channels templates in the BR region: ${JSON.stringify(formatListAllTemplatesResponse(responseBR))}`;
-
+  const replyParts = [];
+  replyParts.push(formatOmniChannelTemplates(responseUS, responseEU, responseBR));
   const whatsAppTemplates = await fetchWhatsAppSpecificTemplates();
+  replyParts.push(formatChannelSpecificTemplates(whatsAppTemplates));
+  replyParts.push(renderInstructions.trim());
 
-  reply += `\nList of WhatsApp templates: ${JSON.stringify(whatsAppTemplates)}`;
-
-  return new PromptResponse(`${reply}.\nPlease return the data in a structured array format with each item on a separate line. One array for omni-channel templates and and another for channel specific templates.
-            For the omni-channel templates, just display the Id, description, version, default translation and the list of translations as as pairs of language_code / version) columns. Example:
-| ID   | Description       | Version | Default translation | Translations            |
-| 0123 | My template desc  | 1       | en-US               | en-US(latest), en-US(1) |
-            For the WhatsApp templates (called channel specific), just display the channel, the name, the language, the category and the state columns. Example:
-| Channel  | Name         | Language | Category  | State    |
-| WhatsApp | wa_template  | en-US    | Marketing | Approved |`).promptResponse;
+  return new PromptResponse(replyParts.join('\n\n')).promptResponse;
 };
 
 interface WhatsAppTemplate {
