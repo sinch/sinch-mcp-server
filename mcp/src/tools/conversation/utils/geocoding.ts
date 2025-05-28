@@ -32,7 +32,7 @@ export const getLatitudeLongitudeFromAddress = async (address: string): Promise<
         formattedAddress: data.results[0].formatted_address
       };
     } else {
-      console.error('Geocoding failed:', data.status, data.error_message);
+      console.error('Geocoding failed:', data.status);
       return fallbackCoordinates;
     }
   } catch (error) {

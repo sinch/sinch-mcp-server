@@ -55,6 +55,8 @@ function getSinchService(
       }),
     ],
   });
+  // Remove the VersionRequest plugin, as we override the user-agent header
+  fetcher.apiClientOptions.requestPlugins?.shift();
 
   // Replace the region placeholder with US by default
   const hostname = hostnameTemplate.replace(REGION_PATTERN, `${ConversationRegion.UNITED_STATES}.`);

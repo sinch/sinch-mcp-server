@@ -4,80 +4,90 @@ import { Voice } from '@sinch/sdk-core';
 import { z } from 'zod';
 import { getVoiceService } from './utils/voice-service-helper';
 import { isPromptResponse } from '../../utils';
-import { PromptResponse } from '../../types';
+import { IPromptResponse, PromptResponse } from '../../types';
 
 export const registerConferenceCallout = (server: McpServer) => {
-  server.tool('conference-call', 'Call a phone number and connects it to a conference room when answered', {
-    phoneNumbers: z.array(z.string()).describe('The phone numbers to call and connect to the conference room'),
-    conferenceId: z.string().optional().describe('The conference room ID. If not provided, a new one will be generated.'),
-  },
-  async ({ phoneNumbers, conferenceId }) => {
+  server.tool(
+    'conference-call',
+    'Call a phone number and connects it to a conference room when answered',
+    {
+      phoneNumbers: z.array(z.string()).describe('The phone numbers to call and connect to the conference room'),
+      conferenceId: z.string().optional().describe('The conference room ID. If not provided, a new one will be generated.'),
+    },
+    conferenceCalloutHandler
+  );
+};
 
-    const maybeClient = getVoiceService();
-    if (isPromptResponse(maybeClient)) {
-      return maybeClient.promptResponse;
-    }
-    const voiceService = maybeClient.voice;
+export const conferenceCalloutHandler = async ({
+  phoneNumbers,
+  conferenceId
+}: {
+  phoneNumbers: string[];
+  conferenceId?: string;
+}): Promise<IPromptResponse> => {
+  const maybeClient = getVoiceService();
+  if (isPromptResponse(maybeClient)) {
+    return maybeClient.promptResponse;
+  }
+  const voiceService = maybeClient.voice;
 
-    const cli = process.env.CALLING_LINE_IDENTIFICATION;
+  const cli = process.env.CALLING_LINE_IDENTIFICATION;
 
-    if (!conferenceId) {
-      conferenceId = crypto.randomUUID();
-    }
+  if (!conferenceId) {
+    conferenceId = crypto.randomUUID();
+  }
 
-    const errors: { phoneNumber: string, error: string }[] = [];
-    const successfulCalls: { phoneNumber: string, callId: string }[] = [];
+  const errors: { phoneNumber: string, error: string }[] = [];
+  const successfulCalls: { phoneNumber: string, callId: string }[] = [];
 
-    for (const phoneNumber of phoneNumbers) {
-      const request: Voice.ConferenceCalloutRequestData = {
-        conferenceCalloutRequestBody: {
-          method: 'conferenceCallout',
-          conferenceCallout: {
-            destination: {
-              type: 'number',
-              endpoint: phoneNumber
-            },
-            conferenceId
-          }
+  for (const phoneNumber of phoneNumbers) {
+    const request: Voice.ConferenceCalloutRequestData = {
+      conferenceCalloutRequestBody: {
+        method: 'conferenceCallout',
+        conferenceCallout: {
+          destination: {
+            type: 'number',
+            endpoint: phoneNumber
+          },
+          conferenceId
         }
-      };
-      if(cli) {
-        request.conferenceCalloutRequestBody.conferenceCallout.cli = cli;
       }
+    };
+    if(cli) {
+      request.conferenceCalloutRequestBody.conferenceCallout.cli = cli;
+    }
 
-      try {
-        const response = await voiceService.callouts.conference(request);
-        if (response.callId) {
-          successfulCalls.push({
-            phoneNumber: request.conferenceCalloutRequestBody.conferenceCallout.destination.endpoint,
-            callId: response.callId
-          });
-        }
-      } catch (error) {
-        errors.push({
+    try {
+      const response = await voiceService.callouts.conference(request);
+      if (response.callId) {
+        successfulCalls.push({
           phoneNumber: request.conferenceCalloutRequestBody.conferenceCallout.destination.endpoint,
-          error: (error as Error).message
+          callId: response.callId
         });
       }
+    } catch (error) {
+      errors.push({
+        phoneNumber: request.conferenceCalloutRequestBody.conferenceCallout.destination.endpoint,
+        error: (error as Error).message
+      });
     }
+  }
 
-    let result = '';
+  let result = '';
 
-    if (successfulCalls.length > 0) {
-      result += `Here is the list of phone numbers joining the conference ${conferenceId} and their associated callId (to be presented as a table):\n`;
-      for (const call of successfulCalls) {
-        result += `- ${call.phoneNumber} | ${call.callId}\n`;
-      }
+  if (successfulCalls.length > 0) {
+    result += `Here is the list of phone numbers joining the conference ${conferenceId} and their associated callId (to be presented as a table):\n`;
+    for (const call of successfulCalls) {
+      result += `- ${call.phoneNumber} | ${call.callId}\n`;
     }
+  }
 
-    if (errors.length > 0) {
-      result += '\nThe following phone numbers couldn\'t be called (to be presented with a list and error message):\n';
-      for (const err of errors) {
-        result += `- ${err.phoneNumber}\n`;
-      }
+  if (errors.length > 0) {
+    result += '\nThe following phone numbers couldn\'t be called (to be presented with a list and error message):\n';
+    for (const err of errors) {
+      result += `- ${err.phoneNumber}\n`;
     }
+  }
 
-    return new PromptResponse(result).promptResponse;
-
-  });
+  return new PromptResponse(result).promptResponse;
 };

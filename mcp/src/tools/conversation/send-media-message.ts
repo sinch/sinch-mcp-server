@@ -9,7 +9,7 @@ import {
 } from './utils/conversation-service-helper';
 import { isPromptResponse } from '../../utils';
 import { buildMessageBase } from './utils/send-message-builder';
-import { PromptResponse } from '../../types';
+import { IPromptResponse, PromptResponse } from '../../types';
 
 export const registerSendMediaMessage = (server: McpServer) => {
   server.tool(
@@ -23,44 +23,59 @@ export const registerSendMediaMessage = (server: McpServer) => {
       sender: MessageSenderNumberOverride,
       region: ConversationRegionOverride
     },
-    async ({ url, recipient, channel, appId, sender, region }) => {
-      console.error(`Sending media message to ${recipient} on channel ${channel}`);
+    sendMediaMessageHandler
+  );
+};
 
-      const maybeAppId = getConversationAppId(appId);
-      if (isPromptResponse(maybeAppId)) {
-        return maybeAppId.promptResponse;
-      }
-      const conversationAppId = maybeAppId;
+export const sendMediaMessageHandler = async({
+  recipient,
+  channel,
+  url,
+  appId,
+  sender,
+  region
+}: {
+  recipient: string;
+  channel: string | string[];
+  url: string;
+  appId?: string;
+  sender?: string;
+  region?: string;
+}): Promise<IPromptResponse> => {
+  const maybeAppId = getConversationAppId(appId);
+  if (isPromptResponse(maybeAppId)) {
+    return maybeAppId.promptResponse;
+  }
+  const conversationAppId = maybeAppId;
 
-      const maybeClient = getConversationService();
-      if (isPromptResponse(maybeClient)) {
-        return maybeClient.promptResponse;
-      }
-      const sinchClient = maybeClient;
-      const conversationRegion = getConversationRegion(region);
-      sinchClient.conversation.setRegion(conversationRegion);
+  const maybeClient = getConversationService();
+  if (isPromptResponse(maybeClient)) {
+    return maybeClient.promptResponse;
+  }
+  const sinchClient = maybeClient;
+  const conversationRegion = getConversationRegion(region);
+  sinchClient.conversation.setRegion(conversationRegion);
 
-      const requestBase = await buildMessageBase(sinchClient, conversationAppId, recipient, channel, sender);
-      const request: Conversation.SendMediaMessageRequestData<Conversation.IdentifiedBy> = {
-        sendMessageRequestBody: {
-          ...requestBase,
-          message: {
-            media_message: {
-              url: url
-            }
-          }
+  const requestBase = await buildMessageBase(sinchClient, conversationAppId, recipient, channel, sender);
+  const request: Conversation.SendMediaMessageRequestData<Conversation.IdentifiedBy> = {
+    sendMessageRequestBody: {
+      ...requestBase,
+      message: {
+        media_message: {
+          url: url
         }
-      };
-
-      let response: Conversation.SendMessageResponse;
-      let reply: string;
-      try{
-        response = await sinchClient.conversation.messages.sendMediaMessage(request);
-        reply = `Media message submitted on channel ${channel}! The message ID is ${response.message_id}`;
-      } catch (error) {
-        reply = `An error occurred when trying to send the media message: ${JSON.stringify(error)}. Are you sure you are using the right region to send your message? The current region is ${region}.`;
       }
+    }
+  };
 
-      return new PromptResponse(reply).promptResponse;
-    });
+  let response: Conversation.SendMessageResponse;
+  let reply: string;
+  try{
+    response = await sinchClient.conversation.messages.sendMediaMessage(request);
+    reply = `Media message submitted on channel ${channel}! The message ID is ${response.message_id}`;
+  } catch (error) {
+    reply = `An error occurred when trying to send the media message: ${JSON.stringify(error)}. Are you sure you are using the right region to send your message? The current region is ${region}.`;
+  }
+
+  return new PromptResponse(reply).promptResponse;
 };

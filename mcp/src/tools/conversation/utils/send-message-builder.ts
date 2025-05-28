@@ -27,7 +27,7 @@ export const buildMessageBase = async (
     });
   }
 
-  await addSMSFallbackForRCS(sinchClient, appId, channel, recipient, channel_identities);
+  addSMSFallback(appConfiguration, channel, recipient, channel_identities);
 
   if(!sender) {
     sender = process.env.DEFAULT_SMS_ORIGINATOR;
@@ -49,18 +49,17 @@ export const buildMessageBase = async (
 
 };
 
-/// This function adds an SMS fallback for RCS if the channel is RCS and SMS is not already included in the channel_identities
-const addSMSFallbackForRCS = async (
-  sinchClient: SinchClient,
-  appId: string,
+/// This function adds an SMS fallback for RCS or WHATSAPP if the channel is RCS or WHATSAPP and SMS is not already included in the channel_identities
+const addSMSFallback = (
+  appConfiguration: Conversation.AppResponse,
   channel: string | string[],
   recipient: string,
   channel_identities: Conversation.ChannelRecipientIdentity[]
 ) => {
   const channels = Array.isArray(channel) ? channel : [channel];
-  if (channels.includes('RCS')) {
+  if (channels.includes('RCS') || channels.includes('WHATSAPP')) {
     const smsChannel = channels.find(c => c === 'SMS');
-    if (!smsChannel && await isSMSChannelConfigured(sinchClient, appId)) {
+    if (!smsChannel && isSMSChannelConfigured(appConfiguration)) {
       channel_identities.push({
         channel: 'SMS',
         identity: recipient
@@ -69,10 +68,9 @@ const addSMSFallbackForRCS = async (
   }
 };
 
-const isSMSChannelConfigured = async (sinchClient: SinchClient, appId: string): Promise<boolean> => {
-  const applicationConfiguration = await sinchClient.conversation.app.get({ app_id: appId });
-  if (applicationConfiguration.channel_credentials) {
-    const smsChannel = applicationConfiguration.channel_credentials.find(channel => channel.channel === 'SMS');
+const isSMSChannelConfigured = (appConfiguration: Conversation.AppResponse): boolean => {
+  if (appConfiguration.channel_credentials) {
+    const smsChannel = appConfiguration.channel_credentials.find(channel => channel.channel === 'SMS');
     return !!smsChannel;
   }
   return false;

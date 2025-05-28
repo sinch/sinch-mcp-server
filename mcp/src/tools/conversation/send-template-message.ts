@@ -1,7 +1,7 @@
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { Conversation } from '@sinch/sdk-core';
 import { z } from 'zod';
-import { PromptResponse } from '../../types';
+import { IPromptResponse, PromptResponse } from '../../types';
 import { isPromptResponse } from '../../utils';
 import { getConversationAppId, getConversationRegion, getConversationService } from './utils/conversation-service-helper';
 import { buildMessageBase } from './utils/send-message-builder';
@@ -28,86 +28,108 @@ export const registerSendTemplateMessage = (server: McpServer) => {
       sender: MessageSenderNumberOverride,
       region: ConversationRegionOverride
     },
-    async ({ recipient, templateId, language, whatsAppTemplateName, whatsAppTemplateLanguage, parameters, channel, appId, sender, region }) => {
-      console.error(`Sending template message to '${recipient}' on channel '${channel}'`);
+    sendTemplateMessageHandler
+  );
+};
 
-      if (!whatsAppTemplateName && !templateId) {
-        return new PromptResponse('At least one of templateId or whatsAppTemplateName should be provided.').promptResponse;
-      }
+export const sendTemplateMessageHandler = async ({
+  recipient,
+  channel,
+  templateId,
+  language,
+  whatsAppTemplateName,
+  whatsAppTemplateLanguage,
+  parameters,
+  appId,
+  sender,
+  region
+}: {
+  recipient: string;
+  channel: string | string[];
+  templateId?: string;
+  language?: string;
+  whatsAppTemplateName?: string;
+  whatsAppTemplateLanguage?: string;
+  parameters?: Record<string, string>;
+  appId?: string;
+  sender?: string;
+  region?: string;
+}): Promise<IPromptResponse> => {
+  if (!whatsAppTemplateName && !templateId) {
+    return new PromptResponse('At least one of templateId or whatsAppTemplateName should be provided.').promptResponse;
+  }
 
-      const maybeAppId = getConversationAppId(appId);
-      if (isPromptResponse(maybeAppId)) {
-        return maybeAppId.promptResponse;
-      }
-      const conversationAppId = maybeAppId;
+  const maybeAppId = getConversationAppId(appId);
+  if (isPromptResponse(maybeAppId)) {
+    return maybeAppId.promptResponse;
+  }
+  const conversationAppId = maybeAppId;
 
-      const maybeClient = getConversationService();
-      if (isPromptResponse(maybeClient)) {
-        return maybeClient.promptResponse;
-      }
-      const sinchClient = maybeClient;
-      const conversationRegion = getConversationRegion(region);
-      sinchClient.conversation.setRegion(conversationRegion);
+  const maybeClient = getConversationService();
+  if (isPromptResponse(maybeClient)) {
+    return maybeClient.promptResponse;
+  }
+  const sinchClient = maybeClient;
+  const conversationRegion = getConversationRegion(region);
+  sinchClient.conversation.setRegion(conversationRegion);
 
-      const requestBase = await buildMessageBase(sinchClient, conversationAppId, recipient, channel, sender);
-      let templateMessage: Conversation.TemplateMessageItem = {};
-      if (whatsAppTemplateName && whatsAppTemplateLanguage) {
-        const whatsappMessage: Conversation.TemplateMessageItem = {
-          channel_template: {
-            WHATSAPP: {
-              template_id: whatsAppTemplateName,
-              language_code: whatsAppTemplateLanguage,
-              version: '',
-              parameters: {
-                ...parameters
-              }
-            }
-          }
-        };
-        templateMessage = {
-          ...templateMessage,
-          ...whatsappMessage
-        };
-      }
-      if (templateId) {
-        const omniChannelMessage: Conversation.TemplateMessageItem = {
-          omni_template: {
-            template_id: templateId,
-            version: 'latest',
-            parameters: {
-              ...parameters
-            }
-          }
-        };
-        if (language) {
-          omniChannelMessage.omni_template!.language_code = language;
-        }
-        templateMessage = {
-          ...templateMessage,
-          ...omniChannelMessage
-        };
-      }
-      const request: Conversation.SendTemplateMessageRequestData<Conversation.IdentifiedBy> = {
-        sendMessageRequestBody: {
-          ...requestBase,
-          message: {
-            template_message: {
-              ...templateMessage
-            }
+  const requestBase = await buildMessageBase(sinchClient, conversationAppId, recipient, channel, sender);
+  let templateMessage: Conversation.TemplateMessageItem = {};
+  if (whatsAppTemplateName && whatsAppTemplateLanguage) {
+    const whatsappMessage: Conversation.TemplateMessageItem = {
+      channel_template: {
+        WHATSAPP: {
+          template_id: whatsAppTemplateName,
+          language_code: whatsAppTemplateLanguage,
+          version: '',
+          parameters: {
+            ...parameters
           }
         }
-      };
-
-      let response: Conversation.SendMessageResponse;
-      let reply: string;
-      try {
-        response = await sinchClient.conversation.messages.sendTemplateMessage(request);
-        reply = `Template message submitted on channel ${channel}! The message ID is ${response.message_id}`;
-      } catch (error) {
-        reply = `An error occurred when trying to send the text message: ${JSON.stringify(error)}. Are you sure you are using the right region to send your message? The current region is ${region}.`;
       }
+    };
+    templateMessage = {
+      ...templateMessage,
+      ...whatsappMessage
+    };
+  }
+  if (templateId) {
+    const omniChannelMessage: Conversation.TemplateMessageItem = {
+      omni_template: {
+        template_id: templateId,
+        version: 'latest',
+        parameters: {
+          ...parameters
+        }
+      }
+    };
+    if (language) {
+      omniChannelMessage.omni_template!.language_code = language;
+    }
+    templateMessage = {
+      ...templateMessage,
+      ...omniChannelMessage
+    };
+  }
+  const request: Conversation.SendTemplateMessageRequestData<Conversation.IdentifiedBy> = {
+    sendMessageRequestBody: {
+      ...requestBase,
+      message: {
+        template_message: {
+          ...templateMessage
+        }
+      }
+    }
+  };
 
-      return new PromptResponse(reply).promptResponse;;
-    });
+  let response: Conversation.SendMessageResponse;
+  let reply: string;
+  try {
+    response = await sinchClient.conversation.messages.sendTemplateMessage(request);
+    reply = `Template message submitted on channel ${channel}! The message ID is ${response.message_id}`;
+  } catch (error) {
+    reply = `An error occurred when trying to send the text message: ${JSON.stringify(error)}. Are you sure you are using the right region to send your message? The current region is ${region}.`;
+  }
 
+  return new PromptResponse(reply).promptResponse;
 };

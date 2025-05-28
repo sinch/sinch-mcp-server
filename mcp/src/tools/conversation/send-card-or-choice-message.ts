@@ -12,7 +12,7 @@ import {
   MessageSenderNumberOverride,
 } from './prompt-schemas';
 import { isPromptResponse } from '../../utils';
-import { PromptResponse } from '../../types';
+import { IPromptResponse, PromptResponse } from '../../types';
 
 const callChoice = z.object({
   phone_number: z.string(),
@@ -61,117 +61,137 @@ export const registerSendCardOrChoiceMessage = (server: McpServer) => {
       appId: ConversationAppIdOverride,
       sender: MessageSenderNumberOverride,
       region: ConversationRegionOverride,
-    }, async ({ recipient, channel, choiceContent, text, mediaUrl, appId, sender, region }) => {
-      console.error(`Sending choice message to ${recipient} on channel ${channel}`);
-
-      const maybeAppId = getConversationAppId(appId);
-      if (isPromptResponse(maybeAppId)) {
-        return maybeAppId.promptResponse;
-      }
-      const conversationAppId = maybeAppId;
-
-      const maybeClient = getConversationService();
-      if (isPromptResponse(maybeClient)) {
-        return maybeClient.promptResponse;
-      }
-      const sinchClient = maybeClient;
-      const conversationRegion = getConversationRegion(region);
-      sinchClient.conversation.setRegion(conversationRegion);
-
-      const choices: Conversation.Choice[] = [];
-      for (const choice of choiceContent || []) {
-        if ('phone_number' in choice && 'title' in choice) {
-          choices.push({
-            call_message: {
-              phone_number: choice.phone_number,
-              title: choice.title
-            }
-          } as Conversation.CallMessageChoice);
-        } else if ('lat' in choice && 'long' in choice && 'title' in choice) {
-          choices.push({
-            location_message: {
-              coordinates: {
-                latitude: choice.lat,
-                longitude: choice.long
-              },
-              title: choice.title
-            }
-          } as Conversation.LocationMessageChoice);
-        } else if ('address' in choice) {
-          const coordinates = await getLatitudeLongitudeFromAddress(choice.address);
-          choices.push({
-            location_message: {
-              coordinates: {
-                latitude: coordinates.latitude,
-                longitude: coordinates.longitude
-              },
-              title: coordinates.formattedAddress
-            }
-          } as Conversation.LocationMessageChoice);
-        } else if ('text' in choice) {
-          choices.push({
-            text_message: {
-              text: choice.text
-            }
-          } as Conversation.TextMessageChoice);
-        } else if ('url' in choice && 'title' in choice) {
-          choices.push({
-            url_message: {
-              url: choice.url,
-              title: choice.title
-            }
-          } as Conversation.UrlMessageChoice);
-        }
-      }
-
-      const requestBase = await buildMessageBase(sinchClient, conversationAppId, recipient, channel, sender);
-
-      let request: Conversation.SendChoiceMessageRequestData<Conversation.IdentifiedBy> | Conversation.SendCardMessageRequestData<Conversation.IdentifiedBy>;
-
-      if (mediaUrl) {
-        request = {
-          sendMessageRequestBody: {
-            ...requestBase,
-            message: {
-              card_message: {
-                choices,
-                title: text,
-                media_message: {
-                  url: mediaUrl
-                }
-              }
-            }
-          }
-        };
-      } else {
-        request = {
-          sendMessageRequestBody: {
-            ...requestBase,
-            message: {
-              choice_message: {
-                choices,
-                text_message:{
-                  text
-                }
-              }
-            }
-          }
-        };
-      }
-
-      let response: Conversation.SendMessageResponse;
-      let reply: string;
-      try {
-        if (mediaUrl) {
-          response = await sinchClient.conversation.messages.sendCardMessage(request as Conversation.SendCardMessageRequestData<Conversation.IdentifiedBy>);
-        } else {
-          response = await sinchClient.conversation.messages.sendChoiceMessage(request as Conversation.SendChoiceMessageRequestData<Conversation.IdentifiedBy>);
-        }
-        reply = `${mediaUrl ? 'Card' : 'Choice'} message submitted on channel ${channel}! The message ID is ${response.message_id}`;
-      } catch (error) {
-        reply = `An error occurred when trying to send the ${mediaUrl ? 'card' : 'choice'} message: ${JSON.stringify(error)}. Are you sure you are using the right region to send your message? The current region is ${region}.`;
-      }
-
-      return new PromptResponse(reply).promptResponse;
-    });
+    },
+    sendCardOrChoiceMessageHandler
+  );
 };
+
+export const sendCardOrChoiceMessageHandler = async ({
+  recipient,
+  channel,
+  choiceContent,
+  text,
+  mediaUrl,
+  appId,
+  sender,
+  region
+}: {
+  recipient: string;
+  channel: string | string[];
+  choiceContent?: z.infer<typeof choiceMessage>[];
+  text: string;
+  mediaUrl?: string;
+  appId?: string;
+  sender?: string;
+  region?: string;
+}): Promise<IPromptResponse> => {
+  const maybeAppId = getConversationAppId(appId);
+  if (isPromptResponse(maybeAppId)) {
+    return maybeAppId.promptResponse;
+  }
+  const conversationAppId = maybeAppId;
+
+  const maybeClient = getConversationService();
+  if (isPromptResponse(maybeClient)) {
+    return maybeClient.promptResponse;
+  }
+  const sinchClient = maybeClient;
+  const conversationRegion = getConversationRegion(region);
+  sinchClient.conversation.setRegion(conversationRegion);
+
+  const choices: Conversation.Choice[] = [];
+  for (const choice of choiceContent || []) {
+    if ('phone_number' in choice && 'title' in choice) {
+      choices.push({
+        call_message: {
+          phone_number: choice.phone_number,
+          title: choice.title
+        }
+      } as Conversation.CallMessageChoice);
+    } else if ('lat' in choice && 'long' in choice && 'title' in choice) {
+      choices.push({
+        location_message: {
+          coordinates: {
+            latitude: choice.lat,
+            longitude: choice.long
+          },
+          title: choice.title
+        }
+      } as Conversation.LocationMessageChoice);
+    } else if ('address' in choice) {
+      const coordinates = await getLatitudeLongitudeFromAddress(choice.address);
+      choices.push({
+        location_message: {
+          coordinates: {
+            latitude: coordinates.latitude,
+            longitude: coordinates.longitude
+          },
+          title: coordinates.formattedAddress
+        }
+      } as Conversation.LocationMessageChoice);
+    } else if ('text' in choice) {
+      choices.push({
+        text_message: {
+          text: choice.text
+        }
+      } as Conversation.TextMessageChoice);
+    } else if ('url' in choice && 'title' in choice) {
+      choices.push({
+        url_message: {
+          url: choice.url,
+          title: choice.title
+        }
+      } as Conversation.UrlMessageChoice);
+    }
+  }
+
+  const requestBase = await buildMessageBase(sinchClient, conversationAppId, recipient, channel, sender);
+
+  let request: Conversation.SendChoiceMessageRequestData<Conversation.IdentifiedBy> | Conversation.SendCardMessageRequestData<Conversation.IdentifiedBy>;
+
+  if (mediaUrl) {
+    request = {
+      sendMessageRequestBody: {
+        ...requestBase,
+        message: {
+          card_message: {
+            choices,
+            title: text,
+            media_message: {
+              url: mediaUrl
+            }
+          }
+        }
+      }
+    };
+  } else {
+    request = {
+      sendMessageRequestBody: {
+        ...requestBase,
+        message: {
+          choice_message: {
+            choices,
+            text_message:{
+              text
+            }
+          }
+        }
+      }
+    };
+  }
+
+  let response: Conversation.SendMessageResponse;
+  let reply: string;
+  try {
+    if (mediaUrl) {
+      response = await sinchClient.conversation.messages.sendCardMessage(request as Conversation.SendCardMessageRequestData<Conversation.IdentifiedBy>);
+    } else {
+      response = await sinchClient.conversation.messages.sendChoiceMessage(request as Conversation.SendChoiceMessageRequestData<Conversation.IdentifiedBy>);
+    }
+    reply = `${mediaUrl ? 'Card' : 'Choice'} message submitted on channel ${channel}! The message ID is ${response.message_id}`;
+  } catch (error) {
+    reply = `An error occurred when trying to send the ${mediaUrl ? 'card' : 'choice'} message: ${JSON.stringify(error)}. Are you sure you are using the right region to send your message? The current region is ${region}.`;
+  }
+
+  return new PromptResponse(reply).promptResponse;
+}
