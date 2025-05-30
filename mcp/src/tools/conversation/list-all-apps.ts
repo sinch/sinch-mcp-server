@@ -8,7 +8,6 @@ export const registerListAllApps = (server: McpServer) => {
   server.tool(
     'list-all-apps',
     'Get a list of all Conversation apps in the account. Apps are created and configured in the Sinch Dashboard or with the Conversation API. The App is the entity that holds the credentials related to the various channels',
-    {},
     listAllAppsHandler
   );
 };

@@ -26,7 +26,7 @@ const locationAsCoordinates = z.object({
 }).describe('Message containing geographic location as coordinates. The coordinates are latitude and longitude, and the title is the text to display next to the location.');
 
 const locationAsAddress = z.object({
-  address: z.string()
+  address: z.string().nonempty()
 }).describe('Message containing a plain text address.');
 
 const locationChoice = z.union([locationAsAddress, locationAsCoordinates])

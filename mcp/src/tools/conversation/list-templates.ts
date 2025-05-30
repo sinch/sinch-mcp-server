@@ -12,7 +12,6 @@ export const registerListAllTemplates = (server: McpServer) => {
   server.tool(
     'list-all-templates',
     'Get a list of all templates (omni-channel or channel specific) belonging to an account',
-    {},
     listAllTemplatesHandler
   );
 };

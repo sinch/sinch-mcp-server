@@ -49,7 +49,7 @@ export const buildMessageBase = async (
 
 };
 
-/// This function adds an SMS fallback for RCS or WHATSAPP if the channel is RCS or WHATSAPP and SMS is not already included in the channel_identities
+// This function adds an SMS fallback for RCS or WHATSAPP if the channel is RCS or WHATSAPP and SMS is not already included in the channel_identities
 const addSMSFallback = (
   appConfiguration: Conversation.AppResponse,
   channel: string | string[],

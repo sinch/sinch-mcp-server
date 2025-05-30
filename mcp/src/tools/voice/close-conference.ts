@@ -18,11 +18,11 @@ export const registerCloseConference = (server: McpServer) => {
 export const closeConferenceHandler = async (
   { conferenceId }: { conferenceId: string }
 ): Promise<IPromptResponse> => {
-  const maybeClient = getVoiceService();
-  if (isPromptResponse(maybeClient)) {
-    return maybeClient.promptResponse;
+  const maybeVoiceService = getVoiceService();
+  if (isPromptResponse(maybeVoiceService)) {
+    return maybeVoiceService.promptResponse;
   }
-  const voiceService = maybeClient.voice;
+  const voiceService = maybeVoiceService;
 
   try {
     await voiceService.conferences.kickAll({
@@ -33,5 +33,5 @@ export const closeConferenceHandler = async (
     return new PromptResponse(`An error occurred while trying to close the conference with ID ${conferenceId}. Please try again later.`).promptResponse;
   }
 
-  return new PromptResponse('All participants have been kicked from the conference.').promptResponse;
+  return new PromptResponse(`The conference ${conferenceId} has been closed successfully.`).promptResponse;
 };

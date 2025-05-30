@@ -9,6 +9,7 @@ import {
   VOICE_HOSTNAME,
   REGION_PATTERN,
   VoiceRegion,
+  VoiceService,
 } from '@sinch/sdk-core';
 import { USER_AGENT } from '../../../user-agent';
 
@@ -23,7 +24,7 @@ const addPropertiesToApi = (api: ApiService, client: ApiFetchClient) => {
   api.setHostname(VOICE_HOSTNAME.replace(REGION_PATTERN, VoiceRegion.DEFAULT));
 };
 
-export const getVoiceService = (): SinchClient | PromptResponse => {
+export const getVoiceService = (): VoiceService | PromptResponse => {
 
   const applicationKey = process.env.VOICE_APPLICATION_KEY;
   const applicationSecret = process.env.VOICE_APPLICATION_SECRET;
@@ -65,6 +66,6 @@ export const getVoiceService = (): SinchClient | PromptResponse => {
 
   apis.forEach((api) => addPropertiesToApi(api as unknown as ApiService, apiFetchClient));
 
-  return sinchClient;
+  return sinchClient.voice;
 
 };
