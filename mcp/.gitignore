@@ -1,0 +1,17 @@
+# Dependency directories
+node_modules/
+
+# TypeScript cache
+*.tsbuildinfo
+
+# Optional npm cache directory
+.npm
+
+# Output of 'npm pack'
+*.tgz
+
+# dotenv environment variable files
+.env
+
+# Build output
+dist
