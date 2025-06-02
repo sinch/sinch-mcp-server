@@ -86,5 +86,7 @@ test('listAllAppsHandler returns error response on failure', async () => {
   // When
   const result = await listAllAppsHandler();
   // Then
+  expect(setRegionMock).toHaveBeenCalledTimes(1);
+  expect(setRegionMock).toHaveBeenCalledWith('us');
   expect(result.content[0].text).toEqual('Error fetching apps: oops');
 });
