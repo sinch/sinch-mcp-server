@@ -85,3 +85,28 @@ test('includes GEOCODING_API_KEY in query params', async () => {
     })
   }));
 });
+
+test('returns fallback when GEOCODING_API_KEY is not set', async () => {
+  delete process.env.GEOCODING_API_KEY;
+  const consoleSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
+
+  const mockError = new Error('API key missing');
+  mockedAxios.get.mockRejectedValueOnce(mockError);
+
+  const result = await getLatitudeLongitudeFromAddress(mockAddress);
+
+  expect(result).toEqual({
+    latitude: 0,
+    longitude: 0,
+    formattedAddress: 'Unknown'
+  });
+
+  expect(mockedAxios.get).toHaveBeenCalledWith(expect.any(String), expect.objectContaining({
+    params: expect.objectContaining({
+      key: undefined
+    })
+  }));
+
+  expect(consoleSpy).toHaveBeenCalledWith('Request failed:', new Error('API key missing'));
+  consoleSpy.mockRestore();
+});
