@@ -24,7 +24,7 @@ jobs:
       - name: Work in the mcp directory
         run: |
           cd mcp
-          run: npm ci
+          npm ci
 
       - name: Compile TypeScript
         run: npm run build
