@@ -1,6 +1,9 @@
 import { Conversation } from '@sinch/sdk-core';
 
-export const formatListAllAppsResponse = (response: Conversation.ListAppsResponse) => {
+export const formatListAllAppsResponse = (response: Conversation.ListAppsResponse | undefined) => {
+  if (!response || !response.apps) {
+    return { apps: [] };
+  }
   return {
     apps: response.apps?.map(app => ({
       id: app.id,

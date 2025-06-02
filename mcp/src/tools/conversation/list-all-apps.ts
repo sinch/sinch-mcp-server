@@ -20,17 +20,18 @@ export const listAllAppsHandler = async (): Promise<IPromptResponse> => {
   }
   const sinchClient = maybeClient;
 
-  const responseUS = await sinchClient.conversation.app.list({});
+  const regions = [ 'us', 'eu', 'br' ];
 
-  sinchClient.conversation.setRegion('eu');
-  const responseEU = await sinchClient.conversation.app.list({});
-
-  sinchClient.conversation.setRegion('br');
-  const responseBR = await sinchClient.conversation.app.list({});
-
-  let reply = `List of conversations apps in the US region: ${JSON.stringify(formatListAllAppsResponse(responseUS))}`;
-  reply += `\nList of conversations apps in the EU region: ${JSON.stringify(formatListAllAppsResponse(responseEU))}`;
-  reply += `\nList of conversations apps in the BR region: ${JSON.stringify(formatListAllAppsResponse(responseBR))}`;
+  let reply = '';
+  try {
+    for (const region of regions) {
+      sinchClient.conversation.setRegion(region);
+      const response = await sinchClient.conversation.app.list({});
+      reply += `${reply ? '\n' : ''}List of conversations apps in the '${region}' region: ${JSON.stringify(formatListAllAppsResponse(response))}`;
+    }
+  } catch (error) {
+    return new PromptResponse(`Error fetching apps: ${error instanceof Error ? error.message : 'Unknown error'}`).promptResponse;
+  }
 
   return new PromptResponse(`${reply}.\nPlease return the data in a structured array format with each item on a separate line. Just display the Id, display name, channels and region columns. Example:
 | ID   | Display name | Channels       | Region |
