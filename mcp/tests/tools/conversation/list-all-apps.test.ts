@@ -63,14 +63,15 @@ test('listAllAppsHandler returns formatted app list for all regions', async () =
   const result = await listAllAppsHandler();
 
   // Then
-  expect(setRegionMock).toHaveBeenCalledTimes(2);
+  expect(setRegionMock).toHaveBeenCalledTimes(3);
+  expect(setRegionMock).toHaveBeenCalledWith('us');
   expect(setRegionMock).toHaveBeenCalledWith('eu');
   expect(setRegionMock).toHaveBeenCalledWith('br');
 
   const expectedText = [
-    'List of conversations apps in the US region: {"apps":[{"id":"us1","channel_credentials":[{"channel":"WHATSAPP"}]}]}',
-    'List of conversations apps in the EU region: {"apps":[]}',
-    'List of conversations apps in the BR region: {"apps":[{"id":"br1","channel_credentials":[{"channel":"MESSENGER"},{"channel":"RCS"}]}]}.',
+    'List of conversations apps in the \'us\' region: {"apps":[{"id":"us1","channel_credentials":[{"channel":"WHATSAPP"}]}]}',
+    'List of conversations apps in the \'eu\' region: {"apps":[]}',
+    'List of conversations apps in the \'br\' region: {"apps":[{"id":"br1","channel_credentials":[{"channel":"MESSENGER"},{"channel":"RCS"}]}]}.',
     'Please return the data in a structured array format with each item on a separate line. Just display the Id, display name, channels and region columns. Example:',
     '| ID   | Display name | Channels       | Region |',
     '| 0123 | My app name  | SMS, MESSENGER | US     |',

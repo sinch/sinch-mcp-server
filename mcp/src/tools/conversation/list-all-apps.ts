@@ -20,19 +20,15 @@ export const listAllAppsHandler = async (): Promise<IPromptResponse> => {
   }
   const sinchClient = maybeClient;
 
-  let responseUS, responseEU, responseBR;
-  let reply;
+  const regions = [ 'us', 'eu', 'br' ];
+
+  let reply = '';
   try {
-    responseUS = await sinchClient.conversation.app.list({});
-    reply = `List of conversations apps in the US region: ${JSON.stringify(formatListAllAppsResponse(responseUS))}`;
-
-    sinchClient.conversation.setRegion('eu');
-    responseEU = await sinchClient.conversation.app.list({});
-    reply += `\nList of conversations apps in the EU region: ${JSON.stringify(formatListAllAppsResponse(responseEU))}`;
-
-    sinchClient.conversation.setRegion('br');
-    responseBR = await sinchClient.conversation.app.list({});
-    reply += `\nList of conversations apps in the BR region: ${JSON.stringify(formatListAllAppsResponse(responseBR))}`;
+    for (const region of regions) {
+      sinchClient.conversation.setRegion(region);
+      const response = await sinchClient.conversation.app.list({});
+      reply += `${reply ? '\n' : ''}List of conversations apps in the '${region}' region: ${JSON.stringify(formatListAllAppsResponse(response))}`;
+    }
   } catch (error) {
     return new PromptResponse(`Error fetching apps: ${error instanceof Error ? error.message : 'Unknown error'}`).promptResponse;
   }
