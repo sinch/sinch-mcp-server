@@ -5,7 +5,7 @@ jest.mock('../../../src/tools/conversation/utils/conversation-service-helper', (
   getConversationService: jest.fn(),
 }));
 
-let currentRegion = 'us';
+let currentRegion: string;
 
 const listMock = jest.fn();
 listMock.mockImplementation(() => {
@@ -54,6 +54,11 @@ const mockSinchClient = {
 };
 
 (getConversationService as jest.Mock).mockReturnValue(mockSinchClient);
+
+beforeEach(() => {
+  jest.clearAllMocks();
+  currentRegion = 'us';
+});
 
 test('listAllAppsHandler returns formatted app list for all regions', async () => {
   // Given
