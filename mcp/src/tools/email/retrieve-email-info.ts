@@ -83,7 +83,11 @@ export const retrieveEmailInfoHandler = async({
     // Don't fail the tool if the email content cannot be retrieved, just inform the user
     result += `\nBut an error occurred when trying to retrieve the events related to the email ID ${emailId}. The status code is ${resp.status}.`;
   } else {
-    const storedEmailData = await storedEmail.json() as { 'body-html': string };
+    const storedEmailData = await storedEmail.json() as { 'body-html': string; Sender: string; From: string; To: string; Subject: string };
+    result += `\nSender: ${storedEmailData['Sender']}.`;
+    result += `\nFrom: ${storedEmailData['From']}.`;
+    result += `\nTo: ${storedEmailData['To']}.`;
+    result += `\nSubject: ${storedEmailData['Subject']}.`;
     result += `\nEmail content: ${storedEmailData['body-html']}.`;
   }
 
