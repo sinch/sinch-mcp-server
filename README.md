@@ -1,4 +1,28 @@
-# Sinch MCP Server
+# Sinch MCP Server Tools Overview
+
+Here is the list of tools available in the MCP server:
+
+| Tool                              | Description                                                                                                                                                                                           | Tags                       |
+|-----------------------------------|-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|----------------------------|
+| **list-email-events**             | Retrieve and group recent email delivery events, such as bounces, opens, or clicks. <br> *Example prompt*: "Show me all recent email activity for my account."                                        | email                      |
+| **retrieve-email-info**           | Retrieve metadata, content and delivery status for a specific email message. <br> *Example prompt*: "Can you get the delivery status of the email with ID <email-id>?"                                | email, notification        |
+| **send-email**                    | Send an email using a predefined HTML template or raw HTML/text content. <br> *Example prompt*: "Send a welcome email to [okami@example.com](mailto:john@example.com) using our onboarding template." | email, notification        |
+| **list-all-apps**                 | List all configured Conversation apps in the Sinch account. <br> *Example prompt*: "What messaging apps do I have set up in my account?"                                                              | conversation, notification |
+| **list-all-templates**            | List all omni-channel and channel-specific message templates. <br> *Example prompt*: "Show me all message templates in my account."                                                                   | conversation, notification |
+| **send-choice-message**           | Send a message that includes interactive choices (buttons or quick replies). <br> *Example prompt*: "Send a survey with three response options to this user on RCS."                                  | conversation, notification |
+| **send-contact-info-message**     | Send a contact card containing name, phone numbers, and optional email/addresses. <br> *Example prompt*: "Share my contact info with the customer on WhatsApp."                                       | conversation, notification |
+| **send-location-message**         | Send a location pin or coordinates to a user. <br> *Example prompt*: "Send our office location to the customer on Messenger."                                                                         | conversation, notification |
+| **send-media-message**            | Send an image, video, or document via a media message. <br> *Example prompt*: "Send the product brochure PDF to this phone number on WhatsApp."                                                       | conversation, notification |
+| **send-template-message**         | Send a message using a predefined template (e.g., WhatsApp or omni-template). <br> *Example prompt*: "Send the appointment reminder template in Spanish to this user."                                | conversation, notification |
+| **send-text-message**             | Send a plain text message to a recipient on a supported channel. <br> *Example prompt*: "Send a quick update to the phone number on SMS."                                                             | conversation, notification |
+| **number-lookup**                 | Lookup a phone number for its status and capabilities. <br> *Example prompt*: "Lookup for this phone number capabilities."                                                                            | verification               |
+| **report-sms-verification**       | Submit a one-time password to complete SMS verification. <br> *Example prompt*: "Verify the user with this code."                                                                                     | verification               |
+| **start-sms-verification**        | Initiate an SMS verification by sending an OTP to a user's phone number. <br> *Example prompt*: "Start phone verification for this number."                                                           | verification               |
+| **close-conference**              | End a conference call by closing its session. <br> *Example prompt*: "End the current conference call with ID abc123."                                                                                | voice                      |
+| **conference-call**               | Start a voice call to one or more participants and connect them to a shared conference. <br> *Example prompt*: "Call John and Lisa and connect them to a conference room."                            | voice                      |
+| **manage-conference-participant** | Mute, unmute, hold, or resume an individual participant in a conference call. <br> *Example prompt*: "Mute the caller with ID xyz789 in the conference."                                              | voice                      |
+| **tts-callout**                   | Place a voice call and read out a message using Text-to-Speech. <br> *Example prompt*: "Call this phone number and say: 'Your appointment is tomorrow at 10 AM.'"                                     | voice, notification        |
+
 
 ## Getting Started
 
@@ -79,6 +103,24 @@ Here is an example of how to configure the MCP server in the [Claude Desktop](ht
 }
 ```
 
+You can filter the tools that are available in the MCP server by using the `tags` options. For example, if you want to only use the conversation tools, you can add the following options to the `args` array:
+```
+      "args": [
+        "/your/path/to/sinch-mcp-server/mcp/dist/index.js",
+        "--tags", 
+        "conversation"
+      ],
+```
+If you want to use all the tools, you can omit the `--tags` option, or use the tag `all`:
+```
+      "args": [
+        "/your/path/to/sinch-mcp-server/mcp/dist/index.js",
+        "--tags", 
+        "all"
+      ],
+```
+
+
 ## Option 2: Start the MCP server remotely and connect to it using SSE
 
 With this option, you can run the MCP server on a remote machine and connect to it using Server-Sent Events (SSE). This is useful if you want to run the MCP server on a cloud server or a dedicated machine.
@@ -94,22 +136,29 @@ npm run build
 
 ### Step 2: Set up the MCP server configuration
 
-Create a `.env` file at `<your_project_root>/mcp` and replace the placeholders with your own credentials:
-```bash
+Copy the file `.template.env` located at `./mcp` and rename it `.env`. Then replace the placeholders with your own credentials and delete any key you don't need. The `.env` file should look like this ():
+```dotenv
 # Conversation tools related environment variables
 CONVERSATION_PROJECT_ID=YOUR_PROJECT_ID
 CONVERSATION_KEY_ID=YOUR_ACCESS_KEY_ID
 CONVERSATION_KEY_SECRET=YOUR_ACCESS_KEY_SECRET
-CONVERSATION_REGION=YOUR_REGION // Optional, defaults to "us"
-DEFAULT_SMS_ORIGINATOR=YOUR_SINCH_PHONE_NUMBER  // Needed only if you want to send SMS messages: it is the number that will be used as the sender for SMS messages
-GEOCODING_API_KEY=YOUR_GOOGLE_GEOCODING_API_KEY // Needed only if you want to send location messages: it converts an address to a lat/lon
+## Optional, defaults to "us". Other possible values are "eu" and "br"
+CONVERSATION_REGION=YOUR_REGION
+## Needed only if you want to send SMS messages: it is the number that will be used as the sender for SMS messages
+DEFAULT_SMS_ORIGINATOR=YOUR_SINCH_PHONE_NUMBER
+## Needed only if you want to send location messages: it converts an address to a lat/lon
+GEOCODING_API_KEY=YOUR_GOOGLE_GEOCODING_API_KEY
+
 # Verification tools related environment variables
 VERIFICATION_APPLICATION_KEY=YOUR_APP_KEY
 VERIFICATION_APPLICATION_SECRET=YOUR_APP_SECRET
-# Voice tools related environment variables
-VOICE_APPLICATION_KEY=YOUR_APP_KEY              // Can be the same value as VERIFICATION_APPLICATION_KEY
-VOICE_APPLICATION_SECRET=YOUR_APP_SECRET        // Can be the same value as VERIFICATION_APPLICATION_SECRET
-CALLING_LINE_IDENTIFICATION=YOUR_CALLING_NUMBER // Needed only to make calls: it is the number that will be displayed to the user when they receive a call
+
+# Voice tools related environment variables (Application key and secret can be the same as for Verification)
+VOICE_APPLICATION_KEY=YOUR_APP_KEY
+VOICE_APPLICATION_SECRET=YOUR_APP_SECRET
+## Needed only if you want to make calls: it is the number that will be displayed to the user when they receive a call
+CALLING_LINE_IDENTIFICATION=YOUR_CALLING_NUMBER
+
 # Mailgun tools related environment variables
 MAILGUN_DOMAIN=YOUR_MAILGUN_DOMAIN
 MAILGUN_API_KEY=YOUR_MAILGUN_API_KEY
@@ -120,6 +169,20 @@ MAILGUN_SENDER_ADDRESS=YOUR_MAILGUN_SENDER_ADDRESS
 
 ```bash
 npm run start
+```
+
+By default, this command will start the MCP with all the tools available. If you want to filter the tools that are available in the MCP server, you can use the `--tags` option. For example, if you want to only use the conversation tools, you can modify the command as follows:
+```bash
+# Original command
+"start": "tsc && (npx -y supergateway --stdio \"node dist/index.js\" --port 8000 --baseUrl http://localhost:8000 --ssePath /sse --messagePath /message)"
+
+# Modified command to only use conversation tools
+"start": "tsc && (npx -y supergateway --stdio \"node dist/index.js --tag conversation\" --port 8000 --baseUrl http://localhost:8000 --ssePath /sse --messagePath /message)"
+```
+
+You can combine multiple tags by separating them with commas. For example, if you want to use both conversation and verification tools, you can use the following command:
+```bash
+"start": "tsc && (npx -y supergateway --stdio \"node dist/index.js --tag conversation,verification\" --port 8000 --baseUrl http://localhost:8000 --ssePath /sse --messagePath /message)"
 ```
 
 ### Step 4: Configure the MCP server in Claude Desktop

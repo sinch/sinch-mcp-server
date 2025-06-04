@@ -7,14 +7,15 @@ import { registerSendLocationMessage } from './send-location-message';
 import { registerSendMediaMessage } from './send-media-message';
 import { registerSendTemplateMessage } from './send-template-message';
 import { registerSendTextMessage } from './send-text-message';
+import { Tags } from '../../types';
 
-export const registerConversationTools = (server: McpServer) => {
-  registerSendTextMessage(server);
-  registerSendMediaMessage(server);
-  registerSendLocationMessage(server);
-  registerSendCardOrChoiceMessage(server);
-  registerSendContactInfoMessage(server);
-  registerSendTemplateMessage(server);
-  registerListAllApps(server);
-  registerListAllTemplates(server);
+export const registerConversationTools = (server: McpServer, tags: Tags[]) => {
+  registerSendTextMessage(server, tags);
+  registerSendMediaMessage(server, tags);
+  registerSendLocationMessage(server, tags);
+  registerSendCardOrChoiceMessage(server, tags);
+  registerSendContactInfoMessage(server, tags);
+  registerSendTemplateMessage(server, tags);
+  registerListAllApps(server, tags);
+  registerListAllTemplates(server, tags);
 };

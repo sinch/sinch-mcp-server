@@ -1,13 +1,17 @@
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { Conversation } from '@sinch/sdk-core';
 import { z } from 'zod';
-import { IPromptResponse, PromptResponse } from '../../types';
+import { IPromptResponse, PromptResponse, Tags } from '../../types';
 import { isPromptResponse } from '../../utils';
 import { getConversationAppId, getConversationRegion, getConversationService } from './utils/conversation-service-helper';
 import { buildMessageBase } from './utils/send-message-builder';
 import { Recipient, ConversationAppIdOverride, ConversationChannel, ConversationRegionOverride, MessageSenderNumberOverride } from './prompt-schemas';
 
-export const registerSendTemplateMessage = (server: McpServer) => {
+export const registerSendTemplateMessage = (server: McpServer, tags: Tags[]) => {
+  if (!tags.includes('all') && !tags.includes('conversation') && !tags.includes('notification')) {
+    return;
+  }
+
   server.tool(
     'send-template-message',
     'Send a template message to a contact on the specified channel. The contact can be a phone number in E.164 format, or the identifier for the specified channel.',

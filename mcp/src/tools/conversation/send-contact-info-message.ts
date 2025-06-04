@@ -11,7 +11,7 @@ import {
   ConversationRegionOverride,
   MessageSenderNumberOverride,
 } from './prompt-schemas';
-import { IPromptResponse, PromptResponse } from '../../types';
+import { IPromptResponse, PromptResponse, Tags } from '../../types';
 
 const NameModel = z.object({
   fullName: z.string().describe('Full name of the contact.'),
@@ -41,7 +41,11 @@ const AddressModel = z.object({
   countryCode: z.string().optional().describe('Two letters country code of the contact.')
 });
 
-export const registerSendContactInfoMessage = (server: McpServer) => {
+export const registerSendContactInfoMessage = (server: McpServer, tags: Tags[]) => {
+  if (!tags.includes('all') && !tags.includes('conversation') && !tags.includes('notification')) {
+    return;
+  }
+
   server.tool(
     'send-contact-info-message',
     'Send a contact info message to a recipient.',

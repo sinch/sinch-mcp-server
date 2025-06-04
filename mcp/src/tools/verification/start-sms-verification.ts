@@ -2,9 +2,13 @@ import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { z } from 'zod';
 import { getVerificationService } from './utils/verification-service-helper';
 import { isPromptResponse } from '../../utils';
-import { IPromptResponse, PromptResponse } from '../../types';
+import { IPromptResponse, PromptResponse, Tags } from '../../types';
 
-export const registerStartVerificationWithSms = (server: McpServer) => {
+export const registerStartVerificationWithSms = (server: McpServer, tags: Tags[]) => {
+  if (!tags.includes('all') && !tags.includes('verification')) {
+    return;
+  }
+
   server.tool(
     'start-sms-verification',
     'Start new phone number verification requests. If the request is successful, you should ask the user to enter the OTP they received on the phone number we are verifying.',

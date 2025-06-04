@@ -3,7 +3,7 @@ import { z } from 'zod';
 import { getVerificationCredentials } from './utils/verification-service-helper';
 import { isPromptResponse } from '../../utils';
 import { USER_AGENT } from '../../user-agent';
-import { IPromptResponse, PromptResponse } from '../../types';
+import { IPromptResponse, PromptResponse, Tags } from '../../types';
 
 interface NumberLookupResponse {
   line: {
@@ -17,7 +17,11 @@ interface NumberLookupResponse {
   traceId: string;
 }
 
-export const registerNumberLookup = (server: McpServer) => {
+export const registerNumberLookup = (server: McpServer, tags: Tags[]) => {
+  if (!tags.includes('all') && !tags.includes('verification')) {
+    return;
+  }
+
   server.tool(
     'number-lookup',
     'With quick and easy access to Number Lookup, you can enhance your communications and keep your database as clean as a whistle. Number Lookup checks against first-party numbering sources and provides real-time feedback. Improve communication by validating and verifying numbers, boosting delivery conversion rates, and saving money on marketing campaigns. Test numbers to ensure your recipients are ready and waiting to receive your messages!',
