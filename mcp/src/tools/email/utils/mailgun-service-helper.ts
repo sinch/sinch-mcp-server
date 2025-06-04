@@ -25,7 +25,7 @@ export const getMailgunCredentials = async (domain: string | undefined): Promise
     if (!mailgunDomain) {
       errorMessage = 'The "domain" is not provided and "MAILGUN_DOMAIN" is not set in the environment variables.';
     }
-    if (!mailgunDomain) {
+    if (!apiKey) {
       errorMessage += '"MAILGUN_API_KEY" is not set in the environment variables. The property is required to use the emails related tools.';
     }
     return new PromptResponse(errorMessage);

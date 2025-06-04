@@ -83,6 +83,7 @@ describe('getConversationService / getConversationTemplateService', () => {
     const result = getConversationService();
     expect(result).toBeInstanceOf(PromptResponse);
     expect((result as PromptResponse).promptResponse).toStrictEqual({
+      role: 'assistant',
       content: [
         {
           type: 'text',
@@ -110,6 +111,7 @@ describe('getConversationAppId', () => {
     const result = getConversationAppId(undefined);
     expect(result).toBeInstanceOf(PromptResponse);
     expect((result as PromptResponse).promptResponse).toStrictEqual({
+      role: 'assistant',
       content: [
         {
           type: 'text',

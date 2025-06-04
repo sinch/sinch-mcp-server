@@ -13,6 +13,7 @@ export interface IPromptResponse {
 export class PromptResponse {
     constructor(content: string) {
         this.promptResponse = {
+            role: 'assistant',
             content: [
                 {
                     type: 'text',
