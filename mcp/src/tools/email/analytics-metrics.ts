@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
-import { IPromptResponse, PromptResponse } from '../../types';
+import { IPromptResponse, PromptResponse, Tags } from '../../types';
 import { getMailgunCredentials } from './utils/mailgun-service-helper';
 import { isPromptResponse } from '../../utils';
 
@@ -68,7 +68,11 @@ const AnalyticsMetricsInput = {
 
 const AnalyticsMetricsInputSchema = z.object(AnalyticsMetricsInput);
 
-export const registerAnalyticsMetrics = (server: McpServer) => {
+export const registerAnalyticsMetrics = (server: McpServer, tags: Tags[]) => {
+  if (!tags.includes('all') && !tags.includes('email')) {
+    return;
+  }
+
   server.tool(
     'analytics-metrics',
     'Get email analytics metrics from Mailgun for an account. All parameters are optional. You can filter by domain, metrics type and specify a time range. By default, it will return all metrics for all your domains for the last 7 days.',

@@ -9,5 +9,5 @@ export const registerEmailTools = (server: McpServer, tags: Tags[]) => {
   registerSendEmail(server, tags);
   registerRetrieveEmailInfo(server, tags);
   registerListEmailEvents(server, tags);
-  registerAnalyticsMetrics(server);
+  registerAnalyticsMetrics(server, tags);
 };

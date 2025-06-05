@@ -18,6 +18,7 @@ describe('Tool registration by tag', () => {
     {
       tag: 'email',
       expectedTools: [
+        'analytics-metrics',
         'list-email-events',
         'retrieve-email-info',
         'send-email'
@@ -81,6 +82,7 @@ describe('Tool registration by tag', () => {
     {
       tag: 'all',
       expectedTools: [
+        'analytics-metrics',
         'list-email-events',
         'retrieve-email-info',
         'send-email',
