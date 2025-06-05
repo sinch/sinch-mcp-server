@@ -5,6 +5,7 @@ import { getMailgunCredentials } from './utils/mailgun-service-helper';
 import { isPromptResponse } from '../../utils';
 
 const metricsTypes = [
+  // Counts
   'accepted_incoming_count',
   'accepted_outgoing_count',
   'accepted_count',
@@ -41,18 +42,19 @@ const metricsTypes = [
   'delayed_first_attempt_count',
   'delivered_subsequent_count',
   'delivered_two_plus_attempts_count',
-  'delivered_rate',
-  'opened_rate',
-  'clicked_rate',
-  'unique_opened_rate',
-  'unique_clicked_rate',
-  'unsubscribed_rate',
-  'complained_rate',
+  // Rates
   'bounced_rate',
+  'clicked_rate',
+  'complained_rate',
+  'delayed_rate',
+  'delivered_rate',
   'fail_rate',
+  'opened_rate',
   'permanent_fail_rate',
   'temporary_fail_rate',
-  'delayed_rate'
+  'unique_clicked_rate',
+  'unique_opened_rate',
+  'unsubscribed_rate'
 ] as const;
 
 type MetricsType = typeof metricsTypes[number];
