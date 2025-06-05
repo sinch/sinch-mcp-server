@@ -19,6 +19,7 @@ describe('Tool registration by tag', () => {
       tag: 'email',
       expectedTools: [
         'list-email-events',
+        'list-email-templates',
         'retrieve-email-info',
         'send-email'
       ],
@@ -28,7 +29,7 @@ describe('Tool registration by tag', () => {
       tag: 'conversation',
       expectedTools: [
         'list-all-apps',
-        'list-all-templates',
+        'list-messaging-templates',
         'send-choice-message',
         'send-contact-info-message',
         'send-location-message',
@@ -64,6 +65,7 @@ describe('Tool registration by tag', () => {
       expectedTools: [
         'send-email',
         'retrieve-email-info',
+        'list-email-templates',
         'tts-callout',
         'send-text-message',
         'send-contact-info-message',
@@ -72,7 +74,7 @@ describe('Tool registration by tag', () => {
         'send-media-message',
         'send-template-message',
         'list-all-apps',
-        'list-all-templates',
+        'list-messaging-templates',
       ],
       expectedPrompts: [
         'conversation-app-id'
@@ -82,10 +84,11 @@ describe('Tool registration by tag', () => {
       tag: 'all',
       expectedTools: [
         'list-email-events',
+        'list-email-templates',
         'retrieve-email-info',
         'send-email',
         'list-all-apps',
-        'list-all-templates',
+        'list-messaging-templates',
         'send-choice-message',
         'send-contact-info-message',
         'send-location-message',

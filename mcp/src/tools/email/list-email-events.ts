@@ -105,7 +105,7 @@ export const listEmailEventsHandler = async ({
   }
 
   let reply = `The following events must be presented with ALL their data, even if the ID is long, it MUST be displayed as this information can be used to get subsequent information on other API endpoints.`;
-  reply += `\nFound ${events.length} email events for domain ${credentials.domain}`
+  reply += `\nFound ${events.length} email events for domain "${credentials.domain}"`
   if (event) reply += ` (filtered by event: ${event})`;
   reply += ':';
 

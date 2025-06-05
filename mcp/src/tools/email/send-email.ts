@@ -18,6 +18,8 @@ export const registerSendEmail = (server: McpServer, tags: Tags[]) => {
       subject: z.string().describe('The subject of the email.'),
       sender: z.string().optional().describe('The sender of the email.'),
       body: z.string().optional().describe('The body of the email. Can be text or HTML'),
+      template: z.string().optional().describe('The name of a template to use to render the email body. If provided, the body will be ignored.'),
+      templateVariables: z.record(z.string()).optional().describe('Variables to use in the template.'),
       domain: z.string().optional().describe('The domain to use for sending the email. It would override the domain provided in the environment variables.')
     },
     sendEmailHandler
@@ -29,12 +31,16 @@ export const sendEmailHandler = async ({
   subject,
   sender,
   body,
+  template,
+  templateVariables,
   domain
 }: {
   recipient: string;
   subject: string;
   sender?: string;
   body?: string;
+  template?: string;
+  templateVariables?: Record<string, string>;
   domain?: string;
 }): Promise<IPromptResponse> => {
   const maybeCredentials = await getMailgunCredentials(domain);
@@ -54,7 +60,16 @@ export const sendEmailHandler = async ({
   form.set('from', sender);
   form.set('to',recipient);
   form.set('subject',subject);
-  form.set('html',body);
+  if (template) {
+    form.set('template', template);
+    if (templateVariables) {
+      form.set('t:variables', JSON.stringify(templateVariables));
+    }
+  } else if (body) {
+    form.set('html', body);
+  } else {
+    return new PromptResponse('The "body" is not provided and no template name is specified.').promptResponse;
+  }
 
   const resp = await fetch(
     `https://api.mailgun.net/v3/${credentials.domain}/messages`,
@@ -68,7 +83,7 @@ export const sendEmailHandler = async ({
   );
 
   if (resp.status !== 200) {
-    return new PromptResponse(`An error occurred when trying to send the email: ${JSON.stringify(resp)} The status code is ${resp.status}.`).promptResponse;
+    return new PromptResponse(`An error occurred when trying to send the email: ${JSON.stringify(resp)} The status code is ${resp.status}: ${resp.statusText}.`).promptResponse;
   }
 
   const data = await resp.json() as { id: string };

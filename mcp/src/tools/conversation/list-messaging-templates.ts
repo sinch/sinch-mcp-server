@@ -14,8 +14,8 @@ export const registerListAllTemplates = (server: McpServer, tags: Tags[]) => {
   }
 
   server.tool(
-    'list-all-templates',
-    'Get a list of all templates (omni-channel or channel specific) belonging to an account',
+    'list-messaging-templates',
+    'Get a list of all messaging-related templates (omni-channel or channel specific) belonging to an account. Note that the Email templates are NOT included in this list - they can be found with another tool: list-email-templates. Do not try to use this tool to list Email templates, it will not work.',
     listAllTemplatesHandler
   );
 };
