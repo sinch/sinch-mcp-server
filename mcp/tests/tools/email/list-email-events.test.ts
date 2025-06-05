@@ -2,7 +2,6 @@ import { listEmailEventsHandler } from '../../../src/tools/email/list-email-even
 import * as mailgunHelper from '../../../src/tools/email/utils/mailgun-service-helper';
 import { PromptResponse } from '../../../src/types';
 
-// Mock fetch
 global.fetch = jest.fn();
 
 describe('listEmailEventsHandler', () => {
