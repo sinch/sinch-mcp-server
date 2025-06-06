@@ -12,7 +12,7 @@ describe('analyticsMetricsHandler', () => {
 
   beforeEach(() => {
     jest.resetAllMocks();
-    jest.spyOn(mailgunHelper, 'getMailgunCredentials').mockResolvedValue(mockCredentials);
+    jest.spyOn(mailgunHelper, 'getMailgunCredentials').mockReturnValue(mockCredentials);
   });
 
   it('returns metrics data in prompt response', async () => {
@@ -87,7 +87,7 @@ describe('analyticsMetricsHandler', () => {
 
   it('returns early on credential fetch error', async () => {
     // Given
-    jest.spyOn(mailgunHelper, 'getMailgunCredentials').mockResolvedValue(new PromptResponse('Missing credentials'));
+    jest.spyOn(mailgunHelper, 'getMailgunCredentials').mockReturnValue(new PromptResponse('Missing credentials'));
 
     // When
     const result = await analyticsMetricsHandler({});

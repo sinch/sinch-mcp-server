@@ -87,7 +87,7 @@ export const analyticsMetricsHandler = async ({
   beginSearchPeriod,
   endSearchPeriod
 }: z.infer<typeof AnalyticsMetricsInputSchema>): Promise<IPromptResponse> => {
-  const maybeCredentials = await getMailgunCredentials(domain);
+  const maybeCredentials = getMailgunCredentials(domain);
   if (isPromptResponse(maybeCredentials)) {
     return maybeCredentials.promptResponse;
   }

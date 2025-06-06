@@ -6,7 +6,7 @@ export type MailgunCredentials = {
 }
 
 // TODO: Replace this method with a getMailgunService() method that will return the SinchClient once the Mailgun service is implemented.
-export const getMailgunCredentials = async (domain: string | undefined): Promise<MailgunCredentials | PromptResponse> => {
+export const getMailgunCredentials = (domain: string | undefined): MailgunCredentials | PromptResponse => {
 
   let credentials: MailgunCredentials | undefined = undefined;
 
