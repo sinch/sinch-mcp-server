@@ -25,7 +25,7 @@
     "rootDir": "src",
     "outDir": "dist"
   },
-  "exclude": ["tests", "jest.config.ts", "eslint.config.mjs", "dist"],
+  "exclude": ["tests", "jest.config.ts", "eslint.config.mjs", "dist", "bin"],
   "ts-node": {
     "esm": true
   }
