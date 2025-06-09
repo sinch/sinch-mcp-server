@@ -2,9 +2,13 @@ import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { z } from 'zod';
 import { getVoiceService } from './utils/voice-service-helper';
 import { isPromptResponse } from '../../utils';
-import { IPromptResponse, PromptResponse } from '../../types';
+import { IPromptResponse, PromptResponse, Tags } from '../../types';
 
-export const registerManageConferenceParticipant = (server: McpServer) => {
+export const registerManageConferenceParticipant = (server: McpServer, tags: Tags[]) => {
+  if (!tags.includes('all') && !tags.includes('voice')) {
+    return;
+  }
+
   server.tool(
     'manage-conference-participant',
     'Manage a conference participant. The conference is identified by the conference Id used in the callout, and the participants by the callId associated to their phone number when the conference callout to their number was made',

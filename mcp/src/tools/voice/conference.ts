@@ -4,9 +4,13 @@ import { Voice } from '@sinch/sdk-core';
 import { z } from 'zod';
 import { getVoiceService } from './utils/voice-service-helper';
 import { isPromptResponse } from '../../utils';
-import { IPromptResponse, PromptResponse } from '../../types';
+import { IPromptResponse, PromptResponse, Tags } from '../../types';
 
-export const registerConferenceCallout = (server: McpServer) => {
+export const registerConferenceCallout = (server: McpServer, tags: Tags[]) => {
+  if (!tags.includes('all') && !tags.includes('voice')) {
+    return;
+  }
+
   server.tool(
     'conference-call',
     'Call a phone number and connects it to a conference room when answered',

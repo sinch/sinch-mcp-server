@@ -1,8 +1,7 @@
 import { z } from 'zod';
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
-import { IPromptResponse, PromptResponse } from '../../types';
-import { getMailgunCredentials } from './utils/mailgun-service-helper';
-import { isPromptResponse } from '../../utils';
+import { IPromptResponse, PromptResponse, Tags } from '../../types';
+import { getMailgunApiKey } from './utils/mailgun-service-helper';
 
 const metricsTypes = [
   // Counts
@@ -68,7 +67,11 @@ const AnalyticsMetricsInput = {
 
 const AnalyticsMetricsInputSchema = z.object(AnalyticsMetricsInput);
 
-export const registerAnalyticsMetrics = (server: McpServer) => {
+export const registerAnalyticsMetrics = (server: McpServer, tags: Tags[]) => {
+  if (!tags.includes('all') && !tags.includes('email')) {
+    return;
+  }
+
   server.tool(
     'analytics-metrics',
     'Get email analytics metrics from Mailgun for an account. All parameters are optional. You can filter by domain, metrics type and specify a time range. By default, it will return all metrics for all your domains for the last 7 days.',
@@ -83,11 +86,11 @@ export const analyticsMetricsHandler = async ({
   beginSearchPeriod,
   endSearchPeriod
 }: z.infer<typeof AnalyticsMetricsInputSchema>): Promise<IPromptResponse> => {
-  const maybeCredentials = await getMailgunCredentials(domain);
-  if (isPromptResponse(maybeCredentials)) {
-    return maybeCredentials.promptResponse;
+  const maybeApiKey = getMailgunApiKey();
+  if (typeof maybeApiKey !== 'string') {
+    return maybeApiKey.promptResponse;
   }
-  const credentials = maybeCredentials;
+  const mailgunApiKey = maybeApiKey;
 
   const body: Record<string, any> = {};
   if (domain) body.domain = {
@@ -118,7 +121,7 @@ export const analyticsMetricsHandler = async ({
   const response = await fetch(url, {
     method: 'POST',
     headers: {
-      'Authorization': 'Basic ' + Buffer.from(`api:${credentials.apiKey}`).toString('base64'),
+      'Authorization': 'Basic ' + Buffer.from(`api:${mailgunApiKey}`).toString('base64'),
       'Content-Type': 'application/json'
     },
     body: JSON.stringify(body)
@@ -135,7 +138,10 @@ export const analyticsMetricsHandler = async ({
     return new PromptResponse(`Failed to parse JSON response: ${error}`).promptResponse;
   }
 
-  return new PromptResponse(JSON.stringify(responseData.aggregates)).promptResponse;
+  let result = `The following data must be presented graphically. Mailgun Analytics Metrics for domain "${domain || 'all'}":\n\n`;
+  result += JSON.stringify(responseData.aggregates)
+
+  return new PromptResponse(result).promptResponse;
 }
 
 interface MailgunAnalyticsMetricsResponse {

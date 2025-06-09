@@ -6,9 +6,13 @@ import {
   renderInstructions,
 } from './utils/format-list-all-templates-response';
 import { getConversationTemplateService } from './utils/conversation-service-helper';
-import { IPromptResponse, PromptResponse } from '../../types';
+import { IPromptResponse, PromptResponse, Tags } from '../../types';
 
-export const registerListAllTemplates = (server: McpServer) => {
+export const registerListAllTemplates = (server: McpServer, tags: Tags[]) => {
+  if (!tags.includes('all') && !tags.includes('conversation') && !tags.includes('notification')) {
+    return;
+  }
+
   server.tool(
     'list-all-templates',
     'Get a list of all templates (omni-channel or channel specific) belonging to an account',

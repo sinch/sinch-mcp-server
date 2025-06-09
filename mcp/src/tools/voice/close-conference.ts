@@ -1,10 +1,14 @@
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { z } from 'zod';
 import { isPromptResponse } from '../../utils';
-import { IPromptResponse, PromptResponse } from '../../types';
+import { IPromptResponse, PromptResponse, Tags } from '../../types';
 import { getVoiceService } from './utils/voice-service-helper';
 
-export const registerCloseConference = (server: McpServer) => {
+export const registerCloseConference = (server: McpServer, tags: Tags[]) => {
+  if (!tags.includes('all') && !tags.includes('voice')) {
+    return;
+  }
+
   server.tool(
     'close-conference',
     'Close a conference callout',

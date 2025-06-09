@@ -11,9 +11,13 @@ import {
   MessageSenderNumberOverride,
   TextMessage,
 } from './prompt-schemas';
-import { IPromptResponse, PromptResponse } from '../../types';
+import { IPromptResponse, PromptResponse, Tags } from '../../types';
 
-export const registerSendTextMessage = (server: McpServer) => {
+export const registerSendTextMessage = (server: McpServer, tags: Tags[]) => {
+  if (!tags.includes('all') && !tags.includes('conversation') && !tags.includes('notification')) {
+    return;
+  }
+
   server.tool(
     'send-text-message',
     'Send a text message to a contact on the specified channel. The contact can be a phone number in E.164 format, or the identifier for the specified channel.',

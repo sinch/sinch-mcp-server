@@ -2,9 +2,13 @@ import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { z } from 'zod';
 import { getVerificationService } from './utils/verification-service-helper';
 import { isPromptResponse } from '../../utils';
-import { IPromptResponse, PromptResponse } from '../../types';
+import { IPromptResponse, PromptResponse, Tags } from '../../types';
 
-export const registerReportSmsVerification = (server: McpServer) => {
+export const registerReportSmsVerification = (server: McpServer, tags: Tags[]) => {
+  if (!tags.includes('all') && !tags.includes('verification')) {
+    return;
+  }
+
   server.tool(
     'report-sms-verification',
     'Report the received verification code to verify it, using the phone number of the user',

@@ -9,9 +9,13 @@ import {
 } from './utils/conversation-service-helper';
 import { isPromptResponse } from '../../utils';
 import { buildMessageBase } from './utils/send-message-builder';
-import { IPromptResponse, PromptResponse } from '../../types';
+import { IPromptResponse, PromptResponse, Tags } from '../../types';
 
-export const registerSendMediaMessage = (server: McpServer) => {
+export const registerSendMediaMessage = (server: McpServer, tags: Tags[]) => {
+  if (!tags.includes('all') && !tags.includes('conversation') && !tags.includes('notification')) {
+    return;
+  }
+
   server.tool(
     'send-media-message',
     'Send a media message from URL given in parameter to a contact on the specified channel. The contact can be a phone number in E.164 format, or the identifier for the specified channel. The media must be specified with its URL.',

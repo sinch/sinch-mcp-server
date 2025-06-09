@@ -5,14 +5,11 @@ import { PromptResponse } from '../../../src/types';
 global.fetch = jest.fn();
 
 describe('analyticsMetricsHandler', () => {
-  const mockCredentials = {
-    domain: 'example.com',
-    apiKey: 'test-api-key'
-  };
+  const mockApiKey = 'test-api-key';
 
   beforeEach(() => {
     jest.resetAllMocks();
-    jest.spyOn(mailgunHelper, 'getMailgunCredentials').mockResolvedValue(mockCredentials);
+    jest.spyOn(mailgunHelper, 'getMailgunApiKey').mockReturnValue(mockApiKey);
   });
 
   it('returns metrics data in prompt response', async () => {
@@ -47,7 +44,11 @@ describe('analyticsMetricsHandler', () => {
     const result = await analyticsMetricsHandler({});
 
     // Then
-    const expectedText = '{"metrics":{"accepted_count":10,"delivered_count":8,"failed_count":2,"opened_count":5,"clicked_count":3,"unsubscribed_count":1,"complained_count":0}}';
+    const expectedText = [
+      'The following data must be presented graphically. Mailgun Analytics Metrics for domain "all":',
+      '',
+      '{"metrics":{"accepted_count":10,"delivered_count":8,"failed_count":2,"opened_count":5,"clicked_count":3,"unsubscribed_count":1,"complained_count":0}}'
+    ].join('\n');
     expect(result.role).toBe('assistant');
     expect(result.content[0].text).toBe(expectedText);
   });
@@ -87,12 +88,12 @@ describe('analyticsMetricsHandler', () => {
 
   it('returns early on credential fetch error', async () => {
     // Given
-    jest.spyOn(mailgunHelper, 'getMailgunCredentials').mockResolvedValue(new PromptResponse('Missing credentials'));
+    jest.spyOn(mailgunHelper, 'getMailgunApiKey').mockReturnValue(new PromptResponse('Missing API key'));
 
     // When
     const result = await analyticsMetricsHandler({});
 
     // Then
-    expect(result).toEqual(new PromptResponse('Missing credentials').promptResponse);
+    expect(result).toEqual(new PromptResponse('Missing API key').promptResponse);
   });
 });

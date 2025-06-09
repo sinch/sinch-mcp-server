@@ -3,9 +3,13 @@ import { Voice } from '@sinch/sdk-core';
 import { z } from 'zod';
 import { getVoiceService } from './utils/voice-service-helper';
 import { isPromptResponse } from '../../utils';
-import { IPromptResponse, PromptResponse } from '../../types';
+import { IPromptResponse, PromptResponse, Tags } from '../../types';
 
-export const registerTtsCallout = (server: McpServer) => {
+export const registerTtsCallout = (server: McpServer, tags: Tags[]) => {
+  if (!tags.includes('all') && !tags.includes('voice') && !tags.includes('notification')) {
+    return;
+  }
+
   server.tool(
     'tts-callout',
     'Make a callout with a Text-To-Speech prompt',
