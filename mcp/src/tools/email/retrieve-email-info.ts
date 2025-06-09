@@ -40,7 +40,7 @@ export const retrieveEmailInfoHandler = async({
   emailId: string;
   domain?: string;
 }): Promise<IPromptResponse> => {
-  const maybeCredentials = await getMailgunCredentials(domain);
+  const maybeCredentials = getMailgunCredentials(domain);
   if (isPromptResponse(maybeCredentials)) {
     return maybeCredentials.promptResponse;
   }

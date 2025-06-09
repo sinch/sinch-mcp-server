@@ -1,4 +1,5 @@
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
+import { registerAnalyticsMetrics } from './analytics-metrics';
 import { registerListEmailEvents } from './list-email-events';
 import { registerListEmailTemplates } from './list-email-templates';
 import { registerRetrieveEmailInfo } from './retrieve-email-info';
@@ -10,4 +11,5 @@ export const registerEmailTools = (server: McpServer, tags: Tags[]) => {
   registerRetrieveEmailInfo(server, tags);
   registerListEmailTemplates(server, tags);
   registerListEmailEvents(server, tags);
+  registerAnalyticsMetrics(server, tags);
 };

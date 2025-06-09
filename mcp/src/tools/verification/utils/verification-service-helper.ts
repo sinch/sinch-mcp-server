@@ -10,7 +10,7 @@ import {
 } from '@sinch/sdk-core';
 import { USER_AGENT } from '../../../user-agent';
 
-export const getVerificationCredentials = () => {
+export const getVerificationCredentials = (): PromptResponse | { applicationKey: string; applicationSecret: string; } => {
   const applicationKey = process.env.VERIFICATION_APPLICATION_KEY;
   const applicationSecret = process.env.VERIFICATION_APPLICATION_SECRET;
 

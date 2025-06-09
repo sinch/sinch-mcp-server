@@ -6,7 +6,7 @@ export type MailgunCredentials = {
 }
 
 // TODO: Replace this method with a getMailgunService() method that will return the SinchClient once the Mailgun service is implemented.
-export const getMailgunCredentials = async (domain: string | undefined): Promise<MailgunCredentials | PromptResponse> => {
+export const getMailgunCredentials = (domain: string | undefined): MailgunCredentials | PromptResponse => {
 
   let credentials: MailgunCredentials | undefined = undefined;
 
@@ -34,3 +34,13 @@ export const getMailgunCredentials = async (domain: string | undefined): Promise
   return credentials;
 
 };
+
+export const getMailgunApiKey = (): string | PromptResponse => {
+  const apiKey = process.env.MAILGUN_API_KEY;
+
+  if (!apiKey) {
+    return new PromptResponse('The "MAILGUN_API_KEY" environment variable is not set. The property is required to use the emails related tools.');
+  }
+
+  return apiKey;
+}

@@ -2,7 +2,6 @@ import { listEmailEventsHandler } from '../../../src/tools/email/list-email-even
 import * as mailgunHelper from '../../../src/tools/email/utils/mailgun-service-helper';
 import { PromptResponse } from '../../../src/types';
 
-// Mock fetch
 global.fetch = jest.fn();
 
 describe('listEmailEventsHandler', () => {
@@ -13,7 +12,7 @@ describe('listEmailEventsHandler', () => {
 
   beforeEach(() => {
     jest.resetAllMocks();
-    jest.spyOn(mailgunHelper, 'getMailgunCredentials').mockResolvedValue(mockCredentials);
+    jest.spyOn(mailgunHelper, 'getMailgunCredentials').mockReturnValue(mockCredentials);
   });
 
   it('returns formatted prompt response with grouped events', async () => {
@@ -198,7 +197,7 @@ describe('listEmailEventsHandler', () => {
 
   it('returns early on credential fetch error', async () => {
     // Given
-    jest.spyOn(mailgunHelper, 'getMailgunCredentials').mockResolvedValue(new PromptResponse('Missing credentials'));
+    jest.spyOn(mailgunHelper, 'getMailgunCredentials').mockReturnValue(new PromptResponse('Missing credentials'));
 
     // When
     const result = await listEmailEventsHandler({});
