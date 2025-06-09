@@ -34,3 +34,13 @@ export const getMailgunCredentials = (domain: string | undefined): MailgunCreden
   return credentials;
 
 };
+
+export const getMailgunApiKey = (): string | PromptResponse => {
+  const apiKey = process.env.MAILGUN_API_KEY;
+
+  if (!apiKey) {
+    return new PromptResponse('The "MAILGUN_API_KEY" environment variable is not set. The property is required to use the emails related tools.');
+  }
+
+  return apiKey;
+}
