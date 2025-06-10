@@ -2,6 +2,7 @@ import { z } from 'zod';
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { IPromptResponse, PromptResponse, Tags } from '../../types';
 import { getMailgunApiKey } from './utils/mailgun-service-helper';
+import { hasMatchingTag } from '../../utils';
 
 const metricsTypes = [
   // Counts
@@ -68,7 +69,7 @@ const AnalyticsMetricsInput = {
 const AnalyticsMetricsInputSchema = z.object(AnalyticsMetricsInput);
 
 export const registerAnalyticsMetrics = (server: McpServer, tags: Tags[]) => {
-  if (!tags.includes('all') && !tags.includes('email')) {
+  if (!hasMatchingTag(['all', 'email'], tags)) {
     return;
   }
 

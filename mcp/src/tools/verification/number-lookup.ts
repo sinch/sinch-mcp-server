@@ -1,7 +1,7 @@
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { z } from 'zod';
 import { getVerificationCredentials } from './utils/verification-service-helper';
-import { isPromptResponse } from '../../utils';
+import { hasMatchingTag, isPromptResponse } from '../../utils';
 import { USER_AGENT } from '../../user-agent';
 import { IPromptResponse, PromptResponse, Tags } from '../../types';
 
@@ -18,7 +18,7 @@ interface NumberLookupResponse {
 }
 
 export const registerNumberLookup = (server: McpServer, tags: Tags[]) => {
-  if (!tags.includes('all') && !tags.includes('verification')) {
+  if (!hasMatchingTag(['all', 'verification'], tags)) {
     return;
   }
 

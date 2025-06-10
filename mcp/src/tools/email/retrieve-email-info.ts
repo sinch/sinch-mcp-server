@@ -1,6 +1,6 @@
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { z } from 'zod';
-import { isPromptResponse } from '../../utils';
+import { hasMatchingTag, isPromptResponse } from '../../utils';
 import { IPromptResponse, PromptResponse, Tags } from '../../types';
 import { getMailgunCredentials } from './utils/mailgun-service-helper';
 
@@ -18,7 +18,7 @@ interface Event {
 }
 
 export const registerRetrieveEmailInfo = (server: McpServer, tags: Tags[]) => {
-  if (!tags.includes('all') && !tags.includes('email') && !tags.includes('notification')) {
+  if (!hasMatchingTag(['all', 'email', 'notification'], tags)) {
     return;
   }
 

@@ -9,7 +9,7 @@ import {
   ConversationRegionOverride,
   MessageSenderNumberOverride,
 } from './prompt-schemas';
-import { isPromptResponse } from '../../utils';
+import { hasMatchingTag, isPromptResponse } from '../../utils';
 import { buildMessageBase } from './utils/send-message-builder';
 import { getLatitudeLongitudeFromAddress } from './utils/geocoding';
 import { IPromptResponse, PromptResponse, Tags } from '../../types';
@@ -25,7 +25,7 @@ const locationAsAddress = z.string();
 const location = z.union([locationAsAddress, locationAsCoordinates]);
 
 export const registerSendLocationMessage = (server: McpServer, tags: Tags[]) => {
-  if (!tags.includes('all') && !tags.includes('conversation') && !tags.includes('notification')) {
+  if (!hasMatchingTag(['all', 'conversation', 'notification'], tags)) {
     return;
   }
 

@@ -2,10 +2,10 @@ import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { IPromptResponse, PromptResponse, Tags } from '../../types';
 import { z } from 'zod';
 import { getMailgunCredentials } from './utils/mailgun-service-helper';
-import { isPromptResponse } from '../../utils';
+import { isPromptResponse, hasMatchingTag } from '../../utils';
 
 export const registerListEmailTemplates = (server: McpServer, tags: Tags[]) => {
-  if (!tags.includes('all') && !tags.includes('email') && !tags.includes('notification')) {
+  if (!hasMatchingTag(['all', 'email', 'notification'], tags)) {
     return;
   }
 
