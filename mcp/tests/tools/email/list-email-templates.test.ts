@@ -13,7 +13,7 @@ describe('listEmailTemplatesHandler', () => {
 
   beforeEach(() => {
     jest.resetAllMocks();
-    jest.spyOn(mailgunHelper, 'getMailgunCredentials').mockResolvedValue(mockCredentials);
+    jest.spyOn(mailgunHelper, 'getMailgunCredentials').mockReturnValue(mockCredentials);
   });
 
   it('returns formatted prompt response with templates', async () => {
@@ -90,7 +90,7 @@ describe('listEmailTemplatesHandler', () => {
 
   it('returns early on credential fetch error', async () => {
     // Given
-    jest.spyOn(mailgunHelper, 'getMailgunCredentials').mockResolvedValue(new PromptResponse('Missing credentials'));
+    jest.spyOn(mailgunHelper, 'getMailgunCredentials').mockReturnValue(new PromptResponse('Missing credentials'));
 
     // When
     const result = await listEmailTemplatesHandler({});

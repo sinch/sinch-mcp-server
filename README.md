@@ -1,28 +1,46 @@
 # Sinch MCP Server Tools Overview
 
-Here is the list of tools available in the MCP server:
+Here is the list of tools available in the MCP server (all the phone numbers must be provided in E.164 format, e.g., `+33612345678` for France).
 
-| Tool                              | Description                                                                                                                                                                                                                                                                             | Tags                       |
-|-----------------------------------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|----------------------------|
-| **list-email-events**             | Retrieve and group recent email delivery events, such as bounces, opens, or clicks. <br> *Example prompt*: "Show me all recent email activity for my account."                                                                                                                          | email                      |
-| **retrieve-email-info**           | Retrieve metadata, content and delivery status for a specific email message. <br> *Example prompt*: "Can you get the delivery status of the email with ID <email-id>?"                                                                                                                  | email, notification        |
-| **list-email-templates**          | Get a list of email templates from Mailgun for a specific domain. <br> *Example prompt*: “Show me the email templates I can use to send a confirmation email.” <br>⚠️ Messaging templates (e.g., WhatsApp or omni-channel) are *not* included—use `list-messaging-templates` for those. | email, notification        |
-| **send-email**                    | Send an email using a predefined HTML template or raw HTML/text content. <br> *Example prompt*: "Send a welcome email to [okami@example.com](mailto:john@example.com) using our onboarding template."                                                                                   | email, notification        |
-| **list-all-apps**                 | List all configured Conversation apps in the Sinch account. <br> *Example prompt*: "What messaging apps do I have set up in my account?"                                                                                                                                                | conversation, notification |
-| **list-all-templates**            | List all omni-channel and channel-specific message templates. <br> *Example prompt*: "Show me all message templates in my account." <br>⚠️ Email templates (managed by Mailgun) are *not* included—use `list-email-templates` for those.                                                | conversation, notification |
-| **send-choice-message**           | Send a message that includes interactive choices (buttons or quick replies). <br> *Example prompt*: "Send a survey with three response options to this user on RCS."                                                                                                                    | conversation, notification |
-| **send-contact-info-message**     | Send a contact card containing name, phone numbers, and optional email/addresses. <br> *Example prompt*: "Share my contact info with the customer on WhatsApp."                                                                                                                         | conversation, notification |
-| **send-location-message**         | Send a location pin or coordinates to a user. <br> *Example prompt*: "Send our office location to the customer on Messenger."                                                                                                                                                           | conversation, notification |
-| **send-media-message**            | Send an image, video, or document via a media message. <br> *Example prompt*: "Send the product brochure PDF to this phone number on WhatsApp."                                                                                                                                         | conversation, notification |
-| **send-template-message**         | Send a message using a predefined template (e.g., WhatsApp or omni-template). <br> *Example prompt*: "Send the appointment reminder template in Spanish to this user."                                                                                                                  | conversation, notification |
-| **send-text-message**             | Send a plain text message to a recipient on a supported channel. <br> *Example prompt*: "Send a quick update to the phone number on SMS."                                                                                                                                               | conversation, notification |
-| **number-lookup**                 | Lookup a phone number for its status and capabilities. <br> *Example prompt*: "Lookup for this phone number capabilities."                                                                                                                                                              | verification               |
-| **report-sms-verification**       | Submit a one-time password to complete SMS verification. <br> *Example prompt*: "Verify the user with this code."                                                                                                                                                                       | verification               |
-| **start-sms-verification**        | Initiate an SMS verification by sending an OTP to a user's phone number. <br> *Example prompt*: "Start phone verification for this number."                                                                                                                                             | verification               |
-| **close-conference**              | End a conference call by closing its session. <br> *Example prompt*: "End the current conference call with ID abc123."                                                                                                                                                                  | voice                      |
-| **conference-call**               | Start a voice call to one or more participants and connect them to a shared conference. <br> *Example prompt*: "Call John and Lisa and connect them to a conference room."                                                                                                              | voice                      |
-| **manage-conference-participant** | Mute, unmute, hold, or resume an individual participant in a conference call. <br> *Example prompt*: "Mute the caller with ID xyz789 in the conference."                                                                                                                                | voice                      |
-| **tts-callout**                   | Place a voice call and read out a message using Text-to-Speech. <br> *Example prompt*: "Call this phone number and say: 'Your appointment is tomorrow at 10 AM.'"                                                                                                                       | voice, notification        |
+## Conversation Tools
+
+| Tool                         | Description                                                                                                                                                                                                                         | Tags                       |
+|------------------------------|-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|----------------------------|
+| **send-text-message**        | Send a plain text message to a recipient on a supported channel. <br> *Example prompt*: "Send a quick update to the phone number +33612345678 on SMS."                                                                              | conversation, notification |
+| **send-media-message**       | Send an image, video, or document via a media message. <br> *Example prompt*: "Send the product brochure PDF to the phone number +33612345678 on WhatsApp."                                                                         | conversation, notification |
+| **send-template-message**    | Send a message using a predefined template (e.g., WhatsApp or omni-template). <br> *Example prompt*: "Send the appointment reminder template in Spanish to this user on Messenger."                                                 | conversation, notification |
+| **send-choice-message**      | Send a message that includes interactive choices (buttons or quick replies). <br> *Example prompt*: "Send a RCS survey about preferred ice cream flavor to +33662162504 with the following choices: Vanilla, Strawberry, Hazelnut". | conversation, notification |
+| **send-location-message**    | Send a location pin or coordinates to a user. <br> *Example prompt*: "Send a pin to the Guggenheim Museum location in Bilbao to the phone number +33612345678."                                                                     | conversation, notification |
+| **list-all-apps**            | List all configured Conversation apps in the Sinch account. <br> *Example prompt*: "What messaging apps do I have set up in my account?"                                                                                            | conversation, notification |
+| **list-messaging-templates** | List all omni-channel and channel-specific message templates. <br> *Example prompt*: "Show me all message templates in my account."                                                                                                 | conversation, notification |
+
+
+## Email tools (Mailgun)
+
+| Tool                     | Description                                                                                                                                                                                          | Tags                |
+|--------------------------|------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|---------------------|
+| **send-email**           | Send an email using a predefined HTML template or raw HTML/text content. <br> *Example prompt*: "Send a welcome email to [john@example.com](mailto:john@example.com) using our onboarding template." | email, notification |
+| **list-email-templates** | List all email templates available for a specific domain. <br> *Example prompt*: "What email templates do I have available?"                                                                         | email, notification |
+| **retrieve-email-info**  | Retrieve metadata, content and delivery status for a specific email message. <br> *Example prompt*: "Can you get the delivery status of the email with ID <email-id>?"                               | email, notification |
+| **list-email-events**    | Retrieve and group recent email delivery events, such as bounces, opens, or clicks. <br> *Example prompt*: "Show me all recent email activity for my account."                                       | email               |
+| **analytics-metrics**    | Retrieve email analytics metrics, such as open rates or click-through rates. <br> *Example prompt*: "What are the open rates during the last week?"                                                  | email               |
+
+## Verification Tools
+
+| Tool                              | Description                                                                                                                                             | Tags                       |
+|-----------------------------------|---------------------------------------------------------------------------------------------------------------------------------------------------------|----------------------------|
+| **number-lookup**                 | Lookup a phone number for its status and capabilities. <br> *Example prompt*: "Lookup for the following phone number capabilities: +33501020304."       | verification               |
+| **start-sms-verification**        | Initiate an SMS verification by sending an OTP to a user's phone number. <br> *Example prompt*: "Start phone verification for the number +33612345678." | verification               |
+| **report-sms-verification**       | Submit a one-time password (OTP) to complete SMS verification. <br> *Example prompt*: "Verify the phone number with this code: 1234."                   | verification               |
+
+## Voice Tools
+
+| Tool                              | Description                                                                                                                                                                                              | Tags                       |
+|-----------------------------------|----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|----------------------------|
+| **tts-callout**                   | Place a voice call and read aloud a message using Text-to-Speech. <br> *Example prompt*: "Call the phone number +33612345678 and say: 'Your appointment is tomorrow at 10 AM.'"                          | voice, notification        |
+| **conference-call**               | Start a voice call to one or more participants and connect them to a shared conference. <br> *Example prompt*: "Call John (+33612345678) and Lisa (+34987654321) and connect them to a conference room." | voice                      |
+| **manage-conference-participant** | Mute, unmute, hold, or resume an individual participant in a conference call. <br> *Example prompt*: "Mute the caller with ID xyz789 in the conference."                                                 | voice                      |
+| **close-conference**              | End a conference call by disconnecting all the participants using the ID of the conference. <br> *Example prompt*: "End the current conference call with ID abc123."                                     | voice                      |
 
 
 ## Getting Started
@@ -47,6 +65,7 @@ To use the APIs used by the MCP tools, you will need the following credentials:
   - CONVERSATION_KEY_ID: Select or create a new access key in the [Access keys section](https://dashboard.sinch.com/settings/access-keys) of the Sinch Build dashboard.
   - CONVERSATION_KEY_SECRET: This is the secret associated with the `Access Key` you selected or created in the previous step. Be careful, the `Access Key Secret` is only shown once when you create the `Access Key`. If you lose it, you will need to create a new `Access Key`.
   - CONVERSATION_REGION: This is the region where your conversation app and templates are located. It can be `us`, `eu`, or `br`. If you don't set it, it defaults to `us`.
+  - CONVERSATION_APP_ID: This is the ID of the conversation app you want to use. You can find it in the [Conversation API / Apps section](https://dashboard.sinch.com/convapi/apps) of the Sinch Build dashboard. If you don't set it, you will have to specify it in the prompt.
   - In case you want to use the SMS channel, you can also set the `DEFAULT_SMS_ORIGINATOR` environment variable to the phone number that will be used as the sender for SMS messages. Depending on your country, this setting may be required.
   - You can also set the `GEOCODING_API_KEY` environment variable to your Google Geocoding API key if you want to use the location feature. This is needed to convert an address to a latitude/longitude pair.
 - Verification API credentials: navigate to the [Verification / Apps section](https://dashboard.sinch.com/verification/apps) of the Sinch Build dashboard and create a new app or select an existing one. You will need the following credentials:
@@ -143,6 +162,8 @@ Copy the file `.template.env` located at `./mcp` and rename it `.env`. Then repl
 CONVERSATION_PROJECT_ID=YOUR_PROJECT_ID
 CONVERSATION_KEY_ID=YOUR_ACCESS_KEY_ID
 CONVERSATION_KEY_SECRET=YOUR_ACCESS_KEY_SECRET
+## Optional but recommended: the App ID holding your channels integration configuration. If not set it must be present in the prompt
+CONVERSATION_APP_ID=YOUR_CONVERSATION_APP_ID
 ## Optional, defaults to "us". Other possible values are "eu" and "br"
 CONVERSATION_REGION=YOUR_REGION
 ## Needed only if you want to send SMS messages: it is the number that will be used as the sender for SMS messages

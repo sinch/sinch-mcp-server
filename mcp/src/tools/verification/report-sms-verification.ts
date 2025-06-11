@@ -1,11 +1,11 @@
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { z } from 'zod';
 import { getVerificationService } from './utils/verification-service-helper';
-import { isPromptResponse } from '../../utils';
+import { hasMatchingTag, isPromptResponse } from '../../utils';
 import { IPromptResponse, PromptResponse, Tags } from '../../types';
 
 export const registerReportSmsVerification = (server: McpServer, tags: Tags[]) => {
-  if (!tags.includes('all') && !tags.includes('verification')) {
+  if (!hasMatchingTag(['all', 'verification'], tags)) {
     return;
   }
 

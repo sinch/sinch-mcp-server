@@ -1,24 +1,24 @@
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { z } from 'zod';
 import { getVerificationCredentials } from './utils/verification-service-helper';
-import { isPromptResponse } from '../../utils';
+import { hasMatchingTag, isPromptResponse } from '../../utils';
 import { USER_AGENT } from '../../user-agent';
 import { IPromptResponse, PromptResponse, Tags } from '../../types';
 
 interface NumberLookupResponse {
-  line: {
-    carrier: string;
-    type: string;
-    mobileCountryCode: string;
-    mobileNetworkCode: string;
+  line?: {
+    carrier?: string;
+    type?: string;
+    mobileCountryCode?: string;
+    mobileNetworkCode?: string;
   };
-  countryCode: string;
-  number: string;
-  traceId: string;
+  countryCode?: string;
+  number?: string;
+  traceId?: string;
 }
 
 export const registerNumberLookup = (server: McpServer, tags: Tags[]) => {
-  if (!tags.includes('all') && !tags.includes('verification')) {
+  if (!hasMatchingTag(['all', 'verification'], tags)) {
     return;
   }
 
@@ -35,7 +35,7 @@ export const registerNumberLookup = (server: McpServer, tags: Tags[]) => {
 export const numberLookupHandler = async (
   { phoneNumber }: { phoneNumber: string }
 ): Promise<IPromptResponse> => {
-  const maybeCredentials = await getVerificationCredentials();
+  const maybeCredentials = getVerificationCredentials();
   if (isPromptResponse(maybeCredentials)) {
     return maybeCredentials.promptResponse;
   }
@@ -58,7 +58,16 @@ export const numberLookupHandler = async (
     }
   );
 
+  if (!resp.ok) {
+    const errorText = await resp.text();
+    return new PromptResponse(`Failed to look up number ${phoneNumber}. Status: ${resp.status}, Error: ${errorText}`).promptResponse;
+  }
+
   const data = await resp.json() as NumberLookupResponse;
+
+  if (!data.line || !data.line.carrier || !data.line.type || !data.countryCode || !data.number) {
+    return new PromptResponse(`Number lookup for ${phoneNumber} returned incomplete data.`).promptResponse;
+  }
 
   return new PromptResponse(`Line type features: carrier ${data.line.carrier}, type: ${data.line.type}), mobileCountryCode: ${data.line.mobileCountryCode}, mobileNetworkCode: ${data.line.mobileNetworkCode}, countryCode: ${data.countryCode}, number: ${data.number}, traceId: ${data.traceId}`).promptResponse;
 };

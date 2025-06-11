@@ -2,13 +2,13 @@ import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { Conversation } from '@sinch/sdk-core';
 import { z } from 'zod';
 import { IPromptResponse, PromptResponse, Tags } from '../../types';
-import { isPromptResponse } from '../../utils';
+import { hasMatchingTag, isPromptResponse } from '../../utils';
 import { getConversationAppId, getConversationRegion, getConversationService } from './utils/conversation-service-helper';
 import { buildMessageBase } from './utils/send-message-builder';
 import { Recipient, ConversationAppIdOverride, ConversationChannel, ConversationRegionOverride, MessageSenderNumberOverride } from './prompt-schemas';
 
 export const registerSendTemplateMessage = (server: McpServer, tags: Tags[]) => {
-  if (!tags.includes('all') && !tags.includes('conversation') && !tags.includes('notification')) {
+  if (!hasMatchingTag(['all', 'conversation', 'notification'], tags)) {
     return;
   }
 

@@ -1,5 +1,5 @@
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
-import { isPromptResponse } from '../../utils';
+import { hasMatchingTag, isPromptResponse } from '../../utils';
 import {
   formatChannelSpecificTemplates,
   formatOmniChannelTemplates,
@@ -9,7 +9,7 @@ import { getConversationTemplateService } from './utils/conversation-service-hel
 import { IPromptResponse, PromptResponse, Tags } from '../../types';
 
 export const registerListAllTemplates = (server: McpServer, tags: Tags[]) => {
-  if (!tags.includes('all') && !tags.includes('conversation') && !tags.includes('notification')) {
+  if (!hasMatchingTag(['all', 'conversation', 'notification'], tags)) {
     return;
   }
 

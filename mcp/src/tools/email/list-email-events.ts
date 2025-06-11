@@ -1,6 +1,6 @@
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { z } from 'zod';
-import { isPromptResponse } from '../../utils';
+import { hasMatchingTag, isPromptResponse } from '../../utils';
 import { IPromptResponse, PromptResponse, Tags } from '../../types';
 import { getMailgunCredentials } from './utils/mailgun-service-helper';
 
@@ -22,7 +22,7 @@ const ListEmailEventsInput = {
 const ListEmailEventsInputSchema = z.object(ListEmailEventsInput);
 
 export const registerListEmailEvents = (server: McpServer, tags: Tags[]) => {
-  if (!tags.includes('all') && !tags.includes('email')) {
+  if (!hasMatchingTag(['all', 'email'], tags)) {
     return;
   }
 
@@ -41,7 +41,7 @@ export const listEmailEventsHandler = async ({
   beginSearchPeriod,
   endSearchPeriod
 }: z.infer<typeof ListEmailEventsInputSchema>): Promise<IPromptResponse> => {
-  const maybeCredentials = await getMailgunCredentials(domain);
+  const maybeCredentials = getMailgunCredentials(domain);
   if (isPromptResponse(maybeCredentials)) {
     return maybeCredentials.promptResponse;
   }

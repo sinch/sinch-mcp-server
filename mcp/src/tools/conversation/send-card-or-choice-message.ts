@@ -11,7 +11,7 @@ import {
   ConversationRegionOverride,
   MessageSenderNumberOverride,
 } from './prompt-schemas';
-import { isPromptResponse } from '../../utils';
+import { hasMatchingTag, isPromptResponse } from '../../utils';
 import { IPromptResponse, PromptResponse, Tags } from '../../types';
 
 const callChoice = z.object({
@@ -49,7 +49,7 @@ const choiceMessage = z.union([
 ]).describe('Choice message that can contain a call, location, text or URL. Each choice can be a call message (phone number + title to display next to it), a location message (latitude/longitude or plain text address + title to display next to it), a text message or a URL message (the URL to click on + title to display next to it).');
 
 export const registerSendCardOrChoiceMessage = (server: McpServer, tags: Tags[]) => {
-  if (!tags.includes('all') && !tags.includes('conversation') && !tags.includes('notification')) {
+  if (!hasMatchingTag(['all', 'conversation', 'notification'], tags)) {
     return;
   }
 
