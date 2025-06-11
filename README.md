@@ -162,6 +162,8 @@ Copy the file `.template.env` located at `./mcp` and rename it `.env`. Then repl
 CONVERSATION_PROJECT_ID=YOUR_PROJECT_ID
 CONVERSATION_KEY_ID=YOUR_ACCESS_KEY_ID
 CONVERSATION_KEY_SECRET=YOUR_ACCESS_KEY_SECRET
+## Optional but recommended: the App ID holding your channels integration configuration. If not set it must be present in the prompt
+CONVERSATION_APP_ID=YOUR_CONVERSATION_APP_ID
 ## Optional, defaults to "us". Other possible values are "eu" and "br"
 CONVERSATION_REGION=YOUR_REGION
 ## Needed only if you want to send SMS messages: it is the number that will be used as the sender for SMS messages
