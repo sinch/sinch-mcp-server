@@ -7,12 +7,12 @@ import {
   getConversationRegion,
   getConversationService,
 } from './utils/conversation-service-helper';
-import { isPromptResponse } from '../../utils';
+import { hasMatchingTag, isPromptResponse } from '../../utils';
 import { buildMessageBase } from './utils/send-message-builder';
 import { IPromptResponse, PromptResponse, Tags } from '../../types';
 
 export const registerSendMediaMessage = (server: McpServer, tags: Tags[]) => {
-  if (!tags.includes('all') && !tags.includes('conversation') && !tags.includes('notification')) {
+  if (!hasMatchingTag(['all', 'conversation', 'notification'], tags)) {
     return;
   }
 

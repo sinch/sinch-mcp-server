@@ -1,11 +1,11 @@
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { z } from 'zod';
 import { getVoiceService } from './utils/voice-service-helper';
-import { isPromptResponse } from '../../utils';
+import { hasMatchingTag, isPromptResponse } from '../../utils';
 import { IPromptResponse, PromptResponse, Tags } from '../../types';
 
 export const registerManageConferenceParticipant = (server: McpServer, tags: Tags[]) => {
-  if (!tags.includes('all') && !tags.includes('voice')) {
+  if (!hasMatchingTag(['all', 'voice'], tags)) {
     return;
   }
 

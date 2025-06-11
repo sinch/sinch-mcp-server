@@ -1,6 +1,6 @@
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { registerListAllApps } from './list-all-apps';
-import { registerListAllTemplates } from './list-templates';
+import { registerListAllTemplates } from './list-messaging-templates';
 import { registerSendCardOrChoiceMessage } from './send-card-or-choice-message';
 import { registerSendLocationMessage } from './send-location-message';
 import { registerSendMediaMessage } from './send-media-message';

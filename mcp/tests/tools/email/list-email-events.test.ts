@@ -83,7 +83,7 @@ describe('listEmailEventsHandler', () => {
     // Then
     const expectedText = [
       'The following events must be presented with ALL their data, even if the ID is long, it MUST be displayed as this information can be used to get subsequent information on other API endpoints.',
-      'Found 4 email events for domain example.com:',
+      'Found 4 email events for domain "example.com":',
       '**Message ID:** abc123@example.com',
       'From: sender@example.com',
       'To: user@example.com',
@@ -150,7 +150,7 @@ describe('listEmailEventsHandler', () => {
     // Then
     const expectedText = [
       'The following events must be presented with ALL their data, even if the ID is long, it MUST be displayed as this information can be used to get subsequent information on other API endpoints.',
-      'Found 2 email events for domain example.com (filtered by event: opened):',
+      'Found 2 email events for domain "example.com" (filtered by event: opened):',
       '**Message ID:** abc123@example.com',
       '| Event | Timestamp (UTC) |',
       '|-------|-----------------|',
