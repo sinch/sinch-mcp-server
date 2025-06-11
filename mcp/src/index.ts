@@ -3,7 +3,7 @@ import dotenv from 'dotenv';
 import { server } from './server';
 dotenv.config();
 
-export const main = async() => {
+export const main = async () => {
   const transport = new StdioServerTransport();
   await server.connect(transport);
   console.error('Sinch MCP Server running on stdio');

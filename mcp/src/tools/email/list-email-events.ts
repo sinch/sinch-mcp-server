@@ -9,7 +9,7 @@ const eventTypes = [
   'opened', 'clicked', 'unsubscribed', 'complained', 'stored'
 ] as const;
 
-type EventType = typeof eventTypes[number];
+type EventType = (typeof eventTypes)[number];
 
 const ListEmailEventsInput = {
   domain: z.string().optional().describe('(Optional) The Mailgun domain to fetch events for.'),
@@ -19,7 +19,7 @@ const ListEmailEventsInput = {
   endSearchPeriod: z.string().datetime().optional().describe('(Optional) The end of the search time range in ISO 8601 format (e.g., 2025-01-01T00:00:00Z).'),
 };
 
-const ListEmailEventsInputSchema = z.object(ListEmailEventsInput);
+type ListEmailEventsInputSchema = z.infer<z.ZodObject<typeof ListEmailEventsInput>>;
 
 export const registerListEmailEvents = (server: McpServer, tags: Tags[]) => {
   if (!hasMatchingTag(['all', 'email'], tags)) {
@@ -40,7 +40,7 @@ export const listEmailEventsHandler = async ({
   limit,
   beginSearchPeriod,
   endSearchPeriod
-}: z.infer<typeof ListEmailEventsInputSchema>): Promise<IPromptResponse> => {
+}: ListEmailEventsInputSchema): Promise<IPromptResponse> => {
   const maybeCredentials = getMailgunCredentials(domain);
   if (isPromptResponse(maybeCredentials)) {
     return maybeCredentials.promptResponse;
