@@ -57,7 +57,7 @@ const metricsTypes = [
   'unsubscribed_rate'
 ] as const;
 
-type MetricsType = typeof metricsTypes[number];
+type MetricsType = (typeof metricsTypes)[number];
 
 const AnalyticsMetricsInput = {
   domain: z.string().optional().describe('(Optional) The Mailgun domain to fetch metrics for.'),
@@ -66,7 +66,7 @@ const AnalyticsMetricsInput = {
   endSearchPeriod: z.string().optional().describe('(Optional) The end of the search time range in RFC-2822 format (e.g., Mon, 09 Jun 2025 00:00:00 +0100).'),
 }
 
-const AnalyticsMetricsInputSchema = z.object(AnalyticsMetricsInput);
+type AnalyticsMetricsInputSchema = z.infer<z.ZodObject<typeof AnalyticsMetricsInput>>;
 
 export const registerAnalyticsMetrics = (server: McpServer, tags: Tags[]) => {
   if (!hasMatchingTag(['all', 'email'], tags)) {
@@ -86,7 +86,7 @@ export const analyticsMetricsHandler = async ({
   metrics,
   beginSearchPeriod,
   endSearchPeriod
-}: z.infer<typeof AnalyticsMetricsInputSchema>): Promise<IPromptResponse> => {
+}: AnalyticsMetricsInputSchema): Promise<IPromptResponse> => {
   const maybeApiKey = getMailgunApiKey();
   if (typeof maybeApiKey !== 'string') {
     return maybeApiKey.promptResponse;
