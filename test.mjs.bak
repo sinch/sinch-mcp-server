@@ -1,0 +1,26 @@
+// test-client.js
+import { spawn } from 'child_process';
+
+const mcp = spawn('mcp-server', ['--tags', 'email']);
+
+mcp.stdout.on('data', (data) => {
+  console.log('🟢 STDOUT:', data.toString());
+});
+
+mcp.stderr.on('data', (data) => {
+  console.error('🔴 STDERR:', data.toString());
+});
+
+mcp.on('close', (code) => {
+  console.log(`Child process exited with code ${code}`);
+});
+
+// Example JSON-RPC request
+const request = {
+  jsonrpc: "2.0",
+  id: 1,
+  method: "tools/list", // Replace with a real method like `list-email-events`
+  params: {}
+};
+
+mcp.stdin.write(JSON.stringify(request) + "\n");

@@ -1,8 +1,10 @@
 build/
 dist/
 node_modules/
+.DS_Store
 .idea
-chrome-extension
-*.bak
+*.tsbuildinfo
+.npm
 .env
 *.db
+*.tgz

@@ -1,8 +1,12 @@
-# Sinch MCP Server Tools Overview
+# Sinch MCP Server
+
+This repository contains the source code for the Sinch MCP server, which provides a set of tools to interact with the Sinch APIs. This README focuses on using the MCP server with the [Claude Desktop](https://claude.ai/download) client, but it can also be used with any other MCP client.
+
+## Tools Overview
 
 Here is the list of tools available in the MCP server (all the phone numbers must be provided in E.164 format, e.g., `+33612345678` for France).
 
-## Conversation Tools
+### Conversation Tools
 
 | Tool                         | Description                                                                                                                                                                                                                         | Tags                       |
 |------------------------------|-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|----------------------------|
@@ -15,7 +19,7 @@ Here is the list of tools available in the MCP server (all the phone numbers mus
 | **list-messaging-templates** | List all omni-channel and channel-specific message templates. <br> *Example prompt*: "Show me all message templates in my account."                                                                                                 | conversation, notification |
 
 
-## Email tools (Mailgun)
+### Email tools (Mailgun)
 
 | Tool                     | Description                                                                                                                                                                                          | Tags                |
 |--------------------------|------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|---------------------|
@@ -25,7 +29,7 @@ Here is the list of tools available in the MCP server (all the phone numbers mus
 | **list-email-events**    | Retrieve and group recent email delivery events, such as bounces, opens, or clicks. <br> *Example prompt*: "Show me all recent email activity for my account."                                       | email               |
 | **analytics-metrics**    | Retrieve email analytics metrics, such as open rates or click-through rates. <br> *Example prompt*: "What are the open rates during the last week?"                                                  | email               |
 
-## Verification Tools
+### Verification Tools
 
 | Tool                              | Description                                                                                                                                             | Tags                       |
 |-----------------------------------|---------------------------------------------------------------------------------------------------------------------------------------------------------|----------------------------|
@@ -33,7 +37,7 @@ Here is the list of tools available in the MCP server (all the phone numbers mus
 | **start-sms-verification**        | Initiate an SMS verification by sending an OTP to a user's phone number. <br> *Example prompt*: "Start phone verification for the number +33612345678." | verification               |
 | **report-sms-verification**       | Submit a one-time password (OTP) to complete SMS verification. <br> *Example prompt*: "Verify the phone number with this code: 1234."                   | verification               |
 
-## Voice Tools
+### Voice Tools
 
 | Tool                              | Description                                                                                                                                                                                              | Tags                       |
 |-----------------------------------|----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|----------------------------|
@@ -42,47 +46,93 @@ Here is the list of tools available in the MCP server (all the phone numbers mus
 | **manage-conference-participant** | Mute, unmute, hold, or resume an individual participant in a conference call. <br> *Example prompt*: "Mute the caller with ID xyz789 in the conference."                                                 | voice                      |
 | **close-conference**              | End a conference call by disconnecting all the participants using the ID of the conference. <br> *Example prompt*: "End the current conference call with ID abc123."                                     | voice                      |
 
+### Configuration Tools
+
+| Tool                        | Description                                                                                                                                                                                          | Tags |
+|-----------------------------|------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|------|
+| **sinch-mcp-configuration** | List all available tools in the Sinch MCP server and their status. If a tool is disabled, it will display the reason why. <br> *Example prompt*: "What tools are available in the Sinch MCP server?" |      |
 
 ## Getting Started
 
-### 0. Prerequisites
+### Prerequisites
 
-  - Node.js >= 20.18.1
-  - npm >= 9
-  - A provisioned [Sinch Build account](https://dashboard.sinch.com/dashboard)
-  - Claude Desktop (or any other MCP client). This README is focused on Claude Desktop, but the MCP server can be used with any MCP client.
-  - Clone this repository
+- [Node.js >= 20.18.1](https://nodejs.org/en/download)
+- A provisioned [Sinch Build account](https://dashboard.sinch.com/dashboard)
+- Claude Desktop (or any other MCP client). This README is focused on [Claude Desktop](https://claude.ai/download), but the MCP server can be used with any MCP client.
+
+### API credentials
+
+To use the APIs used by the MCP tools, you will need the following credentials:
+- Conversation API credentials:
+  - (required) `CONVERSATION_PROJECT_ID`: Select the project you want to use from your [Sinch Build dashboard](https://dashboard.sinch.com/dashboard) (Located at the left of the top toolbar)
+  - (required) `CONVERSATION_KEY_ID`: Select or create a new access key in the [Access keys section](https://dashboard.sinch.com/settings/access-keys) of the Sinch Build dashboard.
+  - (required) `CONVERSATION_KEY_SECRET`: This is the secret associated with the `Access Key` you selected or created in the previous step. Be careful, the `Access Key Secret` is only shown once when you create the `Access Key`. If you lose it, you will need to create a new `Access Key`.
+  - `CONVERSATION_APP_ID`: This is the ID of the conversation app you want to use. You can find it in the [Conversation API / Apps section](https://dashboard.sinch.com/convapi/apps) of the Sinch Build dashboard. If you don't set it, you will have to specify it in the prompt.
+  - `CONVERSATION_REGION`: This is the region where your conversation app and templates are located. It can be `us`, `eu`, or `br`. If you don't set it, it defaults to `us`.
+  - When using the SMS channel, you can also set the `DEFAULT_SMS_ORIGINATOR` environment variable to the phone number that will be used as the sender for SMS messages. Depending on your country, this setting may be required.
+  - You can also set the `GEOCODING_API_KEY` environment variable to your Google Geocoding API key if you want to use the location feature. This is needed to convert an address to a latitude/longitude pair.
+- Verification API credentials: navigate to the [Verification / Apps section](https://dashboard.sinch.com/verification/apps) of the Sinch Build dashboard and create a new app or select an existing one. You will need the following credentials:
+  - (required) `VERIFICATION_APPLICATION_KEY`
+  - (required) `VERIFICATION_APPLICATION_SECRET`
+- Voice API credentials: navigate to the [Voice / Apps section](https://dashboard.sinch.com/voice/apps) of the Sinch Build dashboard and create a new app or select an existing one. You will need the following credentials:
+  - (required) `VOICE_APPLICATION_KEY`
+  - (required) `VOICE_APPLICATION_SECRET`
+  - You can also set the `CALLING_LINE_IDENTIFICATION` environment variable to the phone number that will be displayed to the user when they receive a call.
+- Mailgun API credentials: navigate to the [Mailgun / Domains section](https://app.mailgun.com/app/domains) of the Mailgun dashboard and create a new domain or select an existing one. You will need the following credentials:
+  - (required) `MAILGUN_API_KEY`
+  - `MAILGUN_DOMAIN`
+  - `MAILGUN_SENDER_ADDRESS`
+
+### MCP Server Configuration
+
+The Sinch MCP server is available as an NPM package to the executed:
+
+```json
+{
+  "mcpServers": {
+    "sinch": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@sinch/mcp"
+      ],
+      "env": {
+        "CONVERSATION_PROJECT_ID": "YOUR_PROJECT_ID",
+        "CONVERSATION_KEY_ID": "YOUR_ACCESS_KEY_ID",
+        "CONVERSATION_KEY_SECRET": "YOUR_ACCESS_KEY_SECRET",
+        "CONVERSATION_APP_ID": "YOUR_CONVERSATION_APP_ID (optional, if not set it must be present in the prompt)",
+        "CONVERSATION_REGION": "YOUR_REGION (optional, default to US)",
+        "DEFAULT_SMS_ORIGINATOR": "YOUR_DEFAULT_SMS_ORIGINATOR (required in some countries if you want to send SMS messages)",
+        "GEOCODING_API_KEY": "YOUR_GOOGLE_GEOCODING_API_KEY (optional, needed only to convert addresses into latitude/longitude if you want to send location messages)",
+        "VERIFICATION_APPLICATION_KEY": "YOUR_VERIFICATION_APP_KEY",
+        "VERIFICATION_APPLICATION_SECRET": "YOUR_VERIFICATION_APP_SECRET",
+        "VOICE_APPLICATION_KEY": "YOUR_VOICE_APP_KEY",
+        "VOICE_APPLICATION_SECRET": "YOUR_VOICE_APP_SECRET",
+        "CALLING_LINE_IDENTIFICATION": "YOUR_CALLING_NUMBER",
+        "MAILGUN_API_KEY": "YOUR_MAILGUN_API_KEY",
+        "MAILGUN_DOMAIN": "YOUR_MAILGUN_DOMAIN",
+        "MAILGUN_SENDER_ADDRESS": "YOUR_MAILGUN_SENDER_ADDRESS"
+      }
+    }
+  }
+}
+```
+
+
+
+# Running the MCP Server locally
+
+## Option 1: Start the MCP server with stdio using Claude Desktop
+
+To run the MCP server locally with Claude Desktop, you will need to clone the repository and build the MCP server. This option is useful for local development and testing.
+
+### Step 1: Clone the repository
 
 ```bash
 git clone https://github.com/sinch/sinch-mcp-server.git
 ```
 
-### 1. API credentials
-
-To use the APIs used by the MCP tools, you will need the following credentials:
-- Conversation API credentials:
-  - CONVERSATION_PROJECT_ID: Select the project you want to use from your [Sinch Build dashboard](https://dashboard.sinch.com/dashboard) (Located at the left of the top toolbar)
-  - CONVERSATION_KEY_ID: Select or create a new access key in the [Access keys section](https://dashboard.sinch.com/settings/access-keys) of the Sinch Build dashboard.
-  - CONVERSATION_KEY_SECRET: This is the secret associated with the `Access Key` you selected or created in the previous step. Be careful, the `Access Key Secret` is only shown once when you create the `Access Key`. If you lose it, you will need to create a new `Access Key`.
-  - CONVERSATION_REGION: This is the region where your conversation app and templates are located. It can be `us`, `eu`, or `br`. If you don't set it, it defaults to `us`.
-  - CONVERSATION_APP_ID: This is the ID of the conversation app you want to use. You can find it in the [Conversation API / Apps section](https://dashboard.sinch.com/convapi/apps) of the Sinch Build dashboard. If you don't set it, you will have to specify it in the prompt.
-  - In case you want to use the SMS channel, you can also set the `DEFAULT_SMS_ORIGINATOR` environment variable to the phone number that will be used as the sender for SMS messages. Depending on your country, this setting may be required.
-  - You can also set the `GEOCODING_API_KEY` environment variable to your Google Geocoding API key if you want to use the location feature. This is needed to convert an address to a latitude/longitude pair.
-- Verification API credentials: navigate to the [Verification / Apps section](https://dashboard.sinch.com/verification/apps) of the Sinch Build dashboard and create a new app or select an existing one. You will need the following credentials:
-  - VERIFICATION_APPLICATION_KEY
-  - VERIFICATION_APPLICATION_SECRET
-- Voice API credentials: navigate to the [Voice / Apps section](https://dashboard.sinch.com/voice/apps) of the Sinch Build dashboard and create a new app or select an existing one. You will need the following credentials:
-  - VOICE_APPLICATION_KEY
-  - VOICE_APPLICATION_SECRET
-  - You can also set the `CALLING_LINE_IDENTIFICATION` environment variable to the phone number that will be displayed to the user when they receive a call.
-- Mailgun API credentials: navigate to the [Mailgun / Domains section](https://app.mailgun.com/app/domains) of the Mailgun dashboard and create a new domain or select an existing one. You will need the following credentials:
-  - MAILGUN_DOMAIN
-  - MAILGUN_API_KEY
-  - MAILGUN_SENDER_ADDRESS
-
-## Option 1: Start the MCP server with stdio using Claude Desktop
-
-### Step 1: Build the MCP server
+### Step 2: Build the MCP server
 
 ```bash
 cd sinch-mcp-server/mcp
@@ -90,7 +140,7 @@ npm install
 npm run build
 ```
 
-### Step 2: Setup Claude Desktop configuration
+### Step 3: Setup Claude Desktop configuration
 
 Here is an example of how to configure the MCP server in the [Claude Desktop](https://claude.ai/download) configuration file (`claude_desktop_config.json`):
 
@@ -106,16 +156,17 @@ Here is an example of how to configure the MCP server in the [Claude Desktop](ht
         "CONVERSATION_PROJECT_ID": "YOUR_PROJECT_ID",
         "CONVERSATION_KEY_ID": "YOUR_ACCESS_KEY_ID",
         "CONVERSATION_KEY_SECRET": "YOUR_ACCESS_KEY_SECRET",
+        "CONVERSATION_APP_ID": "YOUR_CONVERSATION_APP_ID (optional, if not set it must be present in the prompt)",
         "CONVERSATION_REGION": "YOUR_REGION (optional, default to US)",
         "DEFAULT_SMS_ORIGINATOR": "YOUR_DEFAULT_SMS_ORIGINATOR (required in some countries if you want to send SMS messages)",
-        "GEOCODING_API_KEY": "YOUR_GOOGLE_GEOCODING_API_KEY (optional, needed only if you want to send location messages)",
+        "GEOCODING_API_KEY": "YOUR_GOOGLE_GEOCODING_API_KEY (optional, needed only to convert addresses into latitude/longitude if you want to send location messages)",
         "VERIFICATION_APPLICATION_KEY": "YOUR_VERIFICATION_APP_KEY",
         "VERIFICATION_APPLICATION_SECRET": "YOUR_VERIFICATION_APP_SECRET",
         "VOICE_APPLICATION_KEY": "YOUR_VOICE_APP_KEY",
         "VOICE_APPLICATION_SECRET": "YOUR_VOICE_APP_SECRET",
         "CALLING_LINE_IDENTIFICATION": "YOUR_CALLING_NUMBER",
-        "MAILGUN_DOMAIN": "YOUR_MAILGUN_DOMAIN",
         "MAILGUN_API_KEY": "YOUR_MAILGUN_API_KEY",
+        "MAILGUN_DOMAIN": "YOUR_MAILGUN_DOMAIN",
         "MAILGUN_SENDER_ADDRESS": "YOUR_MAILGUN_SENDER_ADDRESS"
       }
     }
@@ -123,12 +174,23 @@ Here is an example of how to configure the MCP server in the [Claude Desktop](ht
 }
 ```
 
+### Step 4: (Optional) Filter the tools available in the MCP server
+
+Too many tools mean bigger context, mean higher tokens usage and more confusion for the LLM to select the right tool to use.<br>
 You can filter the tools that are available in the MCP server by using the `tags` options. For example, if you want to only use the conversation tools, you can add the following options to the `args` array:
 ```
       "args": [
         "/your/path/to/sinch-mcp-server/mcp/dist/index.js",
         "--tags", 
         "conversation"
+      ],
+```
+You can combine multiple tags by separating them with commas. For example, if you want to use both conversation and verification tools, you can use the following command:
+```
+      "args": [
+        "/your/path/to/sinch-mcp-server/mcp/dist/index.js",
+        "--tags", 
+        "conversation,verification"
       ],
 ```
 If you want to use all the tools, you can omit the `--tags` option, or use the tag `all`:
@@ -168,7 +230,7 @@ CONVERSATION_APP_ID=YOUR_CONVERSATION_APP_ID
 CONVERSATION_REGION=YOUR_REGION
 ## Needed only if you want to send SMS messages: it is the number that will be used as the sender for SMS messages
 DEFAULT_SMS_ORIGINATOR=YOUR_SINCH_PHONE_NUMBER
-## Needed only if you want to send location messages: it converts an address to a lat/lon
+## Needed only if you want to send location messages: it converts an address to a latitude/longitude pair
 GEOCODING_API_KEY=YOUR_GOOGLE_GEOCODING_API_KEY
 
 # Verification tools related environment variables
@@ -228,13 +290,13 @@ You can then configure the MCP server in the Claude configuration file as follow
 ## Contributing: Defining new tools
 
 Tools are registered in the `src/index.ts` file.
- - Conversation tools: send various types of messages, list conversations apps, templates
- - Verification tools: lookup for a number, perform a verification flow
- - Voice tools: make a TTS call, create a conference call, manage participants
- - Email tools: send emails, retrieve email information
+- Conversation tools: send various types of messages, list conversations apps, templates
+- Verification tools: lookup for a number, perform a verification flow
+- Voice tools: make a TTS call, create a conference call, manage participants
+- Email tools: send emails, retrieve email information
 
 Tools are defined under `src/tools/` and are registered in the `index.ts` file of their respective domain folder.
- - Conversation tools: `src/tools/conversation/index.ts`
- - Verification tools: `src/tools/verification/index.ts`
- - Voice tools: `src/tools/voice/index.ts`
- - Email tools: `src/tools/email/index.ts`
+- Conversation tools: `src/tools/conversation/index.ts`
+- Verification tools: `src/tools/verification/index.ts`
+- Voice tools: `src/tools/voice/index.ts`
+- Email tools: `src/tools/email/index.ts`

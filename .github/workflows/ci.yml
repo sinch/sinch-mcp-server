@@ -21,18 +21,11 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Install dependencies in the mcp/ package
-        run: npm ci
-        working-directory: mcp
-
       - name: Lint
         run: npm run lint
-        working-directory: mcp
 
       - name: Compile TypeScript
         run: npm run build
-        working-directory: mcp
 
       - name: Run tests
         run: npm test
-        working-directory: mcp

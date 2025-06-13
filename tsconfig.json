@@ -1,15 +1,32 @@
 {
   "compilerOptions": {
+    "sourceMap": true,
+    "removeComments": false,
+    "lib": ["ES2022"],
+    "strict": true,
     "target": "ES2022",
     "module": "CommonJS",
     "moduleResolution": "node",
-    "lib": ["DOM", "ES2022"],
-    "strict": true,
     "esModuleInterop": true,
     "skipLibCheck": true,
-    "forceConsistentCasingInFileNames": true,
+    "allowJs": true,
+    "pretty": true,
+    "preserveSymlinks": true,
     "resolveJsonModule": true,
+    "types": ["jest", "node"],
+    "noImplicitAny": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "useDefineForClassFields": false,
+    "declaration": true,
+    "composite": true,
+    "noEmit": false,
     "baseUrl": ".",
+    "rootDir": "src",
+    "outDir": "dist"
   },
-  "include": ["apps", "packages"],
+  "exclude": ["tests", "jest.config.ts", "eslint.config.mjs", "dist", "bin"],
+  "ts-node": {
+    "esm": true
+  }
 }
