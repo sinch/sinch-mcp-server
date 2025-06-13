@@ -1,7 +1,12 @@
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { Conversation } from '@sinch/sdk-core';
 import { z } from 'zod';
-import { getConversationAppId, getConversationRegion, getConversationService } from './utils/conversation-service-helper';
+import {
+  getConversationAppId,
+  getConversationRegion,
+  getConversationService,
+} from './utils/conversation-service-helper';
+import { ConversationToolKey, getToolName, shouldRegisterTool } from './utils/conversation-tools-helper';
 import { buildMessageBase } from './utils/send-message-builder';
 import { getLatitudeLongitudeFromAddress } from './utils/geocoding';
 import {
@@ -11,7 +16,7 @@ import {
   ConversationRegionOverride,
   MessageSenderNumberOverride,
 } from './prompt-schemas';
-import { hasMatchingTag, isPromptResponse } from '../../utils';
+import { isPromptResponse } from '../../utils';
 import { IPromptResponse, PromptResponse, Tags } from '../../types';
 
 const callChoice = z.object({
@@ -48,13 +53,14 @@ const choiceMessage = z.union([
   urlChoice
 ]).describe('Choice message that can contain a call, location, text or URL. Each choice can be a call message (phone number + title to display next to it), a location message (latitude/longitude or plain text address + title to display next to it), a text message or a URL message (the URL to click on + title to display next to it).');
 
+const TOOL_KEY: ConversationToolKey = 'sendCardOrChoiceMessage';
+const TOOL_NAME = getToolName(TOOL_KEY);
+
 export const registerSendCardOrChoiceMessage = (server: McpServer, tags: Tags[]) => {
-  if (!hasMatchingTag(['all', 'conversation', 'notification'], tags)) {
-    return;
-  }
+  if (!shouldRegisterTool(TOOL_KEY, tags)) return;
 
   server.tool(
-    'send-choice-message',
+    TOOL_NAME,
     'Send a choice message to the user. The choice message can contain up to 3 choices if not text or up to 10 message if text only. Each choice can be a call message (phone number + title to display next to it), a location message (latitude / longitude + title to display next to it), a text message or a URL message (the URL to click on + title to display next to it). The contact can be a phone number in E.164 format, or the identifier for the specified channel.',
     {
       recipient: Recipient,

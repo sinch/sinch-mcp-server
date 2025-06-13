@@ -1,17 +1,19 @@
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { fetch, FormData } from 'undici';
 import { z } from 'zod';
-import { hasMatchingTag, isPromptResponse } from '../../utils';
+import { isPromptResponse } from '../../utils';
 import { IPromptResponse, PromptResponse, Tags } from '../../types';
 import { getMailgunCredentials } from './utils/mailgun-service-helper';
+import { EmailToolKey, getToolName, shouldRegisterTool } from './utils/mailgun-tools-helper';
+
+const TOOL_KEY: EmailToolKey = 'sendEmail';
+const TOOL_NAME = getToolName(TOOL_KEY);
 
 export const registerSendEmail = (server: McpServer, tags: Tags[]) => {
-  if (!hasMatchingTag(['all', 'email', 'notification'], tags)) {
-    return;
-  }
+  if (!shouldRegisterTool(TOOL_KEY, tags)) return;
 
   server.tool(
-    'send-email',
+    TOOL_NAME,
     'Send an email to a recipient with a subject and body.',
     {
       recipient: z.string().describe('The recipient of the email.'),

@@ -1,7 +1,12 @@
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { Conversation } from '@sinch/sdk-core';
-import { getConversationAppId, getConversationRegion, getConversationService } from './utils/conversation-service-helper';
-import { hasMatchingTag, isPromptResponse } from '../../utils';
+import {
+  getConversationAppId,
+  getConversationRegion,
+  getConversationService,
+} from './utils/conversation-service-helper';
+import { ConversationToolKey, getToolName, shouldRegisterTool } from './utils/conversation-tools-helper';
+import { isPromptResponse } from '../../utils';
 import { buildMessageBase } from './utils/send-message-builder';
 import {
   Recipient,
@@ -13,13 +18,14 @@ import {
 } from './prompt-schemas';
 import { IPromptResponse, PromptResponse, Tags } from '../../types';
 
+const TOOL_KEY: ConversationToolKey = 'sendTextMessage';
+const TOOL_NAME = getToolName(TOOL_KEY);
+
 export const registerSendTextMessage = (server: McpServer, tags: Tags[]) => {
-  if (!hasMatchingTag(['all', 'conversation', 'notification'], tags)) {
-    return;
-  }
+  if (!shouldRegisterTool(TOOL_KEY, tags)) return;
 
   server.tool(
-    'send-text-message',
+    TOOL_NAME,
     'Send a text message to a contact on the specified channel. The contact can be a phone number in E.164 format, or the identifier for the specified channel.',
     {
       recipient: Recipient,

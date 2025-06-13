@@ -1,8 +1,9 @@
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { z } from 'zod';
-import { hasMatchingTag, isPromptResponse } from '../../utils';
+import { isPromptResponse } from '../../utils';
 import { IPromptResponse, PromptResponse, Tags } from '../../types';
 import { getMailgunCredentials } from './utils/mailgun-service-helper';
+import { EmailToolKey, getToolName, shouldRegisterTool } from './utils/mailgun-tools-helper';
 
 const eventTypes = [
   'accepted', 'rejected', 'delivered', 'failed',
@@ -21,13 +22,14 @@ const ListEmailEventsInput = {
 
 type ListEmailEventsInputSchema = z.infer<z.ZodObject<typeof ListEmailEventsInput>>;
 
+const TOOL_KEY: EmailToolKey = 'listEmailEvents';
+const TOOL_NAME = getToolName(TOOL_KEY);
+
 export const registerListEmailEvents = (server: McpServer, tags: Tags[]) => {
-  if (!hasMatchingTag(['all', 'email'], tags)) {
-    return;
-  }
+  if (!shouldRegisterTool(TOOL_KEY, tags)) return;
 
   server.tool(
-    'list-email-events',
+    TOOL_NAME,
     'Get a list of email events from Mailgun for a specific domain. You can filter by event type and limit the number of results.',
     ListEmailEventsInput,
     listEmailEventsHandler

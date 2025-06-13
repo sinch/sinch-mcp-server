@@ -28,3 +28,8 @@ export class PromptResponse {
 
 // Tags to categorize tools
 export type Tags = 'all' | 'conversation' | 'verification' | 'voice' | 'email' | 'notification' | string;
+
+export interface ToolsConfig {
+    name: string;
+    tags: Tags[];
+}

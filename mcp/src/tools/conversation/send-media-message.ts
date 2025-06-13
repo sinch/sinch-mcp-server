@@ -7,17 +7,19 @@ import {
   getConversationRegion,
   getConversationService,
 } from './utils/conversation-service-helper';
-import { hasMatchingTag, isPromptResponse } from '../../utils';
+import { ConversationToolKey, getToolName, shouldRegisterTool } from './utils/conversation-tools-helper';
+import { isPromptResponse } from '../../utils';
 import { buildMessageBase } from './utils/send-message-builder';
 import { IPromptResponse, PromptResponse, Tags } from '../../types';
 
+const TOOL_KEY: ConversationToolKey = 'sendMediaMessage';
+const TOOL_NAME = getToolName(TOOL_KEY);
+
 export const registerSendMediaMessage = (server: McpServer, tags: Tags[]) => {
-  if (!hasMatchingTag(['all', 'conversation', 'notification'], tags)) {
-    return;
-  }
+  if (!shouldRegisterTool(TOOL_KEY, tags)) return;
 
   server.tool(
-    'send-media-message',
+    TOOL_NAME,
     'Send a media message from URL given in parameter to a contact on the specified channel. The contact can be a phone number in E.164 format, or the identifier for the specified channel. The media must be specified with its URL.',
     {
       recipient: Recipient,

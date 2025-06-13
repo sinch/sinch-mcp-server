@@ -1,8 +1,8 @@
 import { z } from 'zod';
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { IPromptResponse, PromptResponse, Tags } from '../../types';
-import { getMailgunApiKey } from './utils/mailgun-service-helper';
-import { hasMatchingTag } from '../../utils';
+import { getMailgunApiKey} from './utils/mailgun-service-helper';
+import { EmailToolKey, getToolName, shouldRegisterTool } from './utils/mailgun-tools-helper';
 
 const metricsTypes = [
   // Counts
@@ -68,13 +68,14 @@ const AnalyticsMetricsInput = {
 
 type AnalyticsMetricsInputSchema = z.infer<z.ZodObject<typeof AnalyticsMetricsInput>>;
 
+const TOOL_KEY: EmailToolKey = 'analyticsMetrics';
+const TOOL_NAME = getToolName(TOOL_KEY);
+
 export const registerAnalyticsMetrics = (server: McpServer, tags: Tags[]) => {
-  if (!hasMatchingTag(['all', 'email'], tags)) {
-    return;
-  }
+  if (!shouldRegisterTool(TOOL_KEY, tags)) return;
 
   server.tool(
-    'analytics-metrics',
+    TOOL_NAME,
     'Get email analytics metrics from Mailgun for an account. All parameters are optional. You can filter by domain, metrics type and specify a time range. By default, it will return all metrics for all your domains for the last 7 days.',
     AnalyticsMetricsInput,
     analyticsMetricsHandler
