@@ -6,11 +6,12 @@ import { registerVoiceTools } from './tools/voice';
 import { registerEmailTools } from './tools/email';
 import { registerConfigurationTools } from './tools/configuration';
 import { Tags } from './types';
+import { version as mcpServerVersion } from '../package.json';
 
 export const instantiateMcpServer = () => {
   return new McpServer({
     name: 'Sinch',
-    version: '0.0.1-alpha.0',
+    version: mcpServerVersion,
     capabilities: {
       resources: {},
       tools: {},
