@@ -1,5 +1,5 @@
 import { ToolsConfig } from '../../../types';
-import { hasMatchingTag } from '../../../utils';
+import { matchesAnyTag } from '../../../utils';
 import { ENABLED, toolsStatusMap } from '../../../tools-config';
 import { getMailgunApiKey } from './mailgun-service-helper';
 
@@ -33,7 +33,7 @@ export const getToolName = (toolKey: EmailToolKey): string => toolsConfig[toolKe
 export const shouldRegisterTool = (toolKey: string, tags: string[]): boolean => {
   const filteringTags = toolsConfig[toolKey].tags;
   const toolName = toolsConfig[toolKey].name;
-  if (!hasMatchingTag(filteringTags, tags)) {
+  if (!matchesAnyTag(filteringTags, tags)) {
     toolsStatusMap[toolName] = `The filtering tags don't contain ${filteringTags.join(' or ')}`;
     return false;
   }

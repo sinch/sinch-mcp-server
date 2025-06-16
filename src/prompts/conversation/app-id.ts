@@ -1,10 +1,10 @@
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { z } from 'zod';
 import { Tags } from '../../types';
-import { hasMatchingTag } from '../../utils';
+import { matchesAnyTag } from '../../utils';
 
 export const registerAppId = (server: McpServer, tags: Tags[]) => {
-  if (!hasMatchingTag(['all', 'conversation', 'notification'], tags)) {
+  if (!matchesAnyTag(['all', 'conversation', 'notification'], tags)) {
     return;
   }
 
