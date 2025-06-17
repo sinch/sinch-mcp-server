@@ -18,6 +18,7 @@ const setEnvVariables = () => {
   process.env.CONVERSATION_PROJECT_ID = 'test-conversation-project-id';
   process.env.CONVERSATION_KEY_ID = 'test-conversation-key-id';
   process.env.CONVERSATION_KEY_SECRET = 'test-conversation-key-secret';
+  process.env.NGROK_AUTH_TOKEN = 'test-ngrok-auth-token';
   process.env.VERIFICATION_APPLICATION_KEY = 'test-verification-application-key';
   process.env.VERIFICATION_APPLICATION_SECRET = 'test-verification-application-secret';
   process.env.VOICE_APPLICATION_KEY = 'test-voice-application-key';
@@ -46,6 +47,7 @@ describe('Tool registration by tag', () => {
     {
       tag: 'conversation',
       expectedTools: [
+        'get-message-events',
         'list-conversation-apps',
         'list-messaging-templates',
         'send-choice-message',
@@ -87,6 +89,7 @@ describe('Tool registration by tag', () => {
         'retrieve-email-info',
         'list-email-templates',
         'tts-callout',
+        'get-message-events',
         'send-text-message',
         'send-location-message',
         'send-choice-message',
@@ -108,6 +111,7 @@ describe('Tool registration by tag', () => {
         'analytics-metrics',
         'retrieve-email-info',
         'send-email',
+        'get-message-events',
         'list-conversation-apps',
         'list-messaging-templates',
         'send-choice-message',
@@ -211,6 +215,7 @@ describe('Tool registration when environment variables are missing', () => {
 
     // Then
     const tools = getRegisteredToolNames(server);
+    expect(tools).not.toContain('get-message-events');
     expect(tools).not.toContain('list-conversation-apps');
     expect(tools).not.toContain('list-messaging-templates');
     expect(tools).not.toContain('send-choice-message');
@@ -230,6 +235,30 @@ describe('Tool registration when environment variables are missing', () => {
     expect(toolsStatusMap['send-media-message']).toBe(incorrectConversationConfig);
     expect(toolsStatusMap['send-template-message']).toBe(incorrectConversationConfig);
     expect(toolsStatusMap['send-text-message']).toBe(incorrectConversationConfig);
+  });
+
+  it('should register all conversation tools expect "get-message-events" is NGROK_AUTH_TOKEN is missing', () => {
+    // Given
+    const server = new McpServer({
+      name: 'Test',
+      version: 'test',
+      capabilities: { resources: {}, tools: {}, prompts: {} }
+    });
+    process.env.NGROK_AUTH_TOKEN = '';
+
+    // When
+    registerCapabilities(server, []);
+
+    // Then
+    const tools = getRegisteredToolNames(server);
+    expect(tools).not.toContain('get-message-events');
+    expect(tools).toContain('list-conversation-apps');
+    expect(tools).toContain('list-messaging-templates');
+    expect(tools).toContain('send-choice-message');
+    expect(tools).toContain('send-location-message');
+    expect(tools).toContain('send-media-message');
+    expect(tools).toContain('send-template-message');
+    expect(tools).toContain('send-text-message');
   });
 
   it('should list all the missing Conversation environment variables when multiple are missing', () => {

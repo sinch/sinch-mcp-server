@@ -2,7 +2,15 @@ import { matchesAnyTag } from '../../../utils';
 import { ENABLED, toolsStatusMap } from '../../../tools-config';
 import { ToolsConfig } from '../../../types';
 
-const toolsConfig: Record<string, ToolsConfig> = {
+const defineToolsConfig = <T extends Record<string, ToolsConfig>>(config: T) => {
+  return config;
+}
+
+const toolsConfig = defineToolsConfig({
+  getMessageEvents: {
+    name: 'get-message-events',
+    tags: ['all', 'conversation', 'notification', 'get-message-events'],
+  },
   listConversationApps: {
     name: 'list-conversation-apps',
     tags: ['all', 'conversation', 'notification', 'list-conversation-apps'],
@@ -31,7 +39,7 @@ const toolsConfig: Record<string, ToolsConfig> = {
     name: 'send-text-message',
     tags: ['all', 'conversation', 'notification', 'send-text-message'],
   }
-}
+});
 
 export type ConversationToolKey = keyof typeof toolsConfig;
 
