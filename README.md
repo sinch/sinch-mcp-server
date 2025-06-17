@@ -107,6 +107,7 @@ The Sinch MCP server is available as an NPM package to the executed. Here is how
         "CONVERSATION_REGION": "",
         "DEFAULT_SMS_ORIGINATOR": "",
         "GEOCODING_API_KEY": "",
+        "NGROK_AUTH_TOKEN": "",
         "VERIFICATION_APPLICATION_KEY": "",
         "VERIFICATION_APPLICATION_SECRET": "",
         "VOICE_APPLICATION_KEY": "",
@@ -163,6 +164,7 @@ Here is an example of how to configure the MCP server in the [Claude Desktop](ht
         "CONVERSATION_REGION": "",
         "DEFAULT_SMS_ORIGINATOR": "",
         "GEOCODING_API_KEY": "",
+        "NGROK_AUTH_TOKEN": "",
         "VERIFICATION_APPLICATION_KEY": "",
         "VERIFICATION_APPLICATION_SECRET": "",
         "VOICE_APPLICATION_KEY": "",
@@ -235,6 +237,8 @@ CONVERSATION_REGION=
 DEFAULT_SMS_ORIGINATOR=
 ## Needed only if you want to send location messages: it converts an address to a latitude/longitude pair
 GEOCODING_API_KEY=
+## Token to be obtained at https://dashboard.ngrok.com/get-started/your-authtoken to enable the "get-message-events" tool
+NGROK_AUTH_TOKEN=
 
 # Verification tools related environment variables
 VERIFICATION_APPLICATION_KEY=
