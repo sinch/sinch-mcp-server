@@ -1,0 +1,29 @@
+{
+  "name": "conversation tools",
+  "envVar": "CONVERSATION_PROJECT_ID",
+  "toolsToBeDisabled": [
+    "list-conversation-apps",
+    "list-messaging-templates",
+    "send-choice-message",
+    "send-location-message",
+    "send-media-message",
+    "send-template-message",
+    "send-text-message"
+  ],
+  "toolsToStayEnabled": [
+    "list-email-events",
+    "list-email-templates",
+    "analytics-metrics",
+    "retrieve-email-info",
+    "send-email",
+    "number-lookup",
+    "report-sms-verification",
+    "start-sms-verification",
+    "close-conference",
+    "conference-callout",
+    "manage-conference-participant",
+    "tts-callout",
+    "sinch-mcp-configuration"
+  ],
+  "errorMessage": "Incorrect configuration. The environment variables are not set: CONVERSATION_PROJECT_ID"
+}

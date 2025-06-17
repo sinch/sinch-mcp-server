@@ -1,5 +1,5 @@
 import { ToolsConfig } from '../../../types';
-import { hasMatchingTag } from '../../../utils';
+import { matchesAnyTag } from '../../../utils';
 import { ENABLED, toolsStatusMap } from '../../../tools-config';
 
 const verificationToolsConfig: Record<string, ToolsConfig> = {
@@ -24,7 +24,7 @@ export const getToolName = (toolKey: VerificationToolKey): string => verificatio
 export const shouldRegisterTool = (toolKey: VerificationToolKey, tags: string[]): boolean => {
   const filteringTags = verificationToolsConfig[toolKey].tags;
   const toolName = verificationToolsConfig[toolKey].name;
-  if (!hasMatchingTag(filteringTags, tags)) {
+  if (!matchesAnyTag(filteringTags, tags)) {
     toolsStatusMap[toolName] = `The filtering tags don't contain ${filteringTags.join(' or ')}`;
     return false;
   }

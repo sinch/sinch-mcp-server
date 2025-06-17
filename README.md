@@ -48,9 +48,9 @@ Here is the list of tools available in the MCP server (all the phone numbers mus
 
 ### Configuration Tools
 
-| Tool                        | Description                                                                                                                                                                                          | Tags |
-|-----------------------------|------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|------|
-| **sinch-mcp-configuration** | List all available tools in the Sinch MCP server and their status. If a tool is disabled, it will display the reason why. <br> *Example prompt*: "What tools are available in the Sinch MCP server?" |      |
+| Tool                        | Description                                                                                                                                                                                           | Tags |
+|-----------------------------|-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|------|
+| **sinch-mcp-configuration** | List all available tools in the Sinch MCP server and their status. If a tool is disabled, it will display the reason why. <br> *Example prompt*: "Which tools are available in the Sinch MCP server?" |      |
 
 ## Getting Started
 
@@ -212,14 +212,14 @@ By default, Claude Desktop will connect to the MCP server using STDIO; we will u
 ### Step 1: Build the MCP server
 
 ```bash
-cd sinch-mcp-server/mcp
+cd sinch-mcp-server
 npm install
 npm run build
 ```
 
 ### Step 2: Set up the MCP server configuration
 
-Copy the file `.template.env` located at `./mcp` and rename it `.env`. Then replace the placeholders with your own credentials and delete any key you don't need. The `.env` file should look like this ():
+Copy the file `.template.env` and rename it `.env`. Then replace the placeholders with your own credentials and delete any key you don't need. The `.env` file should look like this ():
 ```dotenv
 # Conversation tools related environment variables
 CONVERSATION_PROJECT_ID=
@@ -291,7 +291,7 @@ You can then configure the MCP server in the Claude configuration file as follow
 ## Contributing: Defining new tools
 
 Tools are registered in the `src/index.ts` file.
-- Conversation tools: send various types of messages, list conversations apps, templates
+- Conversation tools: send various types of messages, list conversation apps, templates
 - Verification tools: lookup for a number, perform a verification flow
 - Voice tools: make a TTS call, create a conference call, manage participants
 - Email tools: send emails, retrieve email information

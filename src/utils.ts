@@ -4,7 +4,7 @@ export const isPromptResponse = (x: any): x is PromptResponse => {
   return x instanceof PromptResponse;
 }
 
-export const hasMatchingTag= (tags: string[], filteringTags: string[]): boolean => {
+export const matchesAnyTag= (tags: string[], filteringTags: string[]): boolean => {
   if (!filteringTags || filteringTags.length === 0) {
     return true;
   }

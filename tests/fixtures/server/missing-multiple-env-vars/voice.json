@@ -1,0 +1,14 @@
+{
+  "name": "voice tools",
+  "envVars": [
+    "VOICE_APPLICATION_KEY",
+    "VOICE_APPLICATION_SECRET"
+  ],
+  "toolsToVerify": [
+    "close-conference",
+    "conference-callout",
+    "manage-conference-participant",
+    "tts-callout"
+  ],
+  "errorMessageTemplate": "Incorrect configuration. The environment variables are not set: {vars}"
+}

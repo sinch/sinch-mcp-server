@@ -1,0 +1,18 @@
+{
+  "name": "conversation tools",
+  "envVars": [
+    "CONVERSATION_PROJECT_ID",
+    "CONVERSATION_KEY_ID",
+    "CONVERSATION_KEY_SECRET"
+  ],
+  "toolsToVerify": [
+    "list-conversation-apps",
+    "list-messaging-templates",
+    "send-choice-message",
+    "send-location-message",
+    "send-media-message",
+    "send-template-message",
+    "send-text-message"
+  ],
+  "errorMessageTemplate": "Incorrect configuration. The environment variables are not set: {vars}"
+}

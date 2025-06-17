@@ -1,4 +1,4 @@
-import { hasMatchingTag } from '../../../utils';
+import { matchesAnyTag } from '../../../utils';
 import { ENABLED, toolsStatusMap } from '../../../tools-config';
 import { ToolsConfig } from '../../../types';
 
@@ -40,7 +40,7 @@ export const getToolName = (toolKey: ConversationToolKey): string => toolsConfig
 export const shouldRegisterTool = (toolKey: ConversationToolKey, tags: string[]): boolean => {
   const filteringTags = toolsConfig[toolKey].tags;
   const toolName = toolsConfig[toolKey].name;
-  if (!hasMatchingTag(filteringTags, tags)) {
+  if (!matchesAnyTag(filteringTags, tags)) {
     toolsStatusMap[toolName] = `The filtering tags don't contain ${filteringTags.join(' or ')}`;
     return false;
   }

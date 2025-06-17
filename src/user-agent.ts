@@ -1,3 +1,4 @@
 import process from 'process';
+import { version as mcpServerVersion } from '../package.json';
 
-export const USER_AGENT = `sinch-sdk/0.0.1-alpha.0 (MCP/${process.version}; default; none)`
+export const USER_AGENT = `sinch-sdk/${mcpServerVersion} (MCP/${process.version}; default; none)`
