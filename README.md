@@ -1,4 +1,4 @@
-# Sinch MCP Server
+# Sinch MCP Server — Developer Preview
 
 This repository contains the source code for the Sinch MCP server, which provides a set of tools to interact with the Sinch APIs. This README focuses on using the MCP server with the [Claude Desktop](https://claude.ai/download) client, but it can also be used with any other MCP client.
 
@@ -48,9 +48,9 @@ Here is the list of tools available in the MCP server (all the phone numbers mus
 
 ### Configuration Tools
 
-| Tool                        | Description                                                                                                                                                                                          | Tags |
-|-----------------------------|------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|------|
-| **sinch-mcp-configuration** | List all available tools in the Sinch MCP server and their status. If a tool is disabled, it will display the reason why. <br> *Example prompt*: "What tools are available in the Sinch MCP server?" |      |
+| Tool                        | Description                                                                                                                                                                                           | Tags |
+|-----------------------------|-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|------|
+| **sinch-mcp-configuration** | List all available tools in the Sinch MCP server and their status. If a tool is disabled, it will display the reason why. <br> *Example prompt*: "Which tools are available in the Sinch MCP server?" |      |
 
 ## Getting Started
 
@@ -64,28 +64,29 @@ Here is the list of tools available in the MCP server (all the phone numbers mus
 
 To use the APIs used by the MCP tools, you will need the following credentials:
 - Conversation API credentials:
-  - (required) `CONVERSATION_PROJECT_ID`: Select the project you want to use from your [Sinch Build dashboard](https://dashboard.sinch.com/dashboard) (Located at the left of the top toolbar)
-  - (required) `CONVERSATION_KEY_ID`: Select or create a new access key in the [Access keys section](https://dashboard.sinch.com/settings/access-keys) of the Sinch Build dashboard.
-  - (required) `CONVERSATION_KEY_SECRET`: This is the secret associated with the `Access Key` you selected or created in the previous step. Be careful, the `Access Key Secret` is only shown once when you create the `Access Key`. If you lose it, you will need to create a new `Access Key`.
+  - (Required) `CONVERSATION_PROJECT_ID`: Select the project you want to use from your [Sinch Build dashboard](https://dashboard.sinch.com/dashboard) (Located at the left of the top toolbar)
+![Project ID selection](./docs/projectId-selection.png)
+  - (Required) `CONVERSATION_KEY_ID`: Select or create a new access key in the [Access keys section](https://dashboard.sinch.com/settings/access-keys) of the Sinch Build dashboard.
+  - (Required) `CONVERSATION_KEY_SECRET`: This is the secret associated with the `Access Key` you selected or created in the previous step. Be careful, the `Access Key Secret` is only shown once when you create the `Access Key`. If you lose it, you will need to create a new `Access Key`.
   - `CONVERSATION_APP_ID`: This is the ID of the conversation app you want to use. You can find it in the [Conversation API / Apps section](https://dashboard.sinch.com/convapi/apps) of the Sinch Build dashboard. If you don't set it, you will have to specify it in the prompt.
   - `CONVERSATION_REGION`: This is the region where your conversation app and templates are located. It can be `us`, `eu`, or `br`. If you don't set it, it defaults to `us`.
   - When using the SMS channel, you can also set the `DEFAULT_SMS_ORIGINATOR` environment variable to the phone number that will be used as the sender for SMS messages. Depending on your country, this setting may be required.
   - You can also set the `GEOCODING_API_KEY` environment variable to your Google Geocoding API key if you want to use the location feature. This is needed to convert an address to a latitude/longitude pair.
 - Verification API credentials: navigate to the [Verification / Apps section](https://dashboard.sinch.com/verification/apps) of the Sinch Build dashboard and create a new app or select an existing one. You will need the following credentials:
-  - (required) `VERIFICATION_APPLICATION_KEY`
-  - (required) `VERIFICATION_APPLICATION_SECRET`
+  - (Required) `VERIFICATION_APPLICATION_KEY`
+  - (Required) `VERIFICATION_APPLICATION_SECRET`
 - Voice API credentials: navigate to the [Voice / Apps section](https://dashboard.sinch.com/voice/apps) of the Sinch Build dashboard and create a new app or select an existing one. You will need the following credentials:
-  - (required) `VOICE_APPLICATION_KEY`
-  - (required) `VOICE_APPLICATION_SECRET`
+  - (Required) `VOICE_APPLICATION_KEY`
+  - (Required) `VOICE_APPLICATION_SECRET`
   - You can also set the `CALLING_LINE_IDENTIFICATION` environment variable to the phone number that will be displayed to the user when they receive a call.
 - Mailgun API credentials: navigate to the [Mailgun / Domains section](https://app.mailgun.com/app/domains) of the Mailgun dashboard and create a new domain or select an existing one. You will need the following credentials:
-  - (required) `MAILGUN_API_KEY`
+  - (Required) `MAILGUN_API_KEY`
   - `MAILGUN_DOMAIN`
   - `MAILGUN_SENDER_ADDRESS`
 
 ### MCP Server Configuration
 
-The Sinch MCP server is available as an NPM package to the executed:
+The Sinch MCP server is available as an NPM package to the executed. Here is how to set it up in the [Claude Desktop](https://claude.ai/download) configuration file (`claude_desktop_config.json`). Remember to fill in the environment variables with your own credentials:
 
 ```json
 {
@@ -97,21 +98,21 @@ The Sinch MCP server is available as an NPM package to the executed:
         "@sinch/mcp"
       ],
       "env": {
-        "CONVERSATION_PROJECT_ID": "YOUR_PROJECT_ID",
-        "CONVERSATION_KEY_ID": "YOUR_ACCESS_KEY_ID",
-        "CONVERSATION_KEY_SECRET": "YOUR_ACCESS_KEY_SECRET",
-        "CONVERSATION_APP_ID": "YOUR_CONVERSATION_APP_ID (optional, if not set it must be present in the prompt)",
-        "CONVERSATION_REGION": "YOUR_REGION (optional, default to US)",
-        "DEFAULT_SMS_ORIGINATOR": "YOUR_DEFAULT_SMS_ORIGINATOR (required in some countries if you want to send SMS messages)",
-        "GEOCODING_API_KEY": "YOUR_GOOGLE_GEOCODING_API_KEY (optional, needed only to convert addresses into latitude/longitude if you want to send location messages)",
-        "VERIFICATION_APPLICATION_KEY": "YOUR_VERIFICATION_APP_KEY",
-        "VERIFICATION_APPLICATION_SECRET": "YOUR_VERIFICATION_APP_SECRET",
-        "VOICE_APPLICATION_KEY": "YOUR_VOICE_APP_KEY",
-        "VOICE_APPLICATION_SECRET": "YOUR_VOICE_APP_SECRET",
-        "CALLING_LINE_IDENTIFICATION": "YOUR_CALLING_NUMBER",
-        "MAILGUN_API_KEY": "YOUR_MAILGUN_API_KEY",
-        "MAILGUN_DOMAIN": "YOUR_MAILGUN_DOMAIN",
-        "MAILGUN_SENDER_ADDRESS": "YOUR_MAILGUN_SENDER_ADDRESS"
+        "CONVERSATION_PROJECT_ID": "",
+        "CONVERSATION_KEY_ID": "",
+        "CONVERSATION_KEY_SECRET": "",
+        "CONVERSATION_APP_ID": "",
+        "CONVERSATION_REGION": "",
+        "DEFAULT_SMS_ORIGINATOR": "",
+        "GEOCODING_API_KEY": "",
+        "VERIFICATION_APPLICATION_KEY": "",
+        "VERIFICATION_APPLICATION_SECRET": "",
+        "VOICE_APPLICATION_KEY": "",
+        "VOICE_APPLICATION_SECRET": "",
+        "CALLING_LINE_IDENTIFICATION": "",
+        "MAILGUN_API_KEY": "",
+        "MAILGUN_DOMAIN": "",
+        "MAILGUN_SENDER_ADDRESS": ""
       }
     }
   }
@@ -153,21 +154,21 @@ Here is an example of how to configure the MCP server in the [Claude Desktop](ht
         "/your/path/to/sinch-mcp-server/mcp/dist/index.js"
       ],
       "env": {
-        "CONVERSATION_PROJECT_ID": "YOUR_PROJECT_ID",
-        "CONVERSATION_KEY_ID": "YOUR_ACCESS_KEY_ID",
-        "CONVERSATION_KEY_SECRET": "YOUR_ACCESS_KEY_SECRET",
-        "CONVERSATION_APP_ID": "YOUR_CONVERSATION_APP_ID (optional, if not set it must be present in the prompt)",
-        "CONVERSATION_REGION": "YOUR_REGION (optional, default to US)",
-        "DEFAULT_SMS_ORIGINATOR": "YOUR_DEFAULT_SMS_ORIGINATOR (required in some countries if you want to send SMS messages)",
-        "GEOCODING_API_KEY": "YOUR_GOOGLE_GEOCODING_API_KEY (optional, needed only to convert addresses into latitude/longitude if you want to send location messages)",
-        "VERIFICATION_APPLICATION_KEY": "YOUR_VERIFICATION_APP_KEY",
-        "VERIFICATION_APPLICATION_SECRET": "YOUR_VERIFICATION_APP_SECRET",
-        "VOICE_APPLICATION_KEY": "YOUR_VOICE_APP_KEY",
-        "VOICE_APPLICATION_SECRET": "YOUR_VOICE_APP_SECRET",
-        "CALLING_LINE_IDENTIFICATION": "YOUR_CALLING_NUMBER",
-        "MAILGUN_API_KEY": "YOUR_MAILGUN_API_KEY",
-        "MAILGUN_DOMAIN": "YOUR_MAILGUN_DOMAIN",
-        "MAILGUN_SENDER_ADDRESS": "YOUR_MAILGUN_SENDER_ADDRESS"
+        "CONVERSATION_PROJECT_ID": "",
+        "CONVERSATION_KEY_ID": "",
+        "CONVERSATION_KEY_SECRET": "",
+        "CONVERSATION_APP_ID": "",
+        "CONVERSATION_REGION": "",
+        "DEFAULT_SMS_ORIGINATOR": "",
+        "GEOCODING_API_KEY": "",
+        "VERIFICATION_APPLICATION_KEY": "",
+        "VERIFICATION_APPLICATION_SECRET": "",
+        "VOICE_APPLICATION_KEY": "",
+        "VOICE_APPLICATION_SECRET": "",
+        "CALLING_LINE_IDENTIFICATION": "",
+        "MAILGUN_API_KEY": "",
+        "MAILGUN_DOMAIN": "",
+        "MAILGUN_SENDER_ADDRESS": ""
       }
     }
   }
@@ -211,42 +212,42 @@ By default, Claude Desktop will connect to the MCP server using STDIO; we will u
 ### Step 1: Build the MCP server
 
 ```bash
-cd sinch-mcp-server/mcp
+cd sinch-mcp-server
 npm install
 npm run build
 ```
 
 ### Step 2: Set up the MCP server configuration
 
-Copy the file `.template.env` located at `./mcp` and rename it `.env`. Then replace the placeholders with your own credentials and delete any key you don't need. The `.env` file should look like this ():
+Copy the file `.template.env` and rename it `.env`. Then replace the placeholders with your own credentials and delete any key you don't need. The `.env` file should look like this ():
 ```dotenv
 # Conversation tools related environment variables
-CONVERSATION_PROJECT_ID=YOUR_PROJECT_ID
-CONVERSATION_KEY_ID=YOUR_ACCESS_KEY_ID
-CONVERSATION_KEY_SECRET=YOUR_ACCESS_KEY_SECRET
+CONVERSATION_PROJECT_ID=
+CONVERSATION_KEY_ID=
+CONVERSATION_KEY_SECRET=
 ## Optional but recommended: the App ID holding your channels integration configuration. If not set it must be present in the prompt
-CONVERSATION_APP_ID=YOUR_CONVERSATION_APP_ID
+CONVERSATION_APP_ID=
 ## Optional, defaults to "us". Other possible values are "eu" and "br"
-CONVERSATION_REGION=YOUR_REGION
+CONVERSATION_REGION=
 ## Needed only if you want to send SMS messages: it is the number that will be used as the sender for SMS messages
-DEFAULT_SMS_ORIGINATOR=YOUR_SINCH_PHONE_NUMBER
+DEFAULT_SMS_ORIGINATOR=
 ## Needed only if you want to send location messages: it converts an address to a latitude/longitude pair
-GEOCODING_API_KEY=YOUR_GOOGLE_GEOCODING_API_KEY
+GEOCODING_API_KEY=
 
 # Verification tools related environment variables
-VERIFICATION_APPLICATION_KEY=YOUR_APP_KEY
-VERIFICATION_APPLICATION_SECRET=YOUR_APP_SECRET
+VERIFICATION_APPLICATION_KEY=
+VERIFICATION_APPLICATION_SECRET=
 
 # Voice tools related environment variables (Application key and secret can be the same as for Verification)
-VOICE_APPLICATION_KEY=YOUR_APP_KEY
-VOICE_APPLICATION_SECRET=YOUR_APP_SECRET
+VOICE_APPLICATION_KEY=
+VOICE_APPLICATION_SECRET=
 ## Needed only if you want to make calls: it is the number that will be displayed to the user when they receive a call
-CALLING_LINE_IDENTIFICATION=YOUR_CALLING_NUMBER
+CALLING_LINE_IDENTIFICATION=
 
 # Mailgun tools related environment variables
-MAILGUN_DOMAIN=YOUR_MAILGUN_DOMAIN
-MAILGUN_API_KEY=YOUR_MAILGUN_API_KEY
-MAILGUN_SENDER_ADDRESS=YOUR_MAILGUN_SENDER_ADDRESS
+MAILGUN_DOMAIN=
+MAILGUN_API_KEY=
+MAILGUN_SENDER_ADDRESS=
 ```
 
 ### Step 3: Start the MCP server
@@ -290,7 +291,7 @@ You can then configure the MCP server in the Claude configuration file as follow
 ## Contributing: Defining new tools
 
 Tools are registered in the `src/index.ts` file.
-- Conversation tools: send various types of messages, list conversations apps, templates
+- Conversation tools: send various types of messages, list conversation apps, templates
 - Verification tools: lookup for a number, perform a verification flow
 - Voice tools: make a TTS call, create a conference call, manage participants
 - Email tools: send emails, retrieve email information
