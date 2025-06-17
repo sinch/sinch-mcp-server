@@ -1,0 +1,13 @@
+{
+  "name": "verification tools",
+  "envVars": [
+    "VERIFICATION_APPLICATION_KEY",
+    "VERIFICATION_APPLICATION_SECRET"
+  ],
+  "toolsToVerify": [
+    "number-lookup",
+    "report-sms-verification",
+    "start-sms-verification"
+  ],
+  "errorMessageTemplate": "Incorrect configuration. The environment variables are not set: {vars}"
+}
