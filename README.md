@@ -73,6 +73,7 @@ To use the APIs used by the MCP tools, you will need the following credentials:
   - `CONVERSATION_REGION`: This is the region where your conversation app and templates are located. It can be `us`, `eu`, or `br`. If you don't set it, it defaults to `us`.
   - When using the SMS channel, you can also set the `DEFAULT_SMS_ORIGINATOR` environment variable to the phone number that will be used as the sender for SMS messages. Depending on your country, this setting may be required.
   - You can also set the `GEOCODING_API_KEY` environment variable to your Google Geocoding API key if you want to use the location feature. This is needed to convert an address to a latitude/longitude pair.
+  - `NGROK_AUTH_TOKEN`: If you want to use the tool `get-message-events`, you have to be able to receive events related to a message. If this variable is set, the MCP server will open a tunnel to your local machine using [ngrok](https://dashboard.ngrok.com/get-started/your-authtoken). If you don't set this variable, the MCP server will not be able to receive events related to a message.
 - Verification API credentials: navigate to the [Verification / Apps section](https://dashboard.sinch.com/verification/apps) of the Sinch Build dashboard and create a new app or select an existing one. You will need the following credentials:
   - (Required) `VERIFICATION_APPLICATION_KEY`
   - (Required) `VERIFICATION_APPLICATION_SECRET`
