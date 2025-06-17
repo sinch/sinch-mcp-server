@@ -1,4 +1,4 @@
-# Sinch MCP Server
+# Sinch MCP Server — Developer Preview
 
 This repository contains the source code for the Sinch MCP server, which provides a set of tools to interact with the Sinch APIs. This README focuses on using the MCP server with the [Claude Desktop](https://claude.ai/download) client, but it can also be used with any other MCP client.
 
@@ -86,7 +86,7 @@ To use the APIs used by the MCP tools, you will need the following credentials:
 
 ### MCP Server Configuration
 
-The Sinch MCP server is available as an NPM package to the executed:
+The Sinch MCP server is available as an NPM package to the executed. Here is how to set it up in the [Claude Desktop](https://claude.ai/download) configuration file (`claude_desktop_config.json`). Remember to fill in the environment variables with your own credentials:
 
 ```json
 {
