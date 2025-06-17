@@ -1,0 +1,29 @@
+{
+  "name": "voice tools",
+  "envVar": "VOICE_APPLICATION_KEY",
+  "toolsToBeDisabled": [
+    "close-conference",
+    "conference-callout",
+    "manage-conference-participant",
+    "tts-callout"
+  ],
+  "toolsToStayEnabled": [
+    "list-email-events",
+    "list-email-templates",
+    "analytics-metrics",
+    "retrieve-email-info",
+    "send-email",
+    "list-conversation-apps",
+    "list-messaging-templates",
+    "send-choice-message",
+    "send-location-message",
+    "send-media-message",
+    "send-template-message",
+    "send-text-message",
+    "number-lookup",
+    "report-sms-verification",
+    "start-sms-verification",
+    "sinch-mcp-configuration"
+  ],
+  "errorMessage": "Incorrect configuration. The environment variables are not set: VOICE_APPLICATION_KEY"
+}

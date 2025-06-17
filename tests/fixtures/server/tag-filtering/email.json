@@ -1,0 +1,12 @@
+{
+  "tag": "email",
+  "expectedTools": [
+    "list-email-events",
+    "list-email-templates",
+    "analytics-metrics",
+    "retrieve-email-info",
+    "send-email",
+    "sinch-mcp-configuration"
+  ],
+  "expectedPrompts": []
+}

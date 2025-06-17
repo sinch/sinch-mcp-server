@@ -1,0 +1,16 @@
+{
+  "tag": "conversation",
+  "expectedTools": [
+    "list-conversation-apps",
+    "list-messaging-templates",
+    "send-choice-message",
+    "send-location-message",
+    "send-media-message",
+    "send-template-message",
+    "send-text-message",
+    "sinch-mcp-configuration"
+  ],
+  "expectedPrompts": [
+    "conversation-app-id"
+  ]
+}

@@ -1,0 +1,11 @@
+{
+  "tag": "voice",
+  "expectedTools": [
+    "close-conference",
+    "conference-callout",
+    "manage-conference-participant",
+    "tts-callout",
+    "sinch-mcp-configuration"
+  ],
+  "expectedPrompts": []
+}
