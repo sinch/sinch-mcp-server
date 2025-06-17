@@ -1,8 +1,9 @@
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { z } from 'zod';
-import { hasMatchingTag, isPromptResponse } from '../../utils';
+import { isPromptResponse } from '../../utils';
 import { IPromptResponse, PromptResponse, Tags } from '../../types';
 import { getMailgunCredentials } from './utils/mailgun-service-helper';
+import { EmailToolKey, getToolName, shouldRegisterTool } from './utils/mailgun-tools-helper';
 
 interface EventList {
   items: Event[];
@@ -17,13 +18,14 @@ interface Event {
   };
 }
 
+const TOOL_KEY: EmailToolKey = 'retrieveEmailInfo';
+const TOOL_NAME = getToolName(TOOL_KEY);
+
 export const registerRetrieveEmailInfo = (server: McpServer, tags: Tags[]) => {
-  if (!hasMatchingTag(['all', 'email', 'notification'], tags)) {
-    return;
-  }
+  if (!shouldRegisterTool(TOOL_KEY, tags)) return;
 
   server.tool(
-    'retrieve-email-info',
+    TOOL_NAME,
     'Retrieve the content of an email and the events that happened thanks to its ID',
     {
       emailId: z.string().describe('The email ID.'),

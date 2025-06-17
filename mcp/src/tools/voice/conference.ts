@@ -3,16 +3,18 @@ import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { Voice } from '@sinch/sdk-core';
 import { z } from 'zod';
 import { getVoiceService } from './utils/voice-service-helper';
-import { hasMatchingTag, isPromptResponse } from '../../utils';
+import { getToolName, shouldRegisterTool, VoiceToolKey } from './utils/voice-tools-helper';
+import { isPromptResponse } from '../../utils';
 import { IPromptResponse, PromptResponse, Tags } from '../../types';
 
+const TOOL_KEY: VoiceToolKey = 'conferenceCallout';
+const TOOL_NAME = getToolName(TOOL_KEY);
+
 export const registerConferenceCallout = (server: McpServer, tags: Tags[]) => {
-  if (!hasMatchingTag(['all', 'voice'], tags)) {
-    return;
-  }
+  if (!shouldRegisterTool(TOOL_KEY, tags)) return;
 
   server.tool(
-    'conference-call',
+    TOOL_NAME,
     'Call a phone number and connects it to a conference room when answered',
     {
       phoneNumbers: z.array(z.string()).describe('The phone numbers to call and connect to the conference room'),

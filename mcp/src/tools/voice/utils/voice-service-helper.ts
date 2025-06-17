@@ -67,5 +67,4 @@ export const getVoiceService = (): VoiceService | PromptResponse => {
   apis.forEach((api) => addPropertiesToApi(api as unknown as ApiService, apiFetchClient));
 
   return sinchClient.voice;
-
 };

@@ -1,16 +1,18 @@
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
-import { hasMatchingTag, isPromptResponse } from '../../utils';
+import { isPromptResponse } from '../../utils';
 import { formatListAllAppsResponse } from './utils/format-list-all-apps-response';
 import { getConversationService } from './utils/conversation-service-helper';
+import { ConversationToolKey, getToolName, shouldRegisterTool } from './utils/conversation-tools-helper';
 import { IPromptResponse, PromptResponse, Tags } from '../../types';
 
+const TOOL_KEY: ConversationToolKey = 'listConversationApps';
+const TOOL_NAME = getToolName(TOOL_KEY);
+
 export const registerListAllApps = (server: McpServer, tags: Tags[]) => {
-  if (!hasMatchingTag(['all', 'conversation', 'notification'], tags)) {
-    return;
-  }
+  if (!shouldRegisterTool(TOOL_KEY, tags)) return;
 
   server.tool(
-    'list-all-apps',
+    TOOL_NAME,
     'Get a list of all Conversation apps in the account. Apps are created and configured in the Sinch Dashboard or with the Conversation API. The App is the entity that holds the credentials related to the various channels',
     listAllAppsHandler
   );

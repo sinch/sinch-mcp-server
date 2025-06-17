@@ -1,16 +1,18 @@
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { z } from 'zod';
 import { getVoiceService } from './utils/voice-service-helper';
-import { hasMatchingTag, isPromptResponse } from '../../utils';
+import { getToolName, shouldRegisterTool, VoiceToolKey } from './utils/voice-tools-helper';
+import { isPromptResponse } from '../../utils';
 import { IPromptResponse, PromptResponse, Tags } from '../../types';
 
+const TOOL_KEY: VoiceToolKey = 'manageConferenceParticipant';
+const TOOL_NAME = getToolName(TOOL_KEY);
+
 export const registerManageConferenceParticipant = (server: McpServer, tags: Tags[]) => {
-  if (!hasMatchingTag(['all', 'voice'], tags)) {
-    return;
-  }
+  if (!shouldRegisterTool(TOOL_KEY, tags)) return;
 
   server.tool(
-    'manage-conference-participant',
+    TOOL_NAME,
     'Manage a conference participant. The conference is identified by the conference Id used in the callout, and the participants by the callId associated to their phone number when the conference callout to their number was made',
     {
       conferenceId: z.string().describe('The conference ID used in the callout to create the conference'),

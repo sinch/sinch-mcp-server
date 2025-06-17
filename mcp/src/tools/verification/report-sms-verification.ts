@@ -1,16 +1,18 @@
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { z } from 'zod';
 import { getVerificationService } from './utils/verification-service-helper';
-import { hasMatchingTag, isPromptResponse } from '../../utils';
+import { getToolName, shouldRegisterTool, VerificationToolKey } from './utils/verification-tools-helper';
+import { isPromptResponse } from '../../utils';
 import { IPromptResponse, PromptResponse, Tags } from '../../types';
 
+const TOOL_KEY: VerificationToolKey = 'reportSmsVerification';
+const TOOL_NAME = getToolName(TOOL_KEY);
+
 export const registerReportSmsVerification = (server: McpServer, tags: Tags[]) => {
-  if (!hasMatchingTag(['all', 'verification'], tags)) {
-    return;
-  }
+  if(!shouldRegisterTool(TOOL_KEY, tags)) return;
 
   server.tool(
-    'report-sms-verification',
+    TOOL_NAME,
     'Report the received verification code to verify it, using the phone number of the user',
     {
       phoneNumber: z.string().describe('Phone number in E.164 format used to start the verification process'),

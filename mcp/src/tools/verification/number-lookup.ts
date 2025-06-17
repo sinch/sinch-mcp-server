@@ -1,9 +1,10 @@
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { z } from 'zod';
 import { getVerificationCredentials } from './utils/verification-service-helper';
-import { hasMatchingTag, isPromptResponse } from '../../utils';
+import { isPromptResponse } from '../../utils';
 import { USER_AGENT } from '../../user-agent';
 import { IPromptResponse, PromptResponse, Tags } from '../../types';
+import { getToolName, shouldRegisterTool, VerificationToolKey } from './utils/verification-tools-helper';
 
 interface NumberLookupResponse {
   line?: {
@@ -17,13 +18,14 @@ interface NumberLookupResponse {
   traceId?: string;
 }
 
+const TOOL_KEY: VerificationToolKey = 'numberLookup';
+const TOOL_NAME = getToolName(TOOL_KEY);
+
 export const registerNumberLookup = (server: McpServer, tags: Tags[]) => {
-  if (!hasMatchingTag(['all', 'verification'], tags)) {
-    return;
-  }
+  if(!shouldRegisterTool(TOOL_KEY, tags)) return;
 
   server.tool(
-    'number-lookup',
+    TOOL_NAME,
     'With quick and easy access to Number Lookup, you can enhance your communications and keep your database as clean as a whistle. Number Lookup checks against first-party numbering sources and provides real-time feedback. Improve communication by validating and verifying numbers, boosting delivery conversion rates, and saving money on marketing campaigns. Test numbers to ensure your recipients are ready and waiting to receive your messages!',
     {
       phoneNumber: z.string().describe('Phone number in E.164 format to look up'),

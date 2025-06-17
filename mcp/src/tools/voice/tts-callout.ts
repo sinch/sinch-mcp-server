@@ -2,16 +2,18 @@ import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { Voice } from '@sinch/sdk-core';
 import { z } from 'zod';
 import { getVoiceService } from './utils/voice-service-helper';
-import { hasMatchingTag, isPromptResponse } from '../../utils';
+import { getToolName, shouldRegisterTool, VoiceToolKey } from './utils/voice-tools-helper';
+import { isPromptResponse } from '../../utils';
 import { IPromptResponse, PromptResponse, Tags } from '../../types';
 
+const TOOL_KEY: VoiceToolKey = 'ttsCallout';
+const TOOL_NAME = getToolName(TOOL_KEY);
+
 export const registerTtsCallout = (server: McpServer, tags: Tags[]) => {
-  if (!hasMatchingTag(['all', 'voice', 'notification'], tags)) {
-    return;
-  }
+  if (!shouldRegisterTool(TOOL_KEY, tags)) return;
 
   server.tool(
-    'tts-callout',
+    TOOL_NAME,
     'Make a callout with a Text-To-Speech prompt',
     {
       phoneNumber: z.string().describe('The phone number to call'),

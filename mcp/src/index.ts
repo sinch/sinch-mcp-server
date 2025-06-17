@@ -1,10 +1,12 @@
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import dotenv from 'dotenv';
-import { server } from './server';
+import { instantiateMcpServer, parseArgs, registerCapabilities } from './server';
 dotenv.config();
 
 export const main = async () => {
   const transport = new StdioServerTransport();
+  const server = instantiateMcpServer();
+  registerCapabilities(server, parseArgs(process.argv));
   await server.connect(transport);
   console.error('Sinch MCP Server running on stdio');
 };

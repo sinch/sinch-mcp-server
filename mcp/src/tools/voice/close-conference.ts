@@ -1,16 +1,18 @@
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { z } from 'zod';
-import { hasMatchingTag, isPromptResponse } from '../../utils';
+import { isPromptResponse } from '../../utils';
 import { IPromptResponse, PromptResponse, Tags } from '../../types';
 import { getVoiceService } from './utils/voice-service-helper';
+import { getToolName, shouldRegisterTool, VoiceToolKey } from './utils/voice-tools-helper';
+
+const TOOL_KEY: VoiceToolKey = 'closeConference';
+const TOOL_NAME = getToolName(TOOL_KEY);
 
 export const registerCloseConference = (server: McpServer, tags: Tags[]) => {
-  if (!hasMatchingTag(['all', 'voice'], tags)) {
-    return;
-  }
+  if (!shouldRegisterTool(TOOL_KEY, tags)) return;
 
   server.tool(
-    'close-conference',
+    TOOL_NAME,
     'Close a conference callout',
     {
       conferenceId: z.string().describe('The conference ID to close')

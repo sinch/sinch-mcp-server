@@ -1,7 +1,12 @@
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { Conversation } from '@sinch/sdk-core';
 import { z } from 'zod';
-import { getConversationAppId, getConversationRegion, getConversationService } from './utils/conversation-service-helper';
+import {
+  getConversationAppId,
+  getConversationRegion,
+  getConversationService,
+} from './utils/conversation-service-helper';
+import { ConversationToolKey, getToolName, shouldRegisterTool } from './utils/conversation-tools-helper';
 import {
   Recipient,
   ConversationAppIdOverride,
@@ -9,7 +14,7 @@ import {
   ConversationRegionOverride,
   MessageSenderNumberOverride,
 } from './prompt-schemas';
-import { hasMatchingTag, isPromptResponse } from '../../utils';
+import { isPromptResponse } from '../../utils';
 import { buildMessageBase } from './utils/send-message-builder';
 import { getLatitudeLongitudeFromAddress } from './utils/geocoding';
 import { IPromptResponse, PromptResponse, Tags } from '../../types';
@@ -24,13 +29,14 @@ const locationAsAddress = z.string();
 
 const location = z.union([locationAsAddress, locationAsCoordinates]);
 
+const TOOL_KEY: ConversationToolKey = 'sendLocationMessage';
+const TOOL_NAME = getToolName(TOOL_KEY);
+
 export const registerSendLocationMessage = (server: McpServer, tags: Tags[]) => {
-  if (!hasMatchingTag(['all', 'conversation', 'notification'], tags)) {
-    return;
-  }
+  if (!shouldRegisterTool(TOOL_KEY, tags)) return;
 
   server.tool(
-    'send-location-message',
+    TOOL_NAME,
     'Send a location message from an address given in parameter to a contact on the specified channel. The contact ccan be a phone number in E.164 format, or the identifier for the specified channel.',
     {
       recipient: Recipient,

@@ -1,20 +1,22 @@
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
-import { hasMatchingTag, isPromptResponse } from '../../utils';
+import { isPromptResponse } from '../../utils';
 import {
   formatChannelSpecificTemplates,
   formatOmniChannelTemplates,
   renderInstructions,
 } from './utils/format-list-all-templates-response';
 import { getConversationTemplateService } from './utils/conversation-service-helper';
+import { ConversationToolKey, getToolName, shouldRegisterTool } from './utils/conversation-tools-helper';
 import { IPromptResponse, PromptResponse, Tags } from '../../types';
 
+const TOOL_KEY: ConversationToolKey = 'listMessagingTemplates';
+const TOOL_NAME = getToolName(TOOL_KEY);
+
 export const registerListAllTemplates = (server: McpServer, tags: Tags[]) => {
-  if (!hasMatchingTag(['all', 'conversation', 'notification'], tags)) {
-    return;
-  }
+  if (!shouldRegisterTool(TOOL_KEY, tags)) return;
 
   server.tool(
-    'list-messaging-templates',
+    TOOL_NAME,
     'Get a list of all messaging-related templates (omni-channel or channel specific) belonging to an account. Note that the Email templates are NOT included in this list - they can be found with another tool: list-email-templates. Do not try to use this tool to list Email templates, it will not work.',
     listAllTemplatesHandler
   );
