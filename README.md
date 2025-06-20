@@ -139,7 +139,7 @@ git clone https://github.com/sinch/sinch-mcp-server.git
 ### Step 2: Build the MCP server
 
 ```bash
-cd sinch-mcp-server/mcp
+cd sinch-mcp-server
 npm install
 npm run build
 ```
@@ -154,7 +154,7 @@ Here is an example of how to configure the MCP server in the [Claude Desktop](ht
     "sinch": {
       "command": "node",
       "args": [
-        "/your/path/to/sinch-mcp-server/mcp/dist/index.js"
+        "/your/path/to/sinch-mcp-server/dist/index.js"
       ],
       "env": {
         "CONVERSATION_PROJECT_ID": "",
@@ -185,7 +185,7 @@ Too many tools mean bigger context, mean higher tokens usage and more confusion 
 You can filter the tools that are available in the MCP server by using the `tags` options. For example, if you want to only use the conversation tools, you can add the following options to the `args` array:
 ```
       "args": [
-        "/your/path/to/sinch-mcp-server/mcp/dist/index.js",
+        "/your/path/to/sinch-mcp-server/dist/index.js",
         "--tags", 
         "conversation"
       ],
@@ -193,7 +193,7 @@ You can filter the tools that are available in the MCP server by using the `tags
 You can combine multiple tags by separating them with commas. For example, if you want to use both conversation and verification tools, you can use the following command:
 ```
       "args": [
-        "/your/path/to/sinch-mcp-server/mcp/dist/index.js",
+        "/your/path/to/sinch-mcp-server/dist/index.js",
         "--tags", 
         "conversation,verification"
       ],
@@ -201,7 +201,7 @@ You can combine multiple tags by separating them with commas. For example, if yo
 If you want to use all the tools, you can omit the `--tags` option, or use the tag `all`:
 ```
       "args": [
-        "/your/path/to/sinch-mcp-server/mcp/dist/index.js",
+        "/your/path/to/sinch-mcp-server/dist/index.js",
         "--tags", 
         "all"
       ],
