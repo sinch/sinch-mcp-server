@@ -66,14 +66,8 @@ export const openNgrokTunnel = async () => {
 }
 
 export const startWebhookListener = async () => {
-  // The ngrok tunnel is for the conversation webhook only => check if the environment variables are set
-  if (!process.env.CONVERSATION_PROJECT_ID
-    || !process.env.CONVERSATION_KEY_ID
-    || !process.env.CONVERSATION_KEY_SECRET
-    || !process.env.CONVERSATION_APP_ID) return;
-
-  // The user must have also set the NGROK_AUTH_TOKEN environment variable, and we found a port to use for the webhook events receiver
-  if (!process.env.NGROK_AUTH_TOKEN || !webhookPort) return;
+  // We must have found a port to use for the webhook events receiver
+  if (!webhookPort) return;
 
   let conversationWebhookUrl;
   try {
@@ -93,7 +87,7 @@ export const startWebhookListener = async () => {
   try {
     createWebhookResponse= await sinchClient.conversation.webhooks.create({
       webhookCreateRequestBody: {
-        app_id: process.env.CONVERSATION_APP_ID,
+        app_id: process.env.CONVERSATION_APP_ID!,
         target: conversationWebhookUrl,
         triggers: [
           'MESSAGE_DELIVERY', 'MESSAGE_SUBMIT'
@@ -128,6 +122,15 @@ const deleteWebhook = async (webhookId: string) => {
 }
 
 export const startWebhookServer = async () => {
+  // The ngrok tunnel is for the conversation webhook only => check if the environment variables are set
+  if (!process.env.CONVERSATION_PROJECT_ID
+    || !process.env.CONVERSATION_KEY_ID
+    || !process.env.CONVERSATION_KEY_SECRET
+    || !process.env.CONVERSATION_APP_ID) return;
+
+  // The user must have also set the NGROK_AUTH_TOKEN environment variable
+  if (!process.env.NGROK_AUTH_TOKEN) return;
+
   const app = express();
   app.use(express.json());
 
