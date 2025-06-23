@@ -13,7 +13,7 @@ export const main = async () => {
   const server = instantiateMcpServer();
   registerCapabilities(server, parseArgs(process.argv));
   await server.connect(transport);
-  console.error('Sinch MCP Server running on stdio');
+  console.info('Sinch MCP Server running on stdio');
   // Create a webhook server to handle the webhook events
   await startWebhookServer();
 };

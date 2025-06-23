@@ -101,7 +101,7 @@ export const startWebhookListener = async () => {
         target_type: 'HTTP'
       }
     });
-    console.error('Webhook created successfully:', createWebhookResponse.id);
+    console.info('Webhook created successfully:', createWebhookResponse.id);
   } catch (error) {
     console.error('Failed to create webhook:', error);
     return;
@@ -200,31 +200,31 @@ export const startWebhookServer = async () => {
     const address = httpServer.address();
     if (typeof address === 'object' && address !== null) {
       webhookPort = address.port;
-      console.error(`Webhook server listening on port ${webhookPort}`);
+      console.info(`Webhook server listening on port ${webhookPort}`);
     }
     // Once the server is ready, create a webhook in the conversation app
     await startWebhookListener();
   });
 
   const shutdown = () => {
-    console.error('Shutting down webhook server...');
+    console.info('Shutting down webhook server...');
     httpServer.close(async () => {
-      console.error('HTTP server closed.');
-      console.error('Deleting webhook in the conversation app...');
+      console.info('HTTP server closed.');
+      console.info('Deleting webhook in the conversation app...');
       if (webhookId) {
         try {
           await deleteWebhook(webhookId);
-          console.error(`Webhook ${webhookId} cleanup completed.`);
+          console.info(`Webhook ${webhookId} cleanup completed.`);
         } catch (error) {
           console.error(`Webhook ${webhookId} cleanup failed:`, error);
         }
       }
 
       db.close();
-      console.error('Database connection closed.');
+      console.info('Database connection closed.');
       try {
         fs.unlinkSync(dbPath);
-        console.error('Database file deleted.');
+        console.info('Database file deleted.');
       } catch (err) {
         console.error('Failed to delete DB file:', (err as Error).message);
       }
