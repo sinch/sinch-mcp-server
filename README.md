@@ -8,15 +8,16 @@ Here is the list of tools available in the MCP server (all the phone numbers mus
 
 ### Conversation Tools
 
-| Tool                         | Description                                                                                                                                                                                                                         | Tags                       |
-|------------------------------|-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|----------------------------|
-| **send-text-message**        | Send a plain text message to a recipient on a supported channel. <br> *Example prompt*: "Send a quick update to the phone number +33612345678 on SMS."                                                                              | conversation, notification |
-| **send-media-message**       | Send an image, video, or document via a media message. <br> *Example prompt*: "Send the product brochure PDF to the phone number +33612345678 on WhatsApp."                                                                         | conversation, notification |
-| **send-template-message**    | Send a message using a predefined template (e.g., WhatsApp or omni-template). <br> *Example prompt*: "Send the appointment reminder template in Spanish to this user on Messenger."                                                 | conversation, notification |
-| **send-choice-message**      | Send a message that includes interactive choices (buttons or quick replies). <br> *Example prompt*: "Send a RCS survey about preferred ice cream flavor to +33662162504 with the following choices: Vanilla, Strawberry, Hazelnut". | conversation, notification |
-| **send-location-message**    | Send a location pin or coordinates to a user. <br> *Example prompt*: "Send a pin to the Guggenheim Museum location in Bilbao to the phone number +33612345678."                                                                     | conversation, notification |
-| **list-all-apps**            | List all configured Conversation apps in the Sinch account. <br> *Example prompt*: "What messaging apps do I have set up in my account?"                                                                                            | conversation, notification |
-| **list-messaging-templates** | List all omni-channel and channel-specific message templates. <br> *Example prompt*: "Show me all message templates in my account."                                                                                                 | conversation, notification |
+| Tool                         | Description                                                                                                                                                                                                                                                                                                 | Tags                       |
+|------------------------------|-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|----------------------------|
+| **send-text-message**        | Send a plain text message to a recipient on a supported channel. <br> *Example prompt*: "Send a quick update to the phone number +33612345678 on SMS."                                                                                                                                                      | conversation, notification |
+| **send-media-message**       | Send an image, video, or document via a media message. <br> *Example prompt*: "Send the product brochure PDF to the phone number +33612345678 on WhatsApp."                                                                                                                                                 | conversation, notification |
+| **send-template-message**    | Send a message using a predefined template (e.g., WhatsApp or omni-template). <br> *Example prompt*: "Send the appointment reminder template in Spanish to this user on Messenger."                                                                                                                         | conversation, notification |
+| **send-choice-message**      | Send a message that includes interactive choices (buttons or quick replies). <br> *Example prompt*: "Send a RCS survey about preferred ice cream flavor to +33662162504 with the following choices: Vanilla, Strawberry, Hazelnut".                                                                         | conversation, notification |
+| **send-location-message**    | Send a location pin or coordinates to a user. <br> *Example prompt*: "Send a pin to the Guggenheim Museum location in Bilbao to the phone number +33612345678."                                                                                                                                             | conversation, notification |
+| **get-message-events**       | Retrieve events related to a given message (text, media, choice, ...), such as delivery status or read receipts.<br>⚠️ Only the events received during the time the MCP server is online can be retrieved. <br> *Example prompt*: "What is the delivery status of the message 01JXYH8RB8MZCAFR117KQAQMQ0 ?" | conversation, notification |
+| **list-all-apps**            | List all configured Conversation apps in the Sinch account. <br> *Example prompt*: "What messaging apps do I have set up in my account?"                                                                                                                                                                    | conversation, notification |
+| **list-messaging-templates** | List all omni-channel and channel-specific message templates. <br> *Example prompt*: "Show me all message templates in my account."                                                                                                                                                                         | conversation, notification |
 
 
 ### Email tools (Mailgun)
@@ -72,6 +73,7 @@ To use the APIs used by the MCP tools, you will need the following credentials:
   - `CONVERSATION_REGION`: This is the region where your conversation app and templates are located. It can be `us`, `eu`, or `br`. If you don't set it, it defaults to `us`.
   - When using the SMS channel, you can also set the `DEFAULT_SMS_ORIGINATOR` environment variable to the phone number that will be used as the sender for SMS messages. Depending on your country, this setting may be required.
   - You can also set the `GEOCODING_API_KEY` environment variable to your Google Geocoding API key if you want to use the location feature. This is needed to convert an address to a latitude/longitude pair.
+  - `NGROK_AUTH_TOKEN`: If you want to use the tool `get-message-events`, you have to be able to receive events related to a message. If this variable is set, the MCP server will open a tunnel to your local machine using [ngrok](https://dashboard.ngrok.com/get-started/your-authtoken). If you don't set this variable, the MCP server will not be able to receive events related to a message.
 - Verification API credentials: navigate to the [Verification / Apps section](https://dashboard.sinch.com/verification/apps) of the Sinch Build dashboard and create a new app or select an existing one. You will need the following credentials:
   - (Required) `VERIFICATION_APPLICATION_KEY`
   - (Required) `VERIFICATION_APPLICATION_SECRET`
@@ -105,6 +107,7 @@ The Sinch MCP server is available as an NPM package to the executed. Here is how
         "CONVERSATION_REGION": "",
         "DEFAULT_SMS_ORIGINATOR": "",
         "GEOCODING_API_KEY": "",
+        "NGROK_AUTH_TOKEN": "",
         "VERIFICATION_APPLICATION_KEY": "",
         "VERIFICATION_APPLICATION_SECRET": "",
         "VOICE_APPLICATION_KEY": "",
@@ -136,7 +139,7 @@ git clone https://github.com/sinch/sinch-mcp-server.git
 ### Step 2: Build the MCP server
 
 ```bash
-cd sinch-mcp-server/mcp
+cd sinch-mcp-server
 npm install
 npm run build
 ```
@@ -151,7 +154,7 @@ Here is an example of how to configure the MCP server in the [Claude Desktop](ht
     "sinch": {
       "command": "node",
       "args": [
-        "/your/path/to/sinch-mcp-server/mcp/dist/index.js"
+        "/your/path/to/sinch-mcp-server/dist/index.js"
       ],
       "env": {
         "CONVERSATION_PROJECT_ID": "",
@@ -161,6 +164,7 @@ Here is an example of how to configure the MCP server in the [Claude Desktop](ht
         "CONVERSATION_REGION": "",
         "DEFAULT_SMS_ORIGINATOR": "",
         "GEOCODING_API_KEY": "",
+        "NGROK_AUTH_TOKEN": "",
         "VERIFICATION_APPLICATION_KEY": "",
         "VERIFICATION_APPLICATION_SECRET": "",
         "VOICE_APPLICATION_KEY": "",
@@ -181,7 +185,7 @@ Too many tools mean bigger context, mean higher tokens usage and more confusion 
 You can filter the tools that are available in the MCP server by using the `tags` options. For example, if you want to only use the conversation tools, you can add the following options to the `args` array:
 ```
       "args": [
-        "/your/path/to/sinch-mcp-server/mcp/dist/index.js",
+        "/your/path/to/sinch-mcp-server/dist/index.js",
         "--tags", 
         "conversation"
       ],
@@ -189,7 +193,7 @@ You can filter the tools that are available in the MCP server by using the `tags
 You can combine multiple tags by separating them with commas. For example, if you want to use both conversation and verification tools, you can use the following command:
 ```
       "args": [
-        "/your/path/to/sinch-mcp-server/mcp/dist/index.js",
+        "/your/path/to/sinch-mcp-server/dist/index.js",
         "--tags", 
         "conversation,verification"
       ],
@@ -197,7 +201,7 @@ You can combine multiple tags by separating them with commas. For example, if yo
 If you want to use all the tools, you can omit the `--tags` option, or use the tag `all`:
 ```
       "args": [
-        "/your/path/to/sinch-mcp-server/mcp/dist/index.js",
+        "/your/path/to/sinch-mcp-server/dist/index.js",
         "--tags", 
         "all"
       ],
@@ -233,6 +237,8 @@ CONVERSATION_REGION=
 DEFAULT_SMS_ORIGINATOR=
 ## Needed only if you want to send location messages: it converts an address to a latitude/longitude pair
 GEOCODING_API_KEY=
+## Token to be obtained at https://dashboard.ngrok.com/get-started/your-authtoken to enable the "get-message-events" tool
+NGROK_AUTH_TOKEN=
 
 # Verification tools related environment variables
 VERIFICATION_APPLICATION_KEY=

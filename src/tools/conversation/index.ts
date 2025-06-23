@@ -1,4 +1,5 @@
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
+import { registerGetMessageEvents } from './get-message-events';
 import { registerListAllApps } from './list-all-apps';
 import { registerListAllTemplates } from './list-messaging-templates';
 import { registerSendCardOrChoiceMessage } from './send-card-or-choice-message';
@@ -16,4 +17,5 @@ export const registerConversationTools = (server: McpServer, tags: Tags[]) => {
   registerSendTemplateMessage(server, tags);
   registerListAllApps(server, tags);
   registerListAllTemplates(server, tags);
+  registerGetMessageEvents(server, tags);
 };

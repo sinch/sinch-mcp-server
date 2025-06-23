@@ -6,6 +6,7 @@
     "CONVERSATION_KEY_SECRET"
   ],
   "toolsToVerify": [
+    "get-message-events",
     "list-conversation-apps",
     "list-messaging-templates",
     "send-choice-message",

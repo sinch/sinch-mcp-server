@@ -1,6 +1,7 @@
 {
   "tag": "conversation",
   "expectedTools": [
+    "get-message-events",
     "list-conversation-apps",
     "list-messaging-templates",
     "send-choice-message",

@@ -8,6 +8,7 @@
     "tts-callout"
   ],
   "toolsToStayEnabled": [
+    "get-message-events",
     "list-email-events",
     "list-email-templates",
     "analytics-metrics",

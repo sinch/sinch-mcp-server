@@ -30,6 +30,7 @@ const setEnvVariables = () => {
   process.env.CONVERSATION_PROJECT_ID = 'test-conversation-project-id';
   process.env.CONVERSATION_KEY_ID = 'test-conversation-key-id';
   process.env.CONVERSATION_KEY_SECRET = 'test-conversation-key-secret';
+  process.env.NGROK_AUTH_TOKEN = 'test-ngrok-auth-token';
   process.env.VERIFICATION_APPLICATION_KEY = 'test-verification-application-key';
   process.env.VERIFICATION_APPLICATION_SECRET = 'test-verification-application-secret';
   process.env.VOICE_APPLICATION_KEY = 'test-voice-application-key';
