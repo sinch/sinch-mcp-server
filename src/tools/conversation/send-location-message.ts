@@ -71,7 +71,7 @@ export const sendLocationMessageHandler = async ({
   }
   const conversationAppId = maybeAppId;
 
-  const maybeClient = getConversationService();
+  const maybeClient = getConversationService(TOOL_NAME);
   if (isPromptResponse(maybeClient)) {
     return maybeClient.promptResponse;
   }

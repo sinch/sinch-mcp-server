@@ -31,11 +31,11 @@ export const manageConferenceParticipantHandler = async ({
   participantId: string;
   action: 'mute' | 'unmute' | 'onhold' | 'resume';
 }): Promise<IPromptResponse> => {
-  const maybeVoiceService = getVoiceService();
+  const maybeVoiceService = getVoiceService(TOOL_NAME);
   if (isPromptResponse(maybeVoiceService)) {
     return maybeVoiceService.promptResponse;
   }
-  const voiceService = maybeVoiceService;
+  const voiceService = maybeVoiceService.voice;
 
   await voiceService.conferences.manageParticipant({
     conferenceId,

@@ -2,7 +2,8 @@ import { z } from 'zod';
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { IPromptResponse, PromptResponse, Tags } from '../../types';
 import { getMailgunApiKey} from './utils/mailgun-service-helper';
-import { EmailToolKey, getToolName, shouldRegisterTool } from './utils/mailgun-tools-helper';
+import { EmailToolKey, getToolName, sha256, shouldRegisterTool } from './utils/mailgun-tools-helper';
+import { USER_AGENT } from '../../user-agent';
 
 const metricsTypes = [
   // Counts
@@ -124,7 +125,8 @@ export const analyticsMetricsHandler = async ({
     method: 'POST',
     headers: {
       'Authorization': 'Basic ' + Buffer.from(`api:${mailgunApiKey}`).toString('base64'),
-      'Content-Type': 'application/json'
+      'Content-Type': 'application/json',
+      'User-Agent': USER_AGENT.replace('{toolName}', TOOL_NAME).replace('{projectId}', sha256(mailgunApiKey)),
     },
     body: JSON.stringify(body)
   });

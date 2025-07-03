@@ -13,16 +13,18 @@ import process from 'process';
 import { PromptResponse } from '../../../types';
 import { USER_AGENT } from '../../../user-agent';
 
-export function getConversationService(): SinchClient | PromptResponse {
+export function getConversationService(toolName: string): SinchClient | PromptResponse {
   return getSinchService(
     CONVERSATION_HOSTNAME,
+    toolName,
     (client, fetcher, hostname) => configureConversationApis(client, fetcher, hostname),
   );
 }
 
-export function getConversationTemplateService(): SinchClient | PromptResponse {
+export function getConversationTemplateService(toolName: string): SinchClient | PromptResponse {
   return getSinchService(
     CONVERSATION_TEMPLATES_HOSTNAME,
+    toolName,
     (client, fetcher, hostname) => configureTemplatesApis(client, fetcher, hostname),
   );
 }
@@ -30,6 +32,7 @@ export function getConversationTemplateService(): SinchClient | PromptResponse {
 /** Shared helper for both “conversation” and “templates” */
 function getSinchService(
   hostnameTemplate: string,
+  toolName: string,
   configure: (client: SinchClient, fetcher: ApiFetchClient, hostname: string) => void
 ): SinchClient | PromptResponse {
   const projectId = process.env.CONVERSATION_PROJECT_ID;
@@ -50,7 +53,7 @@ function getSinchService(
       new AdditionalHeadersRequest({
         headers: buildHeader(
           'User-Agent',
-          USER_AGENT,
+          USER_AGENT.replace('{toolName}', toolName).replace('{projectId}', projectId),
         ),
       }),
     ],

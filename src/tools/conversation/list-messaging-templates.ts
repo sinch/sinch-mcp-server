@@ -23,7 +23,7 @@ export const registerListAllTemplates = (server: McpServer, tags: Tags[]) => {
 };
 
 export const listAllTemplatesHandler = async (): Promise<IPromptResponse> => {
-  const maybeClient = getConversationTemplateService();
+  const maybeClient = getConversationTemplateService(TOOL_NAME);
   if (isPromptResponse(maybeClient)) {
     return maybeClient.promptResponse;
   }

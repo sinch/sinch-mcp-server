@@ -51,7 +51,7 @@ export const numberLookupHandler = async (
       headers: {
         'Content-Type': 'application/json',
         Authorization: 'Basic ' + Buffer.from(`${credentials.applicationKey}:${credentials.applicationSecret}`).toString('base64'),
-        'User-Agent': USER_AGENT
+        'User-Agent': USER_AGENT.replace('{toolName}', TOOL_NAME).replace('{projectId}', credentials.applicationKey),
       },
       body: JSON.stringify({
         number: phoneNumber,

@@ -3,7 +3,8 @@ import { z } from 'zod';
 import { isPromptResponse } from '../../utils';
 import { IPromptResponse, PromptResponse, Tags } from '../../types';
 import { getMailgunCredentials } from './utils/mailgun-service-helper';
-import { EmailToolKey, getToolName, shouldRegisterTool } from './utils/mailgun-tools-helper';
+import { EmailToolKey, getToolName, sha256, shouldRegisterTool } from './utils/mailgun-tools-helper';
+import { USER_AGENT } from '../../user-agent';
 
 interface EventList {
   items: Event[];
@@ -53,7 +54,8 @@ export const retrieveEmailInfoHandler = async({
     {
       method: 'GET',
       headers: {
-        Authorization: 'Basic ' + Buffer.from(`api:${credentials.apiKey}`).toString('base64')
+        Authorization: 'Basic ' + Buffer.from(`api:${credentials.apiKey}`).toString('base64'),
+        'User-Agent': USER_AGENT.replace('{toolName}', TOOL_NAME).replace('{projectId}', sha256(credentials.apiKey)),
       }
     }
   );
@@ -80,7 +82,8 @@ export const retrieveEmailInfoHandler = async({
     {
       method: 'GET',
       headers: {
-        Authorization: 'Basic ' + Buffer.from(`api:${credentials.apiKey}`).toString('base64')
+        Authorization: 'Basic ' + Buffer.from(`api:${credentials.apiKey}`).toString('base64'),
+        'User-Agent': USER_AGENT.replace('{toolName}', TOOL_NAME).replace('{projectId}', sha256(credentials.apiKey)),
       }
     }
   );

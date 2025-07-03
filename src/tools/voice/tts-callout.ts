@@ -30,11 +30,11 @@ export const ttsCalloutHandler = async ({
   phoneNumber: string;
   message: string;
 }): Promise<IPromptResponse> => {
-  const maybeVoiceService = getVoiceService();
+  const maybeVoiceService = getVoiceService(TOOL_NAME);
   if (isPromptResponse(maybeVoiceService)) {
     return maybeVoiceService.promptResponse;
   }
-  const voiceService = maybeVoiceService;
+  const voiceService = maybeVoiceService.voice;
 
   const cli = process.env.CALLING_LINE_IDENTIFICATION;
 

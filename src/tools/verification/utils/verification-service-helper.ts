@@ -37,7 +37,7 @@ const addPropertiesToApi = (api: ApiService, client: ApiFetchClient) => {
   api.setHostname(VERIFICATION_HOSTNAME);
 };
 
-export const getVerificationService = (): SinchClient | PromptResponse => {
+export const getVerificationService = (toolName: string): SinchClient | PromptResponse => {
 
   const applicationKey = process.env.VERIFICATION_APPLICATION_KEY;
   const applicationSecret = process.env.VERIFICATION_APPLICATION_SECRET;
@@ -66,7 +66,7 @@ export const getVerificationService = (): SinchClient | PromptResponse => {
       new AdditionalHeadersRequest({
         headers: buildHeader(
           'User-Agent',
-          USER_AGENT,
+          USER_AGENT.replace('{toolName}', toolName).replace('{projectId}', applicationKey),
         ),
       }),
     ],

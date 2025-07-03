@@ -25,7 +25,7 @@ export const registerReportSmsVerification = (server: McpServer, tags: Tags[]) =
 export const reportSmsVerificationHandler = async (
   { phoneNumber, oneTimePassword }: { phoneNumber: string; oneTimePassword: string; }
 ): Promise<IPromptResponse> => {
-  const maybeClient = getVerificationService();
+  const maybeClient = getVerificationService(TOOL_NAME);
   if (isPromptResponse(maybeClient)) {
     return maybeClient.promptResponse;
   }

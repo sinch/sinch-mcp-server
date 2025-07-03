@@ -20,7 +20,7 @@ export const registerListAllApps = (server: McpServer, tags: Tags[]) => {
 
 export const listAllAppsHandler = async (): Promise<IPromptResponse> => {
 
-  const maybeClient = getConversationService();
+  const maybeClient = getConversationService(TOOL_NAME);
   if (isPromptResponse(maybeClient)) {
     return maybeClient.promptResponse;
   }

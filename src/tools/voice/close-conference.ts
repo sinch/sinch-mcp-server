@@ -24,11 +24,11 @@ export const registerCloseConference = (server: McpServer, tags: Tags[]) => {
 export const closeConferenceHandler = async (
   { conferenceId }: { conferenceId: string }
 ): Promise<IPromptResponse> => {
-  const maybeVoiceService = getVoiceService();
+  const maybeVoiceService = getVoiceService(TOOL_NAME);
   if (isPromptResponse(maybeVoiceService)) {
     return maybeVoiceService.promptResponse;
   }
-  const voiceService = maybeVoiceService;
+  const voiceService = maybeVoiceService.voice;
 
   try {
     await voiceService.conferences.kickAll({

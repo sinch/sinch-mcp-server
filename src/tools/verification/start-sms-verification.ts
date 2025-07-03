@@ -24,7 +24,7 @@ export const registerStartVerificationWithSms = (server: McpServer, tags: Tags[]
 export const startSmsVerificationHandler = async (
   { phoneNumber }: { phoneNumber: string }
 ): Promise<IPromptResponse> => {
-  const maybeClient = getVerificationService();
+  const maybeClient = getVerificationService(TOOL_NAME);
   if (isPromptResponse(maybeClient)) {
     return maybeClient.promptResponse;
   }
