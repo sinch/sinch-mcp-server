@@ -1,6 +1,6 @@
 import {
-  getConversationService,
-  getConversationTemplateService,
+  getConversationClient,
+  getConversationTemplateClient,
   getConversationAppId,
   getConversationRegion,
 } from '../../../../src/tools/conversation/utils/conversation-service-helper';
@@ -10,6 +10,7 @@ import {
   SinchClient,
   ApiFetchClient,
 } from '@sinch/sdk-core';
+import { formatUserAgent } from '../../../../src/utils';
 
 const mockApi = () => ({
   setHostname: jest.fn(),
@@ -37,11 +38,13 @@ jest.mock('@sinch/sdk-core', () => {
 
 describe('getConversationService / getConversationTemplateService', () => {
   const OLD_ENV = process.env;
+  const PROJECT_ID = 'test-project';
+  const TOOL_NAME = 'dummy-tool';
 
   beforeEach(() => {
     jest.resetModules();
     process.env = { ...OLD_ENV };
-    process.env.CONVERSATION_PROJECT_ID = 'test-project';
+    process.env.CONVERSATION_PROJECT_ID = PROJECT_ID;
     process.env.CONVERSATION_KEY_ID = 'test-key-id';
     process.env.CONVERSATION_KEY_SECRET = 'test-secret';
   });
@@ -50,8 +53,8 @@ describe('getConversationService / getConversationTemplateService', () => {
     process.env = OLD_ENV;
   });
 
-  test('returns a configured SinchClient from getConversationService', () => {
-    const client = getConversationService();
+  test('returns a configured SinchClient from getConversationService', async () => {
+    const client = getConversationClient(TOOL_NAME);
     expect(client).toHaveProperty('conversation');
 
     const apis = (client as SinchClient).conversation;
@@ -61,13 +64,17 @@ describe('getConversationService / getConversationTemplateService', () => {
       if (key !== 'templatesV2') {
         expect(api.setHostname).toHaveBeenCalledWith(expectedHostname);
         expect(api.client).toBeInstanceOf(ApiFetchClient);
+        const userAgentPlugin = (api.client as ApiFetchClient).apiClientOptions.requestPlugins?.find((plugin) => plugin.getName() === 'AdditionalHeadersRequest');
+        expect(userAgentPlugin).toBeDefined();
+        const expectedUserAgent = formatUserAgent(TOOL_NAME, PROJECT_ID);
+        expect((await (userAgentPlugin as any).additionalHeaders.headers)['User-Agent']).toBe(expectedUserAgent);
       }
     }
 
   });
 
-  test('returns a configured SinchClient from getConversationTemplateService', () => {
-    const client = getConversationTemplateService();
+  test('returns a configured SinchClient from getConversationTemplateService', async () => {
+    const client = getConversationTemplateClient(TOOL_NAME);
     expect(client).toHaveProperty('conversation');
 
     const api = (client as SinchClient).conversation.templatesV2;
@@ -76,11 +83,15 @@ describe('getConversationService / getConversationTemplateService', () => {
     expect(api.setHostname).toHaveBeenCalledWith(expectedHostname);
     expect(api.client).toBeInstanceOf(ApiFetchClient);
     expect(api.client!.apiClientOptions.requestPlugins?.length).toBe(2);
+    const userAgentPlugin = (api.client as ApiFetchClient).apiClientOptions.requestPlugins?.find((plugin) => plugin.getName() === 'AdditionalHeadersRequest');
+    expect(userAgentPlugin).toBeDefined();
+    const expectedUserAgent = formatUserAgent(TOOL_NAME, PROJECT_ID);
+    expect((await (userAgentPlugin as any).additionalHeaders.headers)['User-Agent']).toBe(expectedUserAgent);
   });
 
   test('returns PromptResponse when env vars are missing', () => {
     delete process.env.CONVERSATION_PROJECT_ID;
-    const result = getConversationService();
+    const result = getConversationClient(TOOL_NAME);
     expect(result).toBeInstanceOf(PromptResponse);
     expect((result as PromptResponse).promptResponse).toStrictEqual({
       role: 'assistant',

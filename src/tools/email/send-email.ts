@@ -1,10 +1,10 @@
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { fetch, FormData } from 'undici';
 import { z } from 'zod';
-import { isPromptResponse } from '../../utils';
+import { formatUserAgent, isPromptResponse } from '../../utils';
 import { IPromptResponse, PromptResponse, Tags } from '../../types';
 import { getMailgunCredentials } from './utils/mailgun-service-helper';
-import { EmailToolKey, getToolName, shouldRegisterTool } from './utils/mailgun-tools-helper';
+import { EmailToolKey, getToolName, sha256, shouldRegisterTool } from './utils/mailgun-tools-helper';
 
 const TOOL_KEY: EmailToolKey = 'sendEmail';
 const TOOL_NAME = getToolName(TOOL_KEY);
@@ -78,7 +78,8 @@ export const sendEmailHandler = async ({
     {
       method: 'POST',
       headers: {
-        Authorization: 'Basic ' + Buffer.from(`api:${credentials.apiKey}`).toString('base64')
+        Authorization: 'Basic ' + Buffer.from(`api:${credentials.apiKey}`).toString('base64'),
+        'User-Agent': formatUserAgent(TOOL_NAME, sha256(credentials.apiKey)),
       },
       body: form
     }

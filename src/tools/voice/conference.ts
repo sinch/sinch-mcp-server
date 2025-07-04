@@ -2,7 +2,7 @@ import crypto from 'crypto';
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { Voice } from '@sinch/sdk-core';
 import { z } from 'zod';
-import { getVoiceService } from './utils/voice-service-helper';
+import { getVoiceClient } from './utils/voice-service-helper';
 import { getToolName, shouldRegisterTool, VoiceToolKey } from './utils/voice-tools-helper';
 import { isPromptResponse } from '../../utils';
 import { IPromptResponse, PromptResponse, Tags } from '../../types';
@@ -31,11 +31,11 @@ export const conferenceCalloutHandler = async ({
   phoneNumbers: string[];
   conferenceId?: string;
 }): Promise<IPromptResponse> => {
-  const maybeVoiceService = getVoiceService();
-  if (isPromptResponse(maybeVoiceService)) {
-    return maybeVoiceService.promptResponse;
+  const maybeClient = getVoiceClient(TOOL_NAME);
+  if (isPromptResponse(maybeClient)) {
+    return maybeClient.promptResponse;
   }
-  const voiceService = maybeVoiceService;
+  const voiceService = maybeClient.voice;
 
   const cli = process.env.CALLING_LINE_IDENTIFICATION;
 

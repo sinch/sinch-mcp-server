@@ -1,8 +1,8 @@
 import { listAllAppsHandler } from '../../../src/tools/conversation/list-all-apps';
-import { getConversationService } from '../../../src/tools/conversation/utils/conversation-service-helper';
+import { getConversationClient } from '../../../src/tools/conversation/utils/conversation-service-helper';
 
 jest.mock('../../../src/tools/conversation/utils/conversation-service-helper', () => ({
-  getConversationService: jest.fn(),
+  getConversationClient: jest.fn(),
 }));
 
 let currentRegion: string;
@@ -53,7 +53,7 @@ const mockSinchClient = {
   },
 };
 
-(getConversationService as jest.Mock).mockReturnValue(mockSinchClient);
+(getConversationClient as jest.Mock).mockReturnValue(mockSinchClient);
 
 beforeEach(() => {
   jest.clearAllMocks();

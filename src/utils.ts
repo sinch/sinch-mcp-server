@@ -1,4 +1,5 @@
 import { PromptResponse } from './types';
+import { USER_AGENT } from './user-agent';
 
 export const isPromptResponse = (x: any): x is PromptResponse => {
   return x instanceof PromptResponse;
@@ -13,4 +14,8 @@ export const matchesAnyTag= (tags: string[], filteringTags: string[]): boolean =
   const normalizedFilteringTags = filteringTags.map(tag => tag.toLowerCase());
 
   return normalizedTags.some(tag => normalizedFilteringTags.includes(tag));
+}
+
+export const formatUserAgent = (toolName: string, userId: string): string => {
+  return USER_AGENT.replace('{toolName}', toolName).replace('{userId}', userId);
 }

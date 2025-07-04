@@ -1,5 +1,5 @@
 import { sendTextMessageHandler } from '../../../src/tools/conversation/send-text-message';
-import { getConversationAppId, getConversationRegion, getConversationService } from '../../../src/tools/conversation/utils/conversation-service-helper';
+import { getConversationAppId, getConversationRegion, getConversationClient } from '../../../src/tools/conversation/utils/conversation-service-helper';
 import { buildMessageBase } from '../../../src/tools/conversation/utils/send-message-builder';
 
 jest.mock('../../../src/tools/conversation/utils/conversation-service-helper');
@@ -16,7 +16,7 @@ const mockSinchClient = {
 };
 
 (getConversationAppId as jest.Mock).mockImplementation((id) => id ?? 'mock-app-id');
-(getConversationService as jest.Mock).mockReturnValue(mockSinchClient);
+(getConversationClient as jest.Mock).mockReturnValue(mockSinchClient);
 (getConversationRegion as jest.Mock).mockImplementation((region) => region ?? 'us');
 (buildMessageBase as jest.Mock).mockResolvedValue({ to: 'recipient', from: 'sender', channel: 'WHATSAPP' });
 

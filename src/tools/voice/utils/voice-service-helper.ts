@@ -9,9 +9,8 @@ import {
   VOICE_HOSTNAME,
   REGION_PATTERN,
   VoiceRegion,
-  VoiceService,
 } from '@sinch/sdk-core';
-import { USER_AGENT } from '../../../user-agent';
+import { formatUserAgent } from '../../../utils';
 
 // Hack: VoiceDomainApi is not exposed
 interface ApiService {
@@ -24,7 +23,7 @@ const addPropertiesToApi = (api: ApiService, client: ApiFetchClient) => {
   api.setHostname(VOICE_HOSTNAME.replace(REGION_PATTERN, VoiceRegion.DEFAULT));
 };
 
-export const getVoiceService = (): VoiceService | PromptResponse => {
+export const getVoiceClient = (toolName: string): SinchClient | PromptResponse => {
 
   const applicationKey = process.env.VOICE_APPLICATION_KEY;
   const applicationSecret = process.env.VOICE_APPLICATION_SECRET;
@@ -53,7 +52,7 @@ export const getVoiceService = (): VoiceService | PromptResponse => {
       new AdditionalHeadersRequest({
         headers: buildHeader(
           'User-Agent',
-          USER_AGENT,
+          formatUserAgent(toolName, applicationKey),
         ),
       }),
     ],
@@ -66,5 +65,5 @@ export const getVoiceService = (): VoiceService | PromptResponse => {
 
   apis.forEach((api) => addPropertiesToApi(api as unknown as ApiService, apiFetchClient));
 
-  return sinchClient.voice;
+  return sinchClient;
 };

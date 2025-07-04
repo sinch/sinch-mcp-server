@@ -1,6 +1,8 @@
 import { analyticsMetricsHandler } from '../../../src/tools/email/analytics-metrics';
 import * as mailgunHelper from '../../../src/tools/email/utils/mailgun-service-helper';
 import { PromptResponse } from '../../../src/types';
+import { sha256 } from '../../../src/tools/email/utils/mailgun-tools-helper';
+import { formatUserAgent } from '../../../src/utils';
 
 global.fetch = jest.fn();
 
@@ -35,7 +37,8 @@ describe('analyticsMetricsHandler', () => {
       }
     };
 
-    (fetch as jest.Mock).mockResolvedValue({
+    const mockedFetch = fetch as jest.Mock;
+    mockedFetch.mockResolvedValue({
       ok: true,
       json: async () => mockResponse
     });
@@ -51,6 +54,20 @@ describe('analyticsMetricsHandler', () => {
     ].join('\n');
     expect(result.role).toBe('assistant');
     expect(result.content[0].text).toBe(expectedText);
+
+    expect(mockedFetch).toHaveBeenCalledTimes(1);
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const [_url, options] = mockedFetch.mock.calls[0];
+    expect(options?.method).toBe('POST');
+    const encodedAuth = 'Basic ' + Buffer.from(`api:${mockApiKey}`).toString('base64');
+    expect(options?.headers).toMatchObject({
+      Authorization: encodedAuth,
+      'Content-Type': 'application/json',
+    });
+    const apiKeyHash = '4c806362b613f7496abf284146efd31da90e4b16169fe001841ca17290f427c4';
+    expect(sha256(mockApiKey)).toBe(apiKeyHash);
+    const expectedUserAgent = formatUserAgent('analytics-metrics', apiKeyHash);
+    expect((options?.headers as any)['User-Agent']).toBe(expectedUserAgent);
   });
 
   it('handles Mailgun API error gracefully', async () => {

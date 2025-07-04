@@ -2,6 +2,7 @@ import { ToolsConfig } from '../../../types';
 import { matchesAnyTag } from '../../../utils';
 import { ENABLED, toolsStatusMap } from '../../../tools-config';
 import { getMailgunApiKey } from './mailgun-service-helper';
+import crypto from 'crypto';
 
 const toolsConfig: Record<string, ToolsConfig> = {
   analyticsMetrics: {
@@ -43,4 +44,10 @@ export const shouldRegisterTool = (toolKey: string, tags: string[]): boolean => 
   }
   toolsStatusMap[toolName] = ENABLED;
   return true;
+}
+
+export const sha256 = (str: string): string => {
+  const hash = crypto.createHash('sha256');
+  hash.update(str);
+  return hash.digest('hex');
 }

@@ -11,25 +11,28 @@ import {
 } from '@sinch/sdk-core';
 import process from 'process';
 import { PromptResponse } from '../../../types';
-import { USER_AGENT } from '../../../user-agent';
+import { formatUserAgent } from '../../../utils';
 
-export function getConversationService(): SinchClient | PromptResponse {
-  return getSinchService(
+export function getConversationClient(toolName: string): SinchClient | PromptResponse {
+  return getSinchClient(
     CONVERSATION_HOSTNAME,
+    toolName,
     (client, fetcher, hostname) => configureConversationApis(client, fetcher, hostname),
   );
 }
 
-export function getConversationTemplateService(): SinchClient | PromptResponse {
-  return getSinchService(
+export function getConversationTemplateClient(toolName: string): SinchClient | PromptResponse {
+  return getSinchClient(
     CONVERSATION_TEMPLATES_HOSTNAME,
+    toolName,
     (client, fetcher, hostname) => configureTemplatesApis(client, fetcher, hostname),
   );
 }
 
 /** Shared helper for both “conversation” and “templates” */
-function getSinchService(
+function getSinchClient(
   hostnameTemplate: string,
+  toolName: string,
   configure: (client: SinchClient, fetcher: ApiFetchClient, hostname: string) => void
 ): SinchClient | PromptResponse {
   const projectId = process.env.CONVERSATION_PROJECT_ID;
@@ -50,7 +53,7 @@ function getSinchService(
       new AdditionalHeadersRequest({
         headers: buildHeader(
           'User-Agent',
-          USER_AGENT,
+          formatUserAgent(toolName, projectId),
         ),
       }),
     ],

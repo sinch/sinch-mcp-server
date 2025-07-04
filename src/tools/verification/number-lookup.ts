@@ -1,8 +1,7 @@
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { z } from 'zod';
 import { getVerificationCredentials } from './utils/verification-service-helper';
-import { isPromptResponse } from '../../utils';
-import { USER_AGENT } from '../../user-agent';
+import { formatUserAgent, isPromptResponse } from '../../utils';
 import { IPromptResponse, PromptResponse, Tags } from '../../types';
 import { getToolName, shouldRegisterTool, VerificationToolKey } from './utils/verification-tools-helper';
 
@@ -51,7 +50,7 @@ export const numberLookupHandler = async (
       headers: {
         'Content-Type': 'application/json',
         Authorization: 'Basic ' + Buffer.from(`${credentials.applicationKey}:${credentials.applicationSecret}`).toString('base64'),
-        'User-Agent': USER_AGENT
+        'User-Agent': formatUserAgent(TOOL_NAME, credentials.applicationKey),
       },
       body: JSON.stringify({
         number: phoneNumber,

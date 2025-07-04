@@ -5,7 +5,7 @@ import {
   formatOmniChannelTemplates,
   renderInstructions,
 } from './utils/format-list-all-templates-response';
-import { getConversationTemplateService } from './utils/conversation-service-helper';
+import { getConversationTemplateClient } from './utils/conversation-service-helper';
 import { ConversationToolKey, getToolName, shouldRegisterTool } from './utils/conversation-tools-helper';
 import { IPromptResponse, PromptResponse, Tags } from '../../types';
 
@@ -23,7 +23,7 @@ export const registerListAllTemplates = (server: McpServer, tags: Tags[]) => {
 };
 
 export const listAllTemplatesHandler = async (): Promise<IPromptResponse> => {
-  const maybeClient = getConversationTemplateService();
+  const maybeClient = getConversationTemplateClient(TOOL_NAME);
   if (isPromptResponse(maybeClient)) {
     return maybeClient.promptResponse;
   }
