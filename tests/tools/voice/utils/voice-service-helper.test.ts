@@ -1,4 +1,4 @@
-import { getVoiceService } from '../../../../src/tools/voice/utils/voice-service-helper';
+import { getVoiceClient } from '../../../../src/tools/voice/utils/voice-service-helper';
 import { ApiFetchClient, SinchClient, VOICE_HOSTNAME } from '@sinch/sdk-core';
 import { formatUserAgent } from '../../../../src/utils';
 
@@ -36,7 +36,7 @@ describe('getVoiceService', () => {
   });
 
   test('returns a configured SinchClient from getVoiceService', async () => {
-    const client = getVoiceService(TOOL_NAME);
+    const client = getVoiceClient(TOOL_NAME);
     expect(client).toHaveProperty('voice');
 
     const apis = (client as SinchClient).voice;

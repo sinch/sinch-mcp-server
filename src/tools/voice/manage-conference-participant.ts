@@ -1,6 +1,6 @@
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { z } from 'zod';
-import { getVoiceService } from './utils/voice-service-helper';
+import { getVoiceClient } from './utils/voice-service-helper';
 import { getToolName, shouldRegisterTool, VoiceToolKey } from './utils/voice-tools-helper';
 import { isPromptResponse } from '../../utils';
 import { IPromptResponse, PromptResponse, Tags } from '../../types';
@@ -31,11 +31,11 @@ export const manageConferenceParticipantHandler = async ({
   participantId: string;
   action: 'mute' | 'unmute' | 'onhold' | 'resume';
 }): Promise<IPromptResponse> => {
-  const maybeVoiceService = getVoiceService(TOOL_NAME);
-  if (isPromptResponse(maybeVoiceService)) {
-    return maybeVoiceService.promptResponse;
+  const maybeClient = getVoiceClient(TOOL_NAME);
+  if (isPromptResponse(maybeClient)) {
+    return maybeClient.promptResponse;
   }
-  const voiceService = maybeVoiceService.voice;
+  const voiceService = maybeClient.voice;
 
   await voiceService.conferences.manageParticipant({
     conferenceId,

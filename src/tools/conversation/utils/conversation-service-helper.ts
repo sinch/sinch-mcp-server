@@ -13,16 +13,16 @@ import process from 'process';
 import { PromptResponse } from '../../../types';
 import { formatUserAgent } from '../../../utils';
 
-export function getConversationService(toolName: string): SinchClient | PromptResponse {
-  return getSinchService(
+export function getConversationClient(toolName: string): SinchClient | PromptResponse {
+  return getSinchClient(
     CONVERSATION_HOSTNAME,
     toolName,
     (client, fetcher, hostname) => configureConversationApis(client, fetcher, hostname),
   );
 }
 
-export function getConversationTemplateService(toolName: string): SinchClient | PromptResponse {
-  return getSinchService(
+export function getConversationTemplateClient(toolName: string): SinchClient | PromptResponse {
+  return getSinchClient(
     CONVERSATION_TEMPLATES_HOSTNAME,
     toolName,
     (client, fetcher, hostname) => configureTemplatesApis(client, fetcher, hostname),
@@ -30,7 +30,7 @@ export function getConversationTemplateService(toolName: string): SinchClient | 
 }
 
 /** Shared helper for both “conversation” and “templates” */
-function getSinchService(
+function getSinchClient(
   hostnameTemplate: string,
   toolName: string,
   configure: (client: SinchClient, fetcher: ApiFetchClient, hostname: string) => void

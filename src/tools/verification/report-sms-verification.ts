@@ -1,6 +1,6 @@
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { z } from 'zod';
-import { getVerificationService } from './utils/verification-service-helper';
+import { getVerificationClient } from './utils/verification-service-helper';
 import { getToolName, shouldRegisterTool, VerificationToolKey } from './utils/verification-tools-helper';
 import { isPromptResponse } from '../../utils';
 import { IPromptResponse, PromptResponse, Tags } from '../../types';
@@ -25,7 +25,7 @@ export const registerReportSmsVerification = (server: McpServer, tags: Tags[]) =
 export const reportSmsVerificationHandler = async (
   { phoneNumber, oneTimePassword }: { phoneNumber: string; oneTimePassword: string; }
 ): Promise<IPromptResponse> => {
-  const maybeClient = getVerificationService(TOOL_NAME);
+  const maybeClient = getVerificationClient(TOOL_NAME);
   if (isPromptResponse(maybeClient)) {
     return maybeClient.promptResponse;
   }

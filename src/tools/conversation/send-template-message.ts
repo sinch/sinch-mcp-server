@@ -6,7 +6,7 @@ import { isPromptResponse } from '../../utils';
 import {
   getConversationAppId,
   getConversationRegion,
-  getConversationService,
+  getConversationClient,
 } from './utils/conversation-service-helper';
 import { ConversationToolKey, getToolName, shouldRegisterTool } from './utils/conversation-tools-helper';
 import { buildMessageBase } from './utils/send-message-builder';
@@ -75,7 +75,7 @@ export const sendTemplateMessageHandler = async ({
   }
   const conversationAppId = maybeAppId;
 
-  const maybeClient = getConversationService(TOOL_NAME);
+  const maybeClient = getConversationClient(TOOL_NAME);
   if (isPromptResponse(maybeClient)) {
     return maybeClient.promptResponse;
   }

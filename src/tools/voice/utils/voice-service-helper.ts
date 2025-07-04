@@ -23,7 +23,7 @@ const addPropertiesToApi = (api: ApiService, client: ApiFetchClient) => {
   api.setHostname(VOICE_HOSTNAME.replace(REGION_PATTERN, VoiceRegion.DEFAULT));
 };
 
-export const getVoiceService = (toolName: string): SinchClient | PromptResponse => {
+export const getVoiceClient = (toolName: string): SinchClient | PromptResponse => {
 
   const applicationKey = process.env.VOICE_APPLICATION_KEY;
   const applicationSecret = process.env.VOICE_APPLICATION_SECRET;

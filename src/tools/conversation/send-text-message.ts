@@ -3,7 +3,7 @@ import { Conversation } from '@sinch/sdk-core';
 import {
   getConversationAppId,
   getConversationRegion,
-  getConversationService,
+  getConversationClient,
 } from './utils/conversation-service-helper';
 import { ConversationToolKey, getToolName, shouldRegisterTool } from './utils/conversation-tools-helper';
 import { isPromptResponse } from '../../utils';
@@ -60,7 +60,7 @@ export const sendTextMessageHandler = async({
   }
   const conversationAppId = maybeAppId;
 
-  const maybeClient = getConversationService(TOOL_NAME);
+  const maybeClient = getConversationClient(TOOL_NAME);
   if (isPromptResponse(maybeClient)) {
     return maybeClient.promptResponse;
   }

@@ -1,6 +1,6 @@
 import {
-  getConversationService,
-  getConversationTemplateService,
+  getConversationClient,
+  getConversationTemplateClient,
   getConversationAppId,
   getConversationRegion,
 } from '../../../../src/tools/conversation/utils/conversation-service-helper';
@@ -54,7 +54,7 @@ describe('getConversationService / getConversationTemplateService', () => {
   });
 
   test('returns a configured SinchClient from getConversationService', async () => {
-    const client = getConversationService(TOOL_NAME);
+    const client = getConversationClient(TOOL_NAME);
     expect(client).toHaveProperty('conversation');
 
     const apis = (client as SinchClient).conversation;
@@ -74,7 +74,7 @@ describe('getConversationService / getConversationTemplateService', () => {
   });
 
   test('returns a configured SinchClient from getConversationTemplateService', async () => {
-    const client = getConversationTemplateService(TOOL_NAME);
+    const client = getConversationTemplateClient(TOOL_NAME);
     expect(client).toHaveProperty('conversation');
 
     const api = (client as SinchClient).conversation.templatesV2;
@@ -91,7 +91,7 @@ describe('getConversationService / getConversationTemplateService', () => {
 
   test('returns PromptResponse when env vars are missing', () => {
     delete process.env.CONVERSATION_PROJECT_ID;
-    const result = getConversationService(TOOL_NAME);
+    const result = getConversationClient(TOOL_NAME);
     expect(result).toBeInstanceOf(PromptResponse);
     expect((result as PromptResponse).promptResponse).toStrictEqual({
       role: 'assistant',

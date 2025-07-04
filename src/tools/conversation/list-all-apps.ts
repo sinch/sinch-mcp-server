@@ -1,7 +1,7 @@
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { isPromptResponse } from '../../utils';
 import { formatListAllAppsResponse } from './utils/format-list-all-apps-response';
-import { getConversationService } from './utils/conversation-service-helper';
+import { getConversationClient } from './utils/conversation-service-helper';
 import { ConversationToolKey, getToolName, shouldRegisterTool } from './utils/conversation-tools-helper';
 import { IPromptResponse, PromptResponse, Tags } from '../../types';
 
@@ -20,7 +20,7 @@ export const registerListAllApps = (server: McpServer, tags: Tags[]) => {
 
 export const listAllAppsHandler = async (): Promise<IPromptResponse> => {
 
-  const maybeClient = getConversationService(TOOL_NAME);
+  const maybeClient = getConversationClient(TOOL_NAME);
   if (isPromptResponse(maybeClient)) {
     return maybeClient.promptResponse;
   }

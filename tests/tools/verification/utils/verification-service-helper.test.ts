@@ -1,4 +1,4 @@
-import { getVerificationService } from '../../../../src/tools/verification/utils/verification-service-helper';
+import { getVerificationClient } from '../../../../src/tools/verification/utils/verification-service-helper';
 import { ApiFetchClient, SinchClient, VERIFICATION_HOSTNAME } from '@sinch/sdk-core';
 import { formatUserAgent } from '../../../../src/utils';
 
@@ -36,7 +36,7 @@ describe('getVerificationService', () => {
   });
 
   test('returns a configured SinchClient from getVerificationService', async () => {
-    const client = getVerificationService(TOOL_NAME);
+    const client = getVerificationClient(TOOL_NAME);
     expect(client).toHaveProperty('verification');
 
     const apis = (client as SinchClient).verification;
