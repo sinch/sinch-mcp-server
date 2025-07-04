@@ -1,8 +1,8 @@
 import { analyticsMetricsHandler } from '../../../src/tools/email/analytics-metrics';
 import * as mailgunHelper from '../../../src/tools/email/utils/mailgun-service-helper';
 import { PromptResponse } from '../../../src/types';
-import { USER_AGENT } from '../../../src/user-agent';
 import { sha256 } from '../../../src/tools/email/utils/mailgun-tools-helper';
+import { formatUserAgent } from '../../../src/utils';
 
 global.fetch = jest.fn();
 
@@ -66,7 +66,7 @@ describe('analyticsMetricsHandler', () => {
     });
     const apiKeyHash = '4c806362b613f7496abf284146efd31da90e4b16169fe001841ca17290f427c4';
     expect(sha256(mockApiKey)).toBe(apiKeyHash);
-    const expectedUserAgent = USER_AGENT.replace('{toolName}', 'analytics-metrics').replace('{projectId}', apiKeyHash);
+    const expectedUserAgent = formatUserAgent('analytics-metrics', apiKeyHash);
     expect((options?.headers as any)['User-Agent']).toBe(expectedUserAgent);
   });
 

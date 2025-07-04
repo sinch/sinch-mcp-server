@@ -11,7 +11,7 @@ import {
 } from '@sinch/sdk-core';
 import process from 'process';
 import { PromptResponse } from '../../../types';
-import { USER_AGENT } from '../../../user-agent';
+import { formatUserAgent } from '../../../utils';
 
 export function getConversationService(toolName: string): SinchClient | PromptResponse {
   return getSinchService(
@@ -53,7 +53,7 @@ function getSinchService(
       new AdditionalHeadersRequest({
         headers: buildHeader(
           'User-Agent',
-          USER_AGENT.replace('{toolName}', toolName).replace('{projectId}', projectId),
+          formatUserAgent(toolName, projectId),
         ),
       }),
     ],

@@ -8,7 +8,7 @@ import {
   SinchClient,
   VERIFICATION_HOSTNAME,
 } from '@sinch/sdk-core';
-import { USER_AGENT } from '../../../user-agent';
+import { formatUserAgent } from '../../../utils';
 
 export const getVerificationCredentials = (): PromptResponse | { applicationKey: string; applicationSecret: string; } => {
   const applicationKey = process.env.VERIFICATION_APPLICATION_KEY;
@@ -66,7 +66,7 @@ export const getVerificationService = (toolName: string): SinchClient | PromptRe
       new AdditionalHeadersRequest({
         headers: buildHeader(
           'User-Agent',
-          USER_AGENT.replace('{toolName}', toolName).replace('{projectId}', applicationKey),
+          formatUserAgent(toolName, applicationKey),
         ),
       }),
     ],

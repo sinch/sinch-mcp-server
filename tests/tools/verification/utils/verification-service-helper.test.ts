@@ -1,6 +1,6 @@
 import { getVerificationService } from '../../../../src/tools/verification/utils/verification-service-helper';
 import { ApiFetchClient, SinchClient, VERIFICATION_HOSTNAME } from '@sinch/sdk-core';
-import { USER_AGENT } from '../../../../src/user-agent';
+import { formatUserAgent } from '../../../../src/utils';
 
 const mockApi = () => ({
   setHostname: jest.fn(),
@@ -46,7 +46,7 @@ describe('getVerificationService', () => {
       expect(api.client).toBeInstanceOf(ApiFetchClient);
       const userAgentPlugin = (api.client as ApiFetchClient).apiClientOptions.requestPlugins?.find((plugin) => plugin.getName() === 'AdditionalHeadersRequest');
       expect(userAgentPlugin).toBeDefined();
-      const expectedUserAgent = USER_AGENT.replace('{toolName}', TOOL_NAME).replace('{projectId}', APPLICATION_KEY);
+      const expectedUserAgent = formatUserAgent(TOOL_NAME, APPLICATION_KEY);
       expect((await (userAgentPlugin as any).additionalHeaders.headers)['User-Agent']).toBe(expectedUserAgent);
     }
   });

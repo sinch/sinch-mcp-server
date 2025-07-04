@@ -3,8 +3,7 @@ import { IPromptResponse, PromptResponse, Tags } from '../../types';
 import { z } from 'zod';
 import { getMailgunCredentials } from './utils/mailgun-service-helper';
 import { EmailToolKey, getToolName, sha256, shouldRegisterTool } from './utils/mailgun-tools-helper';
-import { isPromptResponse } from '../../utils';
-import { USER_AGENT } from '../../user-agent';
+import { formatUserAgent, isPromptResponse } from '../../utils';
 
 const TOOL_KEY: EmailToolKey = 'listEmailTemplates';
 const TOOL_NAME = getToolName(TOOL_KEY);
@@ -38,7 +37,7 @@ export const listEmailTemplatesHandler = async ({
   const response = await fetch(url, {
     headers: {
       'Authorization': 'Basic ' + Buffer.from(`api:${credentials.apiKey}`).toString('base64'),
-      'User-Agent': USER_AGENT.replace('{toolName}', TOOL_NAME).replace('{projectId}', sha256(credentials.apiKey)),
+      'User-Agent': formatUserAgent(TOOL_NAME, sha256(credentials.apiKey)),
     }
   });
 

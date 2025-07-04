@@ -10,7 +10,7 @@ import {
   REGION_PATTERN,
   VoiceRegion,
 } from '@sinch/sdk-core';
-import { USER_AGENT } from '../../../user-agent';
+import { formatUserAgent } from '../../../utils';
 
 // Hack: VoiceDomainApi is not exposed
 interface ApiService {
@@ -52,7 +52,7 @@ export const getVoiceService = (toolName: string): SinchClient | PromptResponse 
       new AdditionalHeadersRequest({
         headers: buildHeader(
           'User-Agent',
-          USER_AGENT.replace('{toolName}', toolName).replace('{projectId}', applicationKey),
+          formatUserAgent(toolName, applicationKey),
         ),
       }),
     ],

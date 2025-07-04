@@ -1,7 +1,7 @@
 import { numberLookupHandler } from '../../../src/tools/verification/number-lookup';
 import * as verificationHelper from '../../../src/tools/verification/utils/verification-service-helper';
 import { PromptResponse } from '../../../src/types';
-import { USER_AGENT } from '../../../src/user-agent';
+import { formatUserAgent } from '../../../src/utils';
 
 global.fetch = jest.fn();
 
@@ -46,7 +46,7 @@ describe('numberLookupHandler', () => {
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const [_url, options] = mockedFetch.mock.calls[0];
     expect(options?.method).toBe('POST');
-    const expectedUserAgent = USER_AGENT.replace('{toolName}', 'number-lookup').replace('{projectId}', mockCredentials.applicationKey);
+    const expectedUserAgent = formatUserAgent('number-lookup', mockCredentials.applicationKey);
     expect((options?.headers as any)['User-Agent']).toBe(expectedUserAgent);
   })
 

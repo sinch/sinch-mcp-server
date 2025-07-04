@@ -10,7 +10,7 @@ import {
   SinchClient,
   ApiFetchClient,
 } from '@sinch/sdk-core';
-import { USER_AGENT } from '../../../../src/user-agent';
+import { formatUserAgent } from '../../../../src/utils';
 
 const mockApi = () => ({
   setHostname: jest.fn(),
@@ -66,7 +66,7 @@ describe('getConversationService / getConversationTemplateService', () => {
         expect(api.client).toBeInstanceOf(ApiFetchClient);
         const userAgentPlugin = (api.client as ApiFetchClient).apiClientOptions.requestPlugins?.find((plugin) => plugin.getName() === 'AdditionalHeadersRequest');
         expect(userAgentPlugin).toBeDefined();
-        const expectedUserAgent = USER_AGENT.replace('{toolName}', TOOL_NAME).replace('{projectId}', PROJECT_ID);
+        const expectedUserAgent = formatUserAgent(TOOL_NAME, PROJECT_ID);
         expect((await (userAgentPlugin as any).additionalHeaders.headers)['User-Agent']).toBe(expectedUserAgent);
       }
     }
@@ -85,7 +85,7 @@ describe('getConversationService / getConversationTemplateService', () => {
     expect(api.client!.apiClientOptions.requestPlugins?.length).toBe(2);
     const userAgentPlugin = (api.client as ApiFetchClient).apiClientOptions.requestPlugins?.find((plugin) => plugin.getName() === 'AdditionalHeadersRequest');
     expect(userAgentPlugin).toBeDefined();
-    const expectedUserAgent = USER_AGENT.replace('{toolName}', TOOL_NAME).replace('{projectId}', 'test-project');
+    const expectedUserAgent = formatUserAgent(TOOL_NAME, PROJECT_ID);
     expect((await (userAgentPlugin as any).additionalHeaders.headers)['User-Agent']).toBe(expectedUserAgent);
   });
 

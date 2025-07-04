@@ -3,7 +3,7 @@ import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { IPromptResponse, PromptResponse, Tags } from '../../types';
 import { getMailgunApiKey} from './utils/mailgun-service-helper';
 import { EmailToolKey, getToolName, sha256, shouldRegisterTool } from './utils/mailgun-tools-helper';
-import { USER_AGENT } from '../../user-agent';
+import { formatUserAgent } from '../../utils';
 
 const metricsTypes = [
   // Counts
@@ -126,7 +126,7 @@ export const analyticsMetricsHandler = async ({
     headers: {
       'Authorization': 'Basic ' + Buffer.from(`api:${mailgunApiKey}`).toString('base64'),
       'Content-Type': 'application/json',
-      'User-Agent': USER_AGENT.replace('{toolName}', TOOL_NAME).replace('{projectId}', sha256(mailgunApiKey)),
+      'User-Agent': formatUserAgent(TOOL_NAME, sha256(mailgunApiKey)),
     },
     body: JSON.stringify(body)
   });
