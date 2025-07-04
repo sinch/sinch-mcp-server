@@ -16,6 +16,6 @@ export const matchesAnyTag= (tags: string[], filteringTags: string[]): boolean =
   return normalizedTags.some(tag => normalizedFilteringTags.includes(tag));
 }
 
-export const formatUserAgent = (toolName: string, projectId: string): string => {
-  return USER_AGENT.replace('{toolName}', toolName).replace('{projectId}', projectId);
+export const formatUserAgent = (toolName: string, userId: string): string => {
+  return USER_AGENT.replace('{toolName}', toolName).replace('{userId}', userId);
 }
