@@ -1,5 +1,7 @@
 # Sinch MCP Server — Developer Preview
 
+[![Latest Release](https://img.shields.io/npm/v/@sinch/mcp?label=%40sinch%2Fmcp&labelColor=FFC658)](https://www.npmjs.com/package/@sinch/mcp)
+
 This repository contains the source code for the Sinch MCP server, which provides a set of tools to interact with the Sinch APIs. This README focuses on using the MCP server with the [Claude Desktop](https://claude.ai/download) client, but it can also be used with any other MCP client.
 
 ## Tools Overview
