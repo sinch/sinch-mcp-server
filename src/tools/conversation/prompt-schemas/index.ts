@@ -1,7 +1,7 @@
 import { z } from 'zod';
 
 export const Recipient = z.string()
-  .describe('(Required) The recipient to send the message to. This can be a phone number in E.164 format, or the identifier for the specified channel.');
+  .describe('(Required) The recipient to send the message to. This can be a phone number in E.164 format, or the identifier for the specified channel such as Messenger.');
 
 export const ChannelEnum = z.enum([
   'WHATSAPP', 'RCS', 'SMS', 'MESSENGER', 'VIBER', 'VIBERBM',
