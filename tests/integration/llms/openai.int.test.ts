@@ -2,6 +2,7 @@ import OpenAI from "openai";
 import { Tool } from 'openai/resources/responses/responses';
 import { toolTestCases } from '../toolsTestCases';
 import { listTools } from '../list-tools';
+import { MAX_TOKENS, TEMPERATURE, TIMEOUT } from '../configuration';
 
 const transformToOpenAIFormat = (tools: any[]): Tool[] => {
   return tools.map((t) => ({
@@ -30,8 +31,8 @@ describe('Tool invocation tests - Open AI', () => {
     async ({ prompt, expectedToolName, expectedArguments }) => {
       const response = await openai.responses.create({
         model: 'gpt-4o-mini',
-        temperature: 0,
-        max_output_tokens: 1024,
+        temperature: TEMPERATURE,
+        max_output_tokens: MAX_TOKENS,
         input: prompt,
         tools,
         tool_choice: 'auto',
@@ -53,7 +54,7 @@ describe('Tool invocation tests - Open AI', () => {
         expect(toolCall!.arguments).toEqual(JSON.stringify(expectedArguments));
       }
     },
-    10000
+    TIMEOUT
   );
 
 });

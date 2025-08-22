@@ -1,6 +1,7 @@
 import { FunctionCallingConfigMode, GoogleGenAI, Tool } from '@google/genai';
 import { listTools } from '../list-tools';
 import { toolTestCases } from '../toolsTestCases';
+import { MAX_TOKENS, TEMPERATURE, TIMEOUT } from '../configuration';
 
 const transformToGeminiFormat = (tools: any[]): Tool[] => {
   return tools.map((t) => ({
@@ -35,8 +36,8 @@ describe('Tool invocation tests - Gemini', () => {
           text: prompt
         },
         config: {
-          maxOutputTokens: 1024,
-          temperature: 0,
+          maxOutputTokens: MAX_TOKENS,
+          temperature: TEMPERATURE,
           tools: tools,
           toolConfig: {
             functionCallingConfig: {
@@ -64,7 +65,7 @@ describe('Tool invocation tests - Gemini', () => {
         expect(toolCall!.args).toEqual(expectedArguments);
       }
     },
-    10000
+    TIMEOUT
   );
 
 });

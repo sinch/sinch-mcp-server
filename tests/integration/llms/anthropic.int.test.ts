@@ -1,6 +1,7 @@
 import Anthropic from '@anthropic-ai/sdk';
 import { listTools } from '../list-tools';
 import { toolTestCases } from '../toolsTestCases';
+import { MAX_TOKENS, TEMPERATURE, TIMEOUT } from '../configuration';
 
 const transformToAnthropicFormat = (tools: any[]): Anthropic.Messages.Tool[] => {
   return tools.map((t) => ({
@@ -27,12 +28,12 @@ describe('Tool invocation tests - Anthropic', () => {
     async ({ prompt, expectedToolName, expectedArguments }) => {
       const response = await anthropic.messages.create({
         model: 'claude-3-7-sonnet-latest',
-        max_tokens: 1024,
+        max_tokens: MAX_TOKENS,
         messages: [
           {role: 'user', content: prompt}
         ],
         tools,
-        temperature: 0,
+        temperature: TEMPERATURE,
         tool_choice: {
           type: 'auto',
         },
@@ -54,7 +55,7 @@ describe('Tool invocation tests - Anthropic', () => {
         expect(toolCall!.input).toEqual(expectedArguments);
       }
     },
-    10000
+    TIMEOUT
   );
 
 });
