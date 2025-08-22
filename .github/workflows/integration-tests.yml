@@ -7,7 +7,22 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        llm: [ openai, anthropic, gemini ]
+        include:
+          # OpenAI
+          - llm: openai
+            model: gpt-4o-mini
+          - llm: openai
+            model: gpt-4.1
+          # Anthropic
+          - llm: anthropic
+            model: claude-3-7-sonnet-latest
+          - llm: anthropic
+            model: claude-3-5-haiku-latest
+          # Gemini
+          - llm: gemini
+            model: gemini-1.5-flash-latest
+          - llm: gemini
+            model: gemini-1.5-pro-latest
     steps:
       - uses: actions/checkout@v3
 
@@ -26,4 +41,5 @@ jobs:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
           TARGET_LLM: ${{ matrix.llm }}
+          TARGET_MODEL: ${{ matrix.model }}
         run: npx jest tests/integration/llms/${{ matrix.llm }}.int.test.ts --runInBand

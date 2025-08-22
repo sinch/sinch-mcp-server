@@ -14,7 +14,9 @@ const transformToOpenAIFormat = (tools: any[]): Tool[] => {
   }));
 }
 
-describe('Tool invocation tests - Open AI', () => {
+const targetModel = process.env.TARGET_MODEL || 'gpt-4o-mini';
+
+describe(`Tool invocation tests - Open AI - ${targetModel}`, () => {
 
   let tools: Tool[];
   let openai: OpenAI;
@@ -30,7 +32,7 @@ describe('Tool invocation tests - Open AI', () => {
     'should handle prompt "%s"',
     async ({ prompt, expectedToolName, expectedArguments }) => {
       const response = await openai.responses.create({
-        model: 'gpt-4o-mini',
+        model: targetModel,
         temperature: TEMPERATURE,
         max_output_tokens: MAX_TOKENS,
         input: prompt,

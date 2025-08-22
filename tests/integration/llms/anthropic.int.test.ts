@@ -11,7 +11,9 @@ const transformToAnthropicFormat = (tools: any[]): Anthropic.Messages.Tool[] => 
   }));
 }
 
-describe('Tool invocation tests - Anthropic', () => {
+const targetModel = process.env.TARGET_MODEL || 'claude-3-7-sonnet-latest';
+
+describe(`Tool invocation tests - Anthropic - ${targetModel}`, () => {
 
   let tools: Anthropic.Messages.Tool[];
   let anthropic: Anthropic;
@@ -27,7 +29,7 @@ describe('Tool invocation tests - Anthropic', () => {
     'should handle prompt "%s"',
     async ({ prompt, expectedToolName, expectedArguments }) => {
       const response = await anthropic.messages.create({
-        model: 'claude-3-7-sonnet-latest',
+        model: targetModel,
         max_tokens: MAX_TOKENS,
         messages: [
           {role: 'user', content: prompt}

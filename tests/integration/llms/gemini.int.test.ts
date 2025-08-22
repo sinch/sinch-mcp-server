@@ -15,7 +15,9 @@ const transformToGeminiFormat = (tools: any[]): Tool[] => {
   }));
 }
 
-describe('Tool invocation tests - Gemini', () => {
+const targetModel = process.env.TARGET_MODEL || 'gemini-2.0-flash';
+
+describe(`Tool invocation tests - Gemini - ${targetModel}`, () => {
 
   let tools: any[];
   let gemini: GoogleGenAI;
@@ -31,7 +33,7 @@ describe('Tool invocation tests - Gemini', () => {
     'should handle prompt "%s"',
     async ({ prompt, expectedToolName, expectedArguments }) => {
       const response = await gemini.models.generateContent({
-        model: 'gemini-2.0-flash',
+        model: targetModel,
         contents: {
           text: prompt
         },
