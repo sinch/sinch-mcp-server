@@ -22,10 +22,11 @@
     "composite": true,
     "noEmit": false,
     "baseUrl": ".",
-    "rootDir": "src",
+    "rootDir": ".",
     "outDir": "dist"
   },
-  "exclude": ["tests", "jest.config.ts", "eslint.config.mjs", "dist", "bin"],
+  "exclude": ["jest.config.ts", "eslint.config.mjs", "dist", "bin"],
+  "include": ["src", "tests", "package.json"],
   "ts-node": {
     "esm": true
   }

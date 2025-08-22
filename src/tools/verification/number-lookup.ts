@@ -25,7 +25,7 @@ export const registerNumberLookup = (server: McpServer, tags: Tags[]) => {
 
   server.tool(
     TOOL_NAME,
-    'With quick and easy access to Number Lookup, you can enhance your communications and keep your database as clean as a whistle. Number Lookup checks against first-party numbering sources and provides real-time feedback. Improve communication by validating and verifying numbers, boosting delivery conversion rates, and saving money on marketing campaigns. Test numbers to ensure your recipients are ready and waiting to receive your messages!',
+    'With quick and easy access to Number Lookup, you can enhance your communications and keep your database as clean as a whistle. Number Lookup checks against first-party numbering sources and provides real-time feedback. Test numbers to ensure your recipients are ready and waiting to receive your messages!',
     {
       phoneNumber: z.string().describe('Phone number in E.164 format to look up'),
     },
