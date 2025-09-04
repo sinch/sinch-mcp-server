@@ -53,7 +53,7 @@ describe(`Tool invocation tests - Open AI - ${targetModel}`, () => {
       expect(toolCall!.name).toEqual(expectedToolName);
 
       if (expectedArguments) {
-        expect(toolCall!.arguments).toEqual(JSON.stringify(expectedArguments));
+        expect(JSON.parse(toolCall!.arguments)).toEqual(expectedArguments);
       }
     },
     TIMEOUT

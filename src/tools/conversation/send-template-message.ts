@@ -20,19 +20,21 @@ export const registerSendTemplateMessage = (server: McpServer, tags: Tags[]) => 
 
   server.tool(
     TOOL_NAME,
-    'Send a template message to a contact on the specified channel. The contact can be a phone number in E.164 format, or the identifier for the specified channel.',
+    'Send a template message to a contact on the specified channel. The contact can be a phone number in E.164 format, or the identifier for the specified channel. ' +
+    'If the channel is "WHATSAPP", you must use the "whatsAppTemplateName" and "whatsAppTemplateLanguage" parameters to specify the template to use - "templateId" must not be used for this channel.' +
+    'For other channels, you must use the "templateId" parameter to specify the omni-template template to use. At least one of "templateId" or "whatsAppTemplateName" should be provided.',
     {
       recipient: Recipient,
       templateId: z.string().optional()
-        .describe('The ID (ULID format) of the omni-template template to use for sending the message.'),
+        .describe('The ID (ULID format) of the omni-template template to use for sending the message - MUST NOT be included for WhatsApp channel.'),
       language: z.string().optional()
-        .describe('The language to use for the omni-template (BCP-47). If not set, the default language code will be used.'),
+        .describe('The language to use for the omni-template (BCP-47). If not set, the default language code will be used - MUST NOT be included for WhatsApp channel.'),
       whatsAppTemplateName: z.string().optional()
         .describe('The name of the template to use for sending the message on WhatsApp specifically. At least one of templateId or templateName should be provided. If this is the template name, the message will be sent as a WhatsApp message, otherwise, it will be considered as an omni-channel message.'),
       whatsAppTemplateLanguage: z.string().optional()
         .describe('The language to use for the WhatsApp template (BCP-47). It is mandatory is the templateName is provided.'),
       parameters: z.record(z.string(), z.string()).optional()
-        .describe('The parameters to use for the template. This is a key-value map where the key is the parameter name and the value is the parameter value.'),
+        .describe('The parameters to use for the template. This is a key-value map where the key is the parameter name and the value is the parameter value. Look carefully in the prompt to find which parameters are expected by the template.'),
       channel: ConversationChannel,
       appId: ConversationAppIdOverride,
       sender: MessageSenderNumberOverride,
@@ -55,7 +57,7 @@ export const sendTemplateMessageHandler = async ({
   region
 }: {
   recipient: string;
-  channel: string | string[];
+  channel: string[];
   templateId?: string;
   language?: string;
   whatsAppTemplateName?: string;

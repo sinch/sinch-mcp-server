@@ -19,39 +19,27 @@ import {
 import { isPromptResponse } from '../../utils';
 import { IPromptResponse, PromptResponse, Tags } from '../../types';
 
-const callChoice = z.object({
-  phone_number: z.string(),
-  title: z.string()
-}).describe('Message for triggering a call. The phone number is in E.164 format, and the title is the text to display next to the call button.');
-
-const locationAsCoordinates = z.object({
-  lat: z.number(),
-  long: z.number(),
-  title: z.string()
-}).describe('Message containing geographic location as coordinates. The coordinates are latitude and longitude, and the title is the text to display next to the location.');
-
-const locationAsAddress = z.object({
-  address: z.string().nonempty()
-}).describe('Message containing a plain text address.');
-
-const locationChoice = z.union([locationAsAddress, locationAsCoordinates])
-  .describe('Message for sending a location. It can either be the plain text address that will be converted into latitude/longitude or directly the latitude/longitude coordinates if the user wants to send a specific location.');
-
-const textChoice = z.object({
-  text: z.string()
-}).describe('Message containing only text. This is a simple text message that can be used as a choice.');
-
-const urlChoice = z.object({
-  url: z.string().url(),
-  title: z.string()
-}).describe('Message containing a URL. The URL is the link to click on, and the title is the text to display next to the URL button.');
-
-const choiceMessage = z.union([
-  callChoice,
-  locationChoice,
-  textChoice,
-  urlChoice
-]).describe('Choice message that can contain a call, location, text or URL. Each choice can be a call message (phone number + title to display next to it), a location message (latitude/longitude or plain text address + title to display next to it), a text message or a URL message (the URL to click on + title to display next to it).');
+const choiceMessage = z.object({
+  // Call
+  phone_number: z.string().optional().describe('E.164 format'),
+  // Location
+  lat: z.number().optional(),
+  long: z.number().optional(),
+  address: z.string().optional(),
+  // Text
+  text: z.string().optional(),
+  // URL
+  url: z.string().url().optional(),
+  // Common
+  title: z.string().optional()
+}).refine(
+  data =>
+    Number(!!data.text) +
+    Number(!!data.url) +
+    Number(!!data.phone_number) +
+    Number((!!data.lat && !!data.long) || !!data.address) === 1,
+  { message: 'Must provide exactly one type of choice: call, location, text, or URL' }
+).describe('Choice message that can be a call, location, text, or URL. Exactly one must be provided. The "title" parameter must not be provided is case of text choice.');
 
 const TOOL_KEY: ConversationToolKey = 'sendCardOrChoiceMessage';
 const TOOL_NAME = getToolName(TOOL_KEY);
@@ -87,7 +75,7 @@ export const sendCardOrChoiceMessageHandler = async ({
   region
 }: {
   recipient: string;
-  channel: string | string[];
+  channel: string[];
   choiceContent?: z.infer<typeof choiceMessage>[];
   text: string;
   mediaUrl?: string;
@@ -111,14 +99,14 @@ export const sendCardOrChoiceMessageHandler = async ({
 
   const choices: Conversation.Choice[] = [];
   for (const choice of choiceContent || []) {
-    if ('phone_number' in choice && 'title' in choice) {
+    if ('phone_number' in choice) {
       choices.push({
         call_message: {
           phone_number: choice.phone_number,
           title: choice.title
         }
       } as Conversation.CallMessageChoice);
-    } else if ('lat' in choice && 'long' in choice && 'title' in choice) {
+    } else if ('lat' in choice && 'long' in choice) {
       choices.push({
         location_message: {
           coordinates: {
@@ -128,7 +116,7 @@ export const sendCardOrChoiceMessageHandler = async ({
           title: choice.title
         }
       } as Conversation.LocationMessageChoice);
-    } else if ('address' in choice) {
+    } else if ('address' in choice && choice.address) {
       const coordinates = await getLatitudeLongitudeFromAddress(choice.address);
       choices.push({
         location_message: {
@@ -145,7 +133,7 @@ export const sendCardOrChoiceMessageHandler = async ({
           text: choice.text
         }
       } as Conversation.TextMessageChoice);
-    } else if ('url' in choice && 'title' in choice) {
+    } else if ('url' in choice) {
       choices.push({
         url_message: {
           url: choice.url,

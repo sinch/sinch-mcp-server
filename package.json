@@ -58,7 +58,7 @@
     "typescript-eslint": "^8.32.0"
   },
   "scripts": {
-    "build": "tsc",
+    "build": "tsc --project tsconfig.build.json && tsc --project tsconfig.tests.json",
     "start:stdio": "tsc && node dist/index.js",
     "start": "tsc && (npx -y supergateway --stdio \"node dist/index.js\" --port 8000 --baseUrl http://localhost:8000 --ssePath /sse --messagePath /message)",
     "lint": "eslint src/ tests/ --ext .ts",

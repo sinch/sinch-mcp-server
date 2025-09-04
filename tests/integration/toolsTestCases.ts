@@ -17,7 +17,7 @@ export const toolTestCases: ToolTestCase[] = [
     expectedArguments: {
       recipient: "+33612345678",
       message: "Hello there!",
-      channel: "SMS",
+      channel: ["SMS"],
     },
   },
   {
@@ -26,17 +26,17 @@ export const toolTestCases: ToolTestCase[] = [
     expectedArguments: {
       recipient: '+33612345678',
       url: 'https://bit.ly/ABCDEF',
-      channel: 'WHATSAPP',
+      channel: ['WHATSAPP'],
     },
   },
   {
-    prompt: "Send a whatsapp message to +33612345678 with the template 'appt_reminder' in Spanish, with the parameter name set to 'Mr. Smith'.",
+    prompt: "Send a whatsapp message to +33612345678 with the template 'appt_reminder' in Spanish, with the parameter 'name' set to 'Mr. Smith'.",
     expectedToolName: "send-template-message",
     expectedArguments: {
       recipient: "+33612345678",
       whatsAppTemplateName: "appt_reminder",
       whatsAppTemplateLanguage: "es",
-      channel: 'WHATSAPP',
+      channel: ['WHATSAPP'],
       parameters: {
         name: "Mr. Smith",
       }
@@ -47,7 +47,7 @@ export const toolTestCases: ToolTestCase[] = [
     expectedToolName: "send-choice-message",
     expectedArguments: {
       recipient: "+33612345678",
-      channel: "RCS",
+      channel: ["RCS"],
       text: "What is your preferred ice cream flavor?",
       choiceContent: [
         { text: "Vanilla" },
@@ -57,12 +57,14 @@ export const toolTestCases: ToolTestCase[] = [
     },
   },
   {
-    prompt: "Send a pin to the Guggenheim Museum location, Avenida Abandoibarra, 2 - 48009 Bilbao, Spain to the phone number +33612345678.",
+    prompt: "Send a pin to the Guggenheim Museum location, Avenida Abandoibarra, 2 - 48009 Bilbao, Spain by SMS to the phone number +33612345678.",
     expectedToolName: "send-location-message",
     expectedArguments: {
       recipient: "+33612345678",
-      address: "Avenida Abandoibarra, 2 - 48009 Bilbao, Spain",
-      channel: "SMS",
+      address: {
+        address: "Avenida Abandoibarra, 2 - 48009 Bilbao, Spain"
+      },
+      channel: ["SMS"],
     },
   },
   {

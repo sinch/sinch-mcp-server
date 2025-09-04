@@ -48,7 +48,7 @@ export const sendTextMessageHandler = async({
   region,
 }: {
   message: string;
-  channel: string | string[];
+  channel: string[];
   recipient: string;
   appId?: string;
   sender?: string;
