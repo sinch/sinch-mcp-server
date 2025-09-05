@@ -5,6 +5,7 @@
     "conference-callout",
     "manage-conference-participant",
     "tts-callout",
+    "get-call-information",
     "sinch-mcp-configuration"
   ],
   "expectedPrompts": []

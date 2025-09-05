@@ -5,7 +5,8 @@
     "close-conference",
     "conference-callout",
     "manage-conference-participant",
-    "tts-callout"
+    "tts-callout",
+    "get-call-information"
   ],
   "toolsToStayEnabled": [
     "get-message-events",

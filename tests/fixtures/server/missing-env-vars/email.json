@@ -24,6 +24,7 @@
     "conference-callout",
     "manage-conference-participant",
     "tts-callout",
+    "get-call-information",
     "sinch-mcp-configuration"
   ],
   "errorMessage": "Incorrect configuration. The environment variable \"MAILGUN_API_KEY\" is not set."

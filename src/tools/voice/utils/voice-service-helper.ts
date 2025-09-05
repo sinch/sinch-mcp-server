@@ -61,6 +61,7 @@ export const getVoiceClient = (toolName: string): SinchClient | PromptResponse =
   const apis = [
     sinchClient.voice.callouts,
     sinchClient.voice.conferences,
+    sinchClient.voice.calls,
   ];
 
   apis.forEach((api) => addPropertiesToApi(api as unknown as ApiService, apiFetchClient));
