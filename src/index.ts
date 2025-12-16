@@ -4,7 +4,6 @@ import {
   instantiateMcpServer,
   parseArgs,
   registerCapabilities,
-  startWebhookServer,
 } from './server';
 dotenv.config();
 
@@ -13,9 +12,6 @@ export const main = async () => {
   const server = instantiateMcpServer();
   registerCapabilities(server, parseArgs(process.argv));
   await server.connect(transport);
-  console.info('Sinch MCP Server running on stdio');
-  // Create a webhook server to handle the webhook events
-  await startWebhookServer();
 };
 
 if (require.main === module) {
