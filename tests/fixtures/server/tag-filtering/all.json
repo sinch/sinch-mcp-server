@@ -6,7 +6,6 @@
     "analytics-metrics",
     "retrieve-email-info",
     "send-email",
-    "get-message-events",
     "list-conversation-apps",
     "list-messaging-templates",
     "send-choice-message",

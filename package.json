@@ -61,8 +61,7 @@
     "lint": "eslint src/ tests/ --ext .ts",
     "prettier": "prettier './**/*.{js,ts,md}' --write",
     "test": "jest --testPathIgnorePatterns='/tests/integration/'",
-    "test:integration": "jest tests/integration/llms --runInBand",
-    "toto": "ts-node src/test.ts"
+    "test:integration": "jest tests/integration/llms --runInBand"
   },
   "engines": {
     "node": ">=20.18.1"

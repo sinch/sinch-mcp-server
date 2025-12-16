@@ -7,7 +7,6 @@
     "start-sms-verification"
   ],
   "toolsToStayEnabled": [
-    "get-message-events",
     "list-email-events",
     "list-email-templates",
     "analytics-metrics",
