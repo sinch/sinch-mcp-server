@@ -3,8 +3,8 @@ import { Conversation } from '@sinch/sdk-core';
 import { z } from 'zod';
 import {
   getConversationAppId,
-  getConversationRegion,
   getConversationClient,
+  setConversationRegion,
 } from './utils/conversation-service-helper';
 import { ConversationToolKey, getToolName, shouldRegisterTool } from './utils/conversation-tools-helper';
 import { buildMessageBase } from './utils/send-message-builder';
@@ -106,8 +106,7 @@ export const sendCardOrChoiceMessageHandler = async ({
     return maybeClient.promptResponse;
   }
   const sinchClient = maybeClient;
-  const conversationRegion = getConversationRegion(region);
-  sinchClient.conversation.setRegion(conversationRegion);
+  setConversationRegion(region, sinchClient);
 
   const choices: Conversation.Choice[] = [];
   for (const choice of choiceContent || []) {

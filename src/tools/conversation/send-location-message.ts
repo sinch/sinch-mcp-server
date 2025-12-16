@@ -3,8 +3,8 @@ import { Conversation } from '@sinch/sdk-core';
 import { z } from 'zod';
 import {
   getConversationAppId,
-  getConversationRegion,
   getConversationClient,
+  setConversationRegion,
 } from './utils/conversation-service-helper';
 import { ConversationToolKey, getToolName, shouldRegisterTool } from './utils/conversation-tools-helper';
 import {
@@ -76,8 +76,7 @@ export const sendLocationMessageHandler = async ({
     return maybeClient.promptResponse;
   }
   const sinchClient = maybeClient;
-  const conversationRegion = getConversationRegion(region);
-  sinchClient.conversation.setRegion(conversationRegion);
+  setConversationRegion(region, sinchClient);
 
   let latitude, longitude, formattedAddress;
   if (typeof address === 'string') {

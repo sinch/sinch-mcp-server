@@ -4,8 +4,8 @@ import { z } from 'zod';
 import { Recipient, ConversationAppIdOverride, ConversationChannel, ConversationRegionOverride, MessageSenderNumberOverride } from './prompt-schemas';
 import {
   getConversationAppId,
-  getConversationRegion,
   getConversationClient,
+  setConversationRegion,
 } from './utils/conversation-service-helper';
 import { ConversationToolKey, getToolName, shouldRegisterTool } from './utils/conversation-tools-helper';
 import { isPromptResponse } from '../../utils';
@@ -59,8 +59,7 @@ export const sendMediaMessageHandler = async({
     return maybeClient.promptResponse;
   }
   const sinchClient = maybeClient;
-  const conversationRegion = getConversationRegion(region);
-  sinchClient.conversation.setRegion(conversationRegion);
+  setConversationRegion(region, sinchClient);
 
   const requestBase = await buildMessageBase(sinchClient, conversationAppId, recipient, channel, sender);
   const request: Conversation.SendMediaMessageRequestData<Conversation.IdentifiedBy> = {

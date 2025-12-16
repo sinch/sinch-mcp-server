@@ -5,8 +5,8 @@ import { IPromptResponse, PromptResponse, Tags } from '../../types';
 import { isPromptResponse } from '../../utils';
 import {
   getConversationAppId,
-  getConversationRegion,
   getConversationClient,
+  setConversationRegion,
 } from './utils/conversation-service-helper';
 import { ConversationToolKey, getToolName, shouldRegisterTool } from './utils/conversation-tools-helper';
 import { buildMessageBase } from './utils/send-message-builder';
@@ -80,8 +80,7 @@ export const sendTemplateMessageHandler = async ({
     return maybeClient.promptResponse;
   }
   const sinchClient = maybeClient;
-  const conversationRegion = getConversationRegion(region);
-  sinchClient.conversation.setRegion(conversationRegion);
+  setConversationRegion(region, sinchClient);
 
   const requestBase = await buildMessageBase(sinchClient, conversationAppId, recipient, channel, sender);
   let templateMessage: Conversation.TemplateMessageItem = {};

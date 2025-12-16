@@ -2,7 +2,7 @@ import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { Conversation } from '@sinch/sdk-core';
 import {
   getConversationAppId,
-  getConversationRegion,
+  setConversationRegion,
   getConversationClient,
 } from './utils/conversation-service-helper';
 import { ConversationToolKey, getToolName, shouldRegisterTool } from './utils/conversation-tools-helper';
@@ -65,8 +65,7 @@ export const sendTextMessageHandler = async({
     return maybeClient.promptResponse;
   }
   const sinchClient = maybeClient;
-  const conversationRegion = getConversationRegion(region);
-  sinchClient.conversation.setRegion(conversationRegion);
+  setConversationRegion(region, sinchClient);
 
   const requestBase = await buildMessageBase(sinchClient, conversationAppId, recipient, channel, sender);
   const request: Conversation.SendTextMessageRequestData<Conversation.IdentifiedBy> = {
