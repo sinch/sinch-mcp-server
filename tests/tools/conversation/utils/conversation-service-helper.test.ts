@@ -2,11 +2,9 @@ import {
   getConversationClient,
   getConversationTemplateClient,
   getConversationAppId,
-  getConversationRegion,
 } from '../../../../src/tools/conversation/utils/conversation-service-helper';
 import { PromptResponse } from '../../../../src/types';
 import {
-  ConversationRegion,
   SinchClient,
   ApiFetchClient,
 } from '@sinch/sdk-core';
@@ -130,24 +128,5 @@ describe('getConversationAppId', () => {
         }
       ]
     });
-  });
-});
-
-describe('getConversationRegion', () => {
-  test('returns provided region if given', () => {
-    const result = getConversationRegion('eu');
-    expect(result).toBe('eu');
-  });
-
-  test('returns env region if not provided', () => {
-    process.env.CONVERSATION_REGION = 'br';
-    const result = getConversationRegion(undefined);
-    expect(result).toBe('br');
-  });
-
-  test('returns default region if nothing is provided', () => {
-    delete process.env.CONVERSATION_REGION;
-    const result = getConversationRegion(undefined);
-    expect(result).toBe(ConversationRegion.UNITED_STATES);
   });
 });

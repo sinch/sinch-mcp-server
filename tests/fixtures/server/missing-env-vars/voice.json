@@ -8,7 +8,6 @@
     "tts-callout"
   ],
   "toolsToStayEnabled": [
-    "get-message-events",
     "list-email-events",
     "list-email-templates",
     "analytics-metrics",
@@ -20,6 +19,7 @@
     "send-location-message",
     "send-media-message",
     "send-template-message",
+    "send-whatsapp-template-message",
     "send-text-message",
     "number-lookup",
     "report-sms-verification",

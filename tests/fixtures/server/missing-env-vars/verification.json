@@ -7,7 +7,6 @@
     "start-sms-verification"
   ],
   "toolsToStayEnabled": [
-    "get-message-events",
     "list-email-events",
     "list-email-templates",
     "analytics-metrics",
@@ -19,6 +18,7 @@
     "send-location-message",
     "send-media-message",
     "send-template-message",
+    "send-whatsapp-template-message",
     "send-text-message",
     "close-conference",
     "conference-callout",
