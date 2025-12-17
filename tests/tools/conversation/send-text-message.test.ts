@@ -1,5 +1,9 @@
 import { sendTextMessageHandler } from '../../../src/tools/conversation/send-text-message';
-import { getConversationAppId, getConversationClient } from '../../../src/tools/conversation/utils/conversation-service-helper';
+import {
+  getConversationAppId,
+  getConversationClient,
+  setConversationRegion,
+} from '../../../src/tools/conversation/utils/conversation-service-helper';
 import { buildMessageBase } from '../../../src/tools/conversation/utils/send-message-builder';
 
 jest.mock('../../../src/tools/conversation/utils/conversation-service-helper');
@@ -40,6 +44,8 @@ test('sendTextMessageHandler returns success response', async () => {
 
 test('sendTextMessageHandler returns error response on failure', async () => {
   mockSendTextMessage.mockRejectedValue(new Error('oops'));
+  const region = 'eu';
+  (setConversationRegion as jest.Mock).mockReturnValue(region);
 
   const result = await sendTextMessageHandler({
     message: 'Hi',
@@ -47,7 +53,7 @@ test('sendTextMessageHandler returns error response on failure', async () => {
     channel: 'RCS',
     appId: 'my-app-id',
     sender: 'sender-id',
-    region: 'eu',
+    region,
   });
 
   expect(result.content[0].text).toEqual('An error occurred when trying to send the text message: {}. Are you sure you are using the right region to send your message? The current region is eu.');
