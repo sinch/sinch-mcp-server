@@ -12,6 +12,7 @@
     "send-location-message",
     "send-media-message",
     "send-template-message",
+    "send-whatsapp-template-message",
     "send-text-message",
     "number-lookup",
     "report-sms-verification",

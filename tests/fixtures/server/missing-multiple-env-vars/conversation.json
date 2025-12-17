@@ -12,6 +12,7 @@
     "send-location-message",
     "send-media-message",
     "send-template-message",
+    "send-whatsapp-template-message",
     "send-text-message"
   ],
   "errorMessageTemplate": "Incorrect configuration. The environment variables are not set: {vars}"

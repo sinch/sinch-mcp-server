@@ -31,6 +31,10 @@ const toolsConfig = defineToolsConfig({
     name: 'send-template-message',
     tags: ['all', 'conversation', 'notification', 'send-template-message'],
   },
+  sendWhatsAppTemplateMessage: {
+    name: 'send-whatsapp-template-message',
+    tags: ['all', 'conversation', 'notification', 'send-whatsapp-template-message'],
+  },
   sendTextMessage: {
     name: 'send-text-message',
     tags: ['all', 'conversation', 'notification', 'send-text-message'],

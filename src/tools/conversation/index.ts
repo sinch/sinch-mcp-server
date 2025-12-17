@@ -5,6 +5,7 @@ import { registerSendCardOrChoiceMessage } from './send-card-or-choice-message';
 import { registerSendLocationMessage } from './send-location-message';
 import { registerSendMediaMessage } from './send-media-message';
 import { registerSendTemplateMessage } from './send-template-message';
+import { registerSendWhatsAppTemplateMessage } from './send-whatsapp-template-message';
 import { registerSendTextMessage } from './send-text-message';
 import { Tags } from '../../types';
 
@@ -14,6 +15,7 @@ export const registerConversationTools = (server: McpServer, tags: Tags[]) => {
   registerSendLocationMessage(server, tags);
   registerSendCardOrChoiceMessage(server, tags);
   registerSendTemplateMessage(server, tags);
+  registerSendWhatsAppTemplateMessage(server, tags);
   registerListAllApps(server, tags);
   registerListAllTemplates(server, tags);
 };
