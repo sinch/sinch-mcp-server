@@ -128,6 +128,7 @@ export const setConversationRegion = (promptRegion: string | undefined, sinchCli
   (sinchClient.conversation.messages as any).sinchClientParameters.conversationHostname = hostname;
   (sinchClient.conversation.app as any).client.apiClientOptions.hostname = hostname;
   (sinchClient.conversation.app as any).sinchClientParameters.conversationHostname = hostname;
+  return region;
 }
 
 export const setTemplateRegion = (promptRegion: string | undefined, sinchClient: SinchClient) => {
@@ -137,4 +138,5 @@ export const setTemplateRegion = (promptRegion: string | undefined, sinchClient:
   const hostname = formatRegionalizedHostname(CONVERSATION_TEMPLATES_HOSTNAME, formattedRegion);
   (sinchClient.conversation.templatesV2 as any).client.apiClientOptions.hostname = hostname;
   (sinchClient.conversation.templatesV2 as any).sinchClientParameters.conversationTemplatesHostname = hostname;
+  return region;
 }

@@ -76,7 +76,7 @@ export const sendLocationMessageHandler = async ({
     return maybeClient.promptResponse;
   }
   const sinchClient = maybeClient;
-  setConversationRegion(region, sinchClient);
+  const usedRegion = setConversationRegion(region, sinchClient);
 
   let latitude, longitude, formattedAddress;
   if (typeof address === 'string') {
@@ -111,7 +111,7 @@ export const sendLocationMessageHandler = async ({
     response = await sinchClient.conversation.messages.sendLocationMessage(request);
     reply = `Location message (${longitude}, ${latitude}) submitted on channel ${channel}! The message ID is ${response.message_id}`;
   } catch (error) {
-    reply = `An error occurred when trying to send the location message: ${JSON.stringify(error)}. Are you sure you are using the right region to send your message? The current region is ${region}.`;
+    reply = `An error occurred when trying to send the location message: ${JSON.stringify(error)}. Are you sure you are using the right region to send your message? The current region is ${usedRegion}.`;
   }
 
   return new PromptResponse(reply).promptResponse;

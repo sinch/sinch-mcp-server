@@ -68,7 +68,7 @@ export const sendTemplateMessageHandler = async ({
     return maybeClient.promptResponse;
   }
   const sinchClient = maybeClient;
-  setConversationRegion(region, sinchClient);
+  const usedRegion = setConversationRegion(region, sinchClient);
 
   const requestBase = await buildMessageBase(sinchClient, conversationAppId, recipient, channel, sender);
   const omniChannelMessage: Conversation.TemplateMessageItem = {
@@ -101,7 +101,7 @@ export const sendTemplateMessageHandler = async ({
     response = await sinchClient.conversation.messages.sendTemplateMessage(request);
     reply = `Template message submitted on channel ${channel}! The message ID is ${response.message_id}`;
   } catch (error) {
-    reply = `An error occurred when trying to send the text message: ${JSON.stringify(error)}. Are you sure you are using the right region to send your message? The current region is ${region}.`;
+    reply = `An error occurred when trying to send the template message: ${JSON.stringify(error)}. Are you sure you are using the right region to send your message? The current region is ${usedRegion}.`;
   }
 
   return new PromptResponse(reply).promptResponse;
