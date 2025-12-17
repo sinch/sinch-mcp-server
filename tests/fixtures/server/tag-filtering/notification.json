@@ -5,12 +5,12 @@
     "retrieve-email-info",
     "list-email-templates",
     "tts-callout",
-    "get-message-events",
     "send-text-message",
     "send-location-message",
     "send-choice-message",
     "send-media-message",
     "send-template-message",
+    "send-whatsapp-template-message",
     "list-conversation-apps",
     "list-messaging-templates",
     "sinch-mcp-configuration"

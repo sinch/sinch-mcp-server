@@ -2,7 +2,7 @@ import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { Conversation } from '@sinch/sdk-core';
 import {
   getConversationAppId,
-  getConversationRegion,
+  setConversationRegion,
   getConversationClient,
 } from './utils/conversation-service-helper';
 import { ConversationToolKey, getToolName, shouldRegisterTool } from './utils/conversation-tools-helper';
@@ -65,8 +65,7 @@ export const sendTextMessageHandler = async({
     return maybeClient.promptResponse;
   }
   const sinchClient = maybeClient;
-  const conversationRegion = getConversationRegion(region);
-  sinchClient.conversation.setRegion(conversationRegion);
+  const usedRegion = setConversationRegion(region, sinchClient);
 
   const requestBase = await buildMessageBase(sinchClient, conversationAppId, recipient, channel, sender);
   const request: Conversation.SendTextMessageRequestData<Conversation.IdentifiedBy> = {
@@ -86,7 +85,7 @@ export const sendTextMessageHandler = async({
     response = await sinchClient.conversation.messages.sendTextMessage(request);
     reply = `Text message submitted on channel ${channel}! The message ID is ${response.message_id}`;
   } catch (error) {
-    reply = `An error occurred when trying to send the text message: ${JSON.stringify(error)}. Are you sure you are using the right region to send your message? The current region is ${region}.`;
+    reply = `An error occurred when trying to send the text message: ${JSON.stringify(error)}. Are you sure you are using the right region to send your message? The current region is ${usedRegion}.`;
   }
 
   return new PromptResponse(reply).promptResponse;

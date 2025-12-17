@@ -5,7 +5,7 @@ import {
   formatOmniChannelTemplates,
   renderInstructions,
 } from './utils/format-list-all-templates-response';
-import { getConversationTemplateClient } from './utils/conversation-service-helper';
+import { getConversationTemplateClient, setTemplateRegion } from './utils/conversation-service-helper';
 import { ConversationToolKey, getToolName, shouldRegisterTool } from './utils/conversation-tools-helper';
 import { IPromptResponse, PromptResponse, Tags } from '../../types';
 
@@ -29,12 +29,13 @@ export const listAllTemplatesHandler = async (): Promise<IPromptResponse> => {
   }
   const sinchClient = maybeClient;
 
+  setTemplateRegion('us', sinchClient);
   const responseUS = await sinchClient.conversation.templatesV2.list({});
 
-  sinchClient.conversation.setRegion('eu');
+  setTemplateRegion('eu', sinchClient);
   const responseEU = await sinchClient.conversation.templatesV2.list({});
 
-  sinchClient.conversation.setRegion('br');
+  setTemplateRegion('br', sinchClient);
   const responseBR = await sinchClient.conversation.templatesV2.list({});
 
   const replyParts = [];

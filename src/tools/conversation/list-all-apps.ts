@@ -1,7 +1,7 @@
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { isPromptResponse } from '../../utils';
 import { formatListAllAppsResponse } from './utils/format-list-all-apps-response';
-import { getConversationClient } from './utils/conversation-service-helper';
+import { getConversationClient, setConversationRegion } from './utils/conversation-service-helper';
 import { ConversationToolKey, getToolName, shouldRegisterTool } from './utils/conversation-tools-helper';
 import { IPromptResponse, PromptResponse, Tags } from '../../types';
 
@@ -31,7 +31,7 @@ export const listAllAppsHandler = async (): Promise<IPromptResponse> => {
   let reply = '';
   try {
     for (const region of regions) {
-      sinchClient.conversation.setRegion(region);
+      setConversationRegion(region, sinchClient);
       const response = await sinchClient.conversation.app.list({});
       reply += `${reply ? '\n' : ''}List of conversations apps in the '${region}' region: ${JSON.stringify(formatListAllAppsResponse(response))}`;
     }

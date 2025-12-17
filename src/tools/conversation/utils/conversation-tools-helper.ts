@@ -7,10 +7,6 @@ const defineToolsConfig = <T extends Record<string, ToolsConfig>>(config: T) => 
 }
 
 const toolsConfig = defineToolsConfig({
-  getMessageEvents: {
-    name: 'get-message-events',
-    tags: ['all', 'conversation', 'notification', 'get-message-events'],
-  },
   listConversationApps: {
     name: 'list-conversation-apps',
     tags: ['all', 'conversation', 'notification', 'list-conversation-apps'],
@@ -34,6 +30,10 @@ const toolsConfig = defineToolsConfig({
   sendTemplateMessage: {
     name: 'send-template-message',
     tags: ['all', 'conversation', 'notification', 'send-template-message'],
+  },
+  sendWhatsAppTemplateMessage: {
+    name: 'send-whatsapp-template-message',
+    tags: ['all', 'conversation', 'notification', 'send-whatsapp-template-message'],
   },
   sendTextMessage: {
     name: 'send-text-message',
