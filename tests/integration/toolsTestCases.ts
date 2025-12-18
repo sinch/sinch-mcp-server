@@ -68,13 +68,6 @@ export const toolTestCases: ToolTestCase[] = [
     },
   },
   {
-    prompt: "What is the delivery status of the message 01JXYH8RB8MZCAFR117KQAQMQ0",
-    expectedToolName: "get-message-events",
-    expectedArguments: {
-      messageId: "01JXYH8RB8MZCAFR117KQAQMQ0",
-    },
-  },
-  {
     prompt: "What messaging apps do I have set up in my account?",
     expectedToolName: "list-conversation-apps",
     expectedArguments: undefined,

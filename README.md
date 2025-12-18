@@ -59,7 +59,7 @@ Here is the list of tools available in the MCP server (all the phone numbers mus
 
 ### Prerequisites
 
-- [Node.js >= 20.18.1](https://nodejs.org/en/download)
+- [Node.js 20.x or 22.x (LTS)](https://nodejs.org/en/download)
 - A provisioned [Sinch Build account](https://dashboard.sinch.com/dashboard)
 - Claude Desktop (or any other MCP client). This README is focused on [Claude Desktop](https://claude.ai/download), but the MCP server can be used with any MCP client.
 
