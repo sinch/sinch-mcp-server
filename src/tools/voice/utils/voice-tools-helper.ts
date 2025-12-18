@@ -18,6 +18,10 @@ const toolsConfig: Record<string, ToolsConfig> = {
   ttsCallout: {
     name: 'tts-callout',
     tags: ['all', 'voice', 'notification', 'tts-callout'],
+  },
+  getCallInformation: {
+    name: 'get-call-information',
+    tags: ['all', 'voice', 'notification', 'get-call-information'],
   }
 }
 

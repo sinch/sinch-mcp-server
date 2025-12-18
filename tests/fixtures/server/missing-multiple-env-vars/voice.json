@@ -8,7 +8,8 @@
     "close-conference",
     "conference-callout",
     "manage-conference-participant",
-    "tts-callout"
+    "tts-callout",
+    "get-call-information"
   ],
   "errorMessageTemplate": "Incorrect configuration. The environment variables are not set: {vars}"
 }

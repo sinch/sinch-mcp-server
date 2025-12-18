@@ -14,6 +14,7 @@ jest.mock('@sinch/sdk-core', () => {
       voice: {
         callouts: mockApi(),
         conferences: mockApi(),
+        calls: mockApi(),
       },
     })),
   }
