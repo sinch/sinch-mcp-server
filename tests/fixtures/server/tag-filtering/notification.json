@@ -6,7 +6,6 @@
     "list-email-templates",
     "tts-callout",
     "get-call-information",
-    "get-message-events",
     "send-text-message",
     "send-location-message",
     "send-choice-message",
