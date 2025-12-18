@@ -33,7 +33,7 @@ test('sendTextMessageHandler returns success response', async () => {
   const result = await sendTextMessageHandler({
     message: 'Hello!',
     recipient: '+123456789',
-    channel: 'WHATSAPP',
+    channel: ['WHATSAPP'],
     appId: undefined,
     sender: undefined,
     region: undefined,
@@ -50,7 +50,7 @@ test('sendTextMessageHandler returns error response on failure', async () => {
   const result = await sendTextMessageHandler({
     message: 'Hi',
     recipient: '+123456789',
-    channel: 'RCS',
+    channel: ['RCS'],
     appId: 'my-app-id',
     sender: 'sender-id',
     region,

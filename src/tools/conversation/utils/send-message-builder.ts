@@ -4,7 +4,7 @@ export const buildMessageBase = async (
   sinchClient: SinchClient,
   appId: string,
   recipient: string,
-  channel: string | string[],
+  channel: string[],
   sender?: string
 ): Promise<Omit<Conversation.SendMessageRequest<Conversation.IdentifiedBy>, 'message'>> => {
 
@@ -16,7 +16,7 @@ export const buildMessageBase = async (
   const channel_identities: Conversation.ChannelRecipientIdentity[] = [];
   const appConfiguration = await sinchClient.conversation.app.get({ app_id: appId });
   const configuredChannels: string[] = appConfiguration.channel_credentials?.map(channel => channel.channel) || [];
-  for (let c of (Array.isArray(channel) ? channel : [channel])) {
+  for (let c of channel) {
     if (c === 'MMS' && !configuredChannels.includes('MMS')) {
       // Fallback to SMS if MMS is not configured
       c = 'SMS';
@@ -52,11 +52,10 @@ export const buildMessageBase = async (
 // This function adds an SMS fallback for RCS or WHATSAPP if the channel is RCS or WHATSAPP and SMS is not already included in the channel_identities
 const addSMSFallback = (
   appConfiguration: Conversation.AppResponse,
-  channel: string | string[],
+  channels: string[],
   recipient: string,
   channel_identities: Conversation.ChannelRecipientIdentity[]
 ) => {
-  const channels = Array.isArray(channel) ? channel : [channel];
   if (channels.includes('RCS') || channels.includes('WHATSAPP')) {
     const smsChannel = channels.find(c => c === 'SMS');
     if (!smsChannel && isSMSChannelConfigured(appConfiguration)) {

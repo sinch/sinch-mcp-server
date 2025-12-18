@@ -28,7 +28,7 @@ export const registerSendTemplateMessage = (server: McpServer, tags: Tags[]) => 
       language: z.string().optional()
         .describe('The language to use for the omni-template (BCP-47). If not set, the default language code will be used.'),
       parameters: z.record(z.string(), z.string()).optional()
-        .describe('The parameters to use for the template. This is a key-value map where the key is the parameter name and the value is the parameter value.'),
+        .describe('The parameters to use for the template. This is a key-value map where the key is the parameter name and the value is the parameter value. Look carefully in the prompt to find which parameters are expected by the template.'),
       channel: ConversationChannel,
       appId: ConversationAppIdOverride,
       sender: MessageSenderNumberOverride,
@@ -49,7 +49,7 @@ export const sendTemplateMessageHandler = async ({
   region
 }: {
   recipient: string;
-  channel: string | string[];
+  channel: string[];
   templateId: string;
   language?: string;
   parameters?: Record<string, string>;

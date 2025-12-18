@@ -42,7 +42,7 @@ export const sendMediaMessageHandler = async({
   region
 }: {
   recipient: string;
-  channel: string | string[];
+  channel: string[];
   url: string;
   appId?: string;
   sender?: string;

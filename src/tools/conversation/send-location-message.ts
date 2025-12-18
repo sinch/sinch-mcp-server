@@ -19,15 +19,12 @@ import { buildMessageBase } from './utils/send-message-builder';
 import { getLatitudeLongitudeFromAddress } from './utils/geocoding';
 import { IPromptResponse, PromptResponse, Tags } from '../../types';
 
-const locationAsCoordinates = z.object({
-  lat: z.number(),
-  long: z.number(),
-  title: z.string()
+const location = z.object({
+  lat: z.number().optional(),
+  long: z.number().optional(),
+  title: z.string().optional(),
+  address: z.string().optional(),
 });
-
-const locationAsAddress = z.string();
-
-const location = z.union([locationAsAddress, locationAsCoordinates]);
 
 const TOOL_KEY: ConversationToolKey = 'sendLocationMessage';
 const TOOL_NAME = getToolName(TOOL_KEY);
@@ -37,7 +34,7 @@ export const registerSendLocationMessage = (server: McpServer, tags: Tags[]) => 
 
   server.tool(
     TOOL_NAME,
-    'Send a location message from an address given in parameter to a contact on the specified channel. The contact ccan be a phone number in E.164 format, or the identifier for the specified channel.',
+    'Send a location message from an address given in parameter to a contact on the specified channel. The contact can be a phone number in E.164 format, or the identifier for the specified channel.',
     {
       recipient: Recipient,
       address: location.describe('It can either be the plain text address that will be converted into latitude /longitude or directly the latitude / longitude coordinates if the user wants to send a specific location.'),
@@ -59,8 +56,8 @@ export const sendLocationMessageHandler = async ({
   region
 }: {
   recipient: string;
-  channel: string | string[];
-  address: string | { lat: number; long: number; title: string };
+  channel: string[];
+  address: { lat?: number; long?: number; title?: string; address?: string; };
   appId?: string;
   sender?: string;
   region?: string;
@@ -78,13 +75,14 @@ export const sendLocationMessageHandler = async ({
   const sinchClient = maybeClient;
   const usedRegion = setConversationRegion(region, sinchClient);
 
-  let latitude, longitude, formattedAddress;
-  if (typeof address === 'string') {
-    const geocodingAddress = await getLatitudeLongitudeFromAddress(address);
+  let latitude = 0, longitude = 0;
+  let formattedAddress = 'Default tile';
+  if (address.address) {
+    const geocodingAddress = await getLatitudeLongitudeFromAddress(address.address);
     latitude = geocodingAddress.latitude;
     longitude = geocodingAddress.longitude;
     formattedAddress = geocodingAddress.formattedAddress;
-  } else {
+  } else if (address.lat && address.long && address.title) {
     latitude = address.lat;
     longitude = address.long;
     formattedAddress = address.title;

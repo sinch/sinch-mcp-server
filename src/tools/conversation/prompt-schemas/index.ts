@@ -9,7 +9,7 @@ export const ChannelEnum = z.enum([
   'LINE', 'WECHAT', 'APPLEBC'
 ]);
 
-export const ConversationChannel = z.union([ChannelEnum, z.array(ChannelEnum).nonempty()])
+export const ConversationChannel = z.array(ChannelEnum).nonempty()
   .describe('(Required) The channel to use for sending the message.')
 
 export const ConversationAppIdOverride = z.string().optional()

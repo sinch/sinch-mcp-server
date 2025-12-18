@@ -26,7 +26,7 @@ beforeEach(() => {
 test('buildMessageBase sets correct base structure and adds SMS fallback when needed', async () => {
   mockGetApp.mockResolvedValue(baseAppConfig);
 
-  const result = await buildMessageBase(mockSinchClient as any, 'my-app-id', '+1234567890', 'WHATSAPP');
+  const result = await buildMessageBase(mockSinchClient as any, 'my-app-id', '+1234567890', ['WHATSAPP']);
 
   expect(result).toMatchObject({
     app_id: 'my-app-id',
@@ -48,7 +48,7 @@ test('buildMessageBase sets correct base structure and adds SMS fallback when ne
 test('MMS fallback switches to SMS when MMS is not configured', async () => {
   mockGetApp.mockResolvedValue({ channel_credentials: [] });
 
-  const result = await buildMessageBase(mockSinchClient as any, 'my-app-id', '+1234567890', 'MMS');
+  const result = await buildMessageBase(mockSinchClient as any, 'my-app-id', '+1234567890', ['MMS']);
 
   expect(result.recipient.identified_by.channel_identities[0].channel).toBe('SMS');
 });
@@ -68,7 +68,7 @@ test('Does not set channel_properties if sender is undefined and env var is miss
   delete process.env.DEFAULT_SMS_ORIGINATOR;
   mockGetApp.mockResolvedValue(baseAppConfig);
 
-  const result = await buildMessageBase(mockSinchClient as any, 'my-app-id', '+1234567890', 'SMS');
+  const result = await buildMessageBase(mockSinchClient as any, 'my-app-id', '+1234567890', ['SMS']);
 
   expect(result.channel_properties).toBeUndefined();
 });
