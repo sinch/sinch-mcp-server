@@ -6,7 +6,7 @@ export const Recipient = z.string()
 export const ChannelEnum = z.enum([
   'WHATSAPP', 'RCS', 'SMS', 'MESSENGER', 'VIBERBM',
   'MMS', 'INSTAGRAM', 'TELEGRAM', 'KAKAOTALK', 'KAKAOTALKCHAT',
-  'LINE', 'WECHAT'
+  'LINE', 'WECHAT', 'APPLEBC'
 ]);
 
 export const ConversationChannel = z.array(ChannelEnum).nonempty()
@@ -18,7 +18,7 @@ export const ConversationAppIdOverride = z.string().optional()
 export const MessageSenderNumberOverride = z.string().optional()
   .describe('(Optional) The phone number of the message\'s sender (E.164 format). If set, it will override the value from the environment variable "DEFAULT_SMS_ORIGINATOR".')
 
-export const ConversationRegionOverride =  z.enum(['us', 'eu', 'br']).optional()
+export const ConversationRegionOverride =  z.enum(['us', 'eu', 'br', '']).optional()
   .describe('(Optional) The region to use for the Sinch conversation API. If set, it will override the value from the environment variable CONVERSATION_REGION.')
 
 export const TextMessage = z.string()
