@@ -57,7 +57,8 @@
   "scripts": {
     "build": "tsc --project tsconfig.build.json && tsc --project tsconfig.tests.json",
     "start:stdio": "tsc && node dist/index.js",
-    "start": "tsc && (npx -y supergateway --stdio \"node dist/index.js\" --port 8000 --baseUrl http://localhost:8000 --ssePath /sse --messagePath /message)",
+    "start:sse": "tsc --project tsconfig.build.json && npx -y supergateway --stdio \"node dist/index.js\" --port 8000 --baseUrl http://localhost:8000 --ssePath /sse --messagePath /message",
+    "start:http": "tsc --project tsconfig.build.json && npx -y supergateway --stdio \"node dist/index.js\" --port 8000 --outputTransport streamableHttp",
     "lint": "eslint src/ tests/ --ext .ts",
     "prettier": "prettier './**/*.{js,ts,md}' --write",
     "test": "jest --testPathIgnorePatterns='/tests/integration/'",
