@@ -20,9 +20,7 @@ export const registerSendTemplateMessage = (server: McpServer, tags: Tags[]) => 
 
   server.tool(
     TOOL_NAME,
-    'Send a template message to a contact on the specified channel. The contact can be a phone number in E.164 format, or the identifier for the specified channel. ' +
-    'If the channel is "WHATSAPP", you must use the "whatsAppTemplateName" and "whatsAppTemplateLanguage" parameters to specify the template to use - "templateId" must not be used for this channel.' +
-    'For other channels, you must use the "templateId" parameter to specify the omni-template template to use. At least one of "templateId" or "whatsAppTemplateName" should be provided.',
+    'Send a template message to a contact on the specified channel. The contact can be a phone number in E.164 format, or the identifier for the specified channel.',
     {
       recipient: Recipient,
       templateId: z.string()
