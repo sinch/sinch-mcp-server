@@ -8,6 +8,7 @@ import {
   REGION_PATTERN,
   SinchClient,
   buildHeader,
+  formatRegionalizedHostname,
 } from '@sinch/sdk-core';
 import process from 'process';
 import { PromptResponse } from '../../../types';
@@ -118,5 +119,24 @@ export const getConversationAppId = (appId: string | undefined): string | Prompt
   return appId;
 }
 
-export const getConversationRegion = (region: string | undefined): string =>
-  region ?? process.env.CONVERSATION_REGION ?? ConversationRegion.UNITED_STATES;
+export const setConversationRegion = (promptRegion: string | undefined, sinchClient: SinchClient) => {
+  const region = promptRegion ?? process.env.CONVERSATION_REGION ?? ConversationRegion.UNITED_STATES;
+  sinchClient.conversation.setRegion(region);
+  const formattedRegion = region !== '' ? `${region}.` : '';
+  const hostname = formatRegionalizedHostname(CONVERSATION_HOSTNAME, formattedRegion);
+  (sinchClient.conversation.messages as any).client.apiClientOptions.hostname = hostname;
+  (sinchClient.conversation.messages as any).sinchClientParameters.conversationHostname = hostname;
+  (sinchClient.conversation.app as any).client.apiClientOptions.hostname = hostname;
+  (sinchClient.conversation.app as any).sinchClientParameters.conversationHostname = hostname;
+  return region;
+}
+
+export const setTemplateRegion = (promptRegion: string | undefined, sinchClient: SinchClient) => {
+  const region = promptRegion ?? process.env.CONVERSATION_REGION ?? ConversationRegion.UNITED_STATES;
+  sinchClient.conversation.setRegion(region);
+  const formattedRegion = region !== '' ? `${region}.` : '';
+  const hostname = formatRegionalizedHostname(CONVERSATION_TEMPLATES_HOSTNAME, formattedRegion);
+  (sinchClient.conversation.templatesV2 as any).client.apiClientOptions.hostname = hostname;
+  (sinchClient.conversation.templatesV2 as any).sinchClientParameters.conversationTemplatesHostname = hostname;
+  return region;
+}

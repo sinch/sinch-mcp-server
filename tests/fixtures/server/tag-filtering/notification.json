@@ -12,6 +12,7 @@
     "send-choice-message",
     "send-media-message",
     "send-template-message",
+    "send-whatsapp-template-message",
     "list-conversation-apps",
     "list-messaging-templates",
     "sinch-mcp-configuration"

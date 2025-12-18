@@ -24,10 +24,8 @@
   "license": "Apache-2.0",
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.17.3",
-    "@ngrok/ngrok": "^1.5.2",
     "@sinch/sdk-core": "^1.3.0",
     "axios": "^1.8.4",
-    "better-sqlite3": "^11.10.0",
     "dotenv": "^16.5.0",
     "express": "^5.1.0",
     "undici": "^7.9.0",
@@ -38,7 +36,6 @@
     "@eslint/compat": "^1.2.9",
     "@eslint/js": "^9.26.0",
     "@google/genai": "^1.15.0",
-    "@types/better-sqlite3": "^7.6.13",
     "@types/express": "^5.0.3",
     "@types/jest": "^29.5.14",
     "@typescript-eslint/eslint-plugin": "^8.32.0",
@@ -60,7 +57,8 @@
   "scripts": {
     "build": "tsc --project tsconfig.build.json && tsc --project tsconfig.tests.json",
     "start:stdio": "tsc && node dist/index.js",
-    "start": "npm run build && (npx -y supergateway --stdio \"node dist/index.js\" --port 8000 --baseUrl http://localhost:8000 --ssePath /sse --messagePath /message)",
+    "start:sse": "tsc --project tsconfig.build.json && npx -y supergateway --stdio \"node dist/index.js\" --port 8000 --baseUrl http://localhost:8000 --ssePath /sse --messagePath /message",
+    "start:http": "tsc --project tsconfig.build.json && npx -y supergateway --stdio \"node dist/index.js\" --port 8000 --outputTransport streamableHttp",
     "lint": "eslint src/ tests/ --ext .ts",
     "prettier": "prettier './**/*.{js,ts,md}' --write",
     "test": "jest --testPathIgnorePatterns='/tests/integration/'",

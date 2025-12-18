@@ -2,13 +2,13 @@
   "name": "conversation tools",
   "envVar": "CONVERSATION_PROJECT_ID",
   "toolsToBeDisabled": [
-    "get-message-events",
     "list-conversation-apps",
     "list-messaging-templates",
     "send-choice-message",
     "send-location-message",
     "send-media-message",
     "send-template-message",
+    "send-whatsapp-template-message",
     "send-text-message"
   ],
   "toolsToStayEnabled": [

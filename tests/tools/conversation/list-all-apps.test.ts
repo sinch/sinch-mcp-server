@@ -1,8 +1,13 @@
 import { listAllAppsHandler } from '../../../src/tools/conversation/list-all-apps';
-import { getConversationClient } from '../../../src/tools/conversation/utils/conversation-service-helper';
+import {
+  getConversationClient,
+} from '../../../src/tools/conversation/utils/conversation-service-helper';
 
 jest.mock('../../../src/tools/conversation/utils/conversation-service-helper', () => ({
   getConversationClient: jest.fn(),
+  setConversationRegion: jest.fn((region: string, client: any) => {
+    client.conversation.setRegion(region);
+  }),
 }));
 
 let currentRegion: string;
