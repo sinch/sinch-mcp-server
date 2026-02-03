@@ -1,7 +1,4 @@
 import { ToolsConfig } from '../../../types';
-import { matchesAnyTag } from '../../../utils';
-import { ENABLED, toolsStatusMap } from '../../../tools-config';
-import { getMailgunApiKey } from './mailgun-service-helper';
 import crypto from 'crypto';
 
 export const toolsConfig: Record<string, ToolsConfig> = {
@@ -30,21 +27,6 @@ export const toolsConfig: Record<string, ToolsConfig> = {
 export type EmailToolKey = keyof typeof toolsConfig;
 
 export const getToolName = (toolKey: EmailToolKey): string => toolsConfig[toolKey].name;
-
-export const shouldRegisterTool = (toolKey: string, tags: string[]): boolean => {
-  const filteringTags = toolsConfig[toolKey].tags;
-  const toolName = toolsConfig[toolKey].name;
-  if (!matchesAnyTag(filteringTags, tags)) {
-    toolsStatusMap[toolName] = `The filtering tags don't contain ${filteringTags.join(' or ')}`;
-    return false;
-  }
-  if (typeof getMailgunApiKey() !== 'string') {
-    toolsStatusMap[toolName] = `Incorrect configuration. The environment variable "MAILGUN_API_KEY" is not set.`;
-    return false;
-  }
-  toolsStatusMap[toolName] = ENABLED;
-  return true;
-}
 
 export const sha256 = (str: string): string => {
   const hash = crypto.createHash('sha256');
