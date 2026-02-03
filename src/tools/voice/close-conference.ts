@@ -1,15 +1,15 @@
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { z } from 'zod';
-import { isPromptResponse } from '../../utils';
+import { isPromptResponse, matchesAnyTag } from '../../utils';
 import { IPromptResponse, PromptResponse, Tags } from '../../types';
 import { getVoiceClient } from './utils/voice-service-helper';
-import { getToolName, shouldRegisterTool, VoiceToolKey } from './utils/voice-tools-helper';
+import { getToolName, VoiceToolKey, voiceToolsConfig } from './utils/voice-tools-helper';
 
 const TOOL_KEY: VoiceToolKey = 'closeConference';
 const TOOL_NAME = getToolName(TOOL_KEY);
 
 export const registerCloseConference = (server: McpServer, tags: Tags[]) => {
-  if (!shouldRegisterTool(TOOL_KEY, tags)) return;
+  if (!matchesAnyTag(tags, voiceToolsConfig[TOOL_KEY].tags)) return;
 
   server.tool(
     TOOL_NAME,
@@ -34,10 +34,15 @@ export const closeConferenceHandler = async (
     await voiceService.conferences.kickAll({
       conferenceId
     });
+    return new PromptResponse(JSON.stringify({
+      success: true,
+      conference_id: conferenceId
+    })).promptResponse;
   } catch (error) {
     console.error(`Error closing conference ${conferenceId}:`, error);
-    return new PromptResponse(`An error occurred while trying to close the conference with ID ${conferenceId}. Please try again later.`).promptResponse;
+    return new PromptResponse(JSON.stringify({
+      success: false,
+      error: error instanceof Error ? error.message : String(error)
+    })).promptResponse;
   }
-
-  return new PromptResponse(`The conference ${conferenceId} has been closed successfully.`).promptResponse;
 };

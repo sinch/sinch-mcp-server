@@ -3,15 +3,15 @@ import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { Voice } from '@sinch/sdk-core';
 import { z } from 'zod';
 import { getVoiceClient } from './utils/voice-service-helper';
-import { getToolName, shouldRegisterTool, VoiceToolKey } from './utils/voice-tools-helper';
-import { isPromptResponse } from '../../utils';
+import { getToolName, VoiceToolKey, voiceToolsConfig } from './utils/voice-tools-helper';
+import { isPromptResponse, matchesAnyTag } from '../../utils';
 import { IPromptResponse, PromptResponse, Tags } from '../../types';
 
 const TOOL_KEY: VoiceToolKey = 'conferenceCallout';
 const TOOL_NAME = getToolName(TOOL_KEY);
 
 export const registerConferenceCallout = (server: McpServer, tags: Tags[]) => {
-  if (!shouldRegisterTool(TOOL_KEY, tags)) return;
+  if (!matchesAnyTag(tags, voiceToolsConfig[TOOL_KEY].tags)) return;
 
   server.tool(
     TOOL_NAME,
@@ -79,21 +79,16 @@ export const conferenceCalloutHandler = async ({
     }
   }
 
-  let result = '';
-
-  if (successfulCalls.length > 0) {
-    result += `Here is the list of phone numbers joining the conference ${conferenceId} and their associated callId (to be presented as a table):\n`;
-    for (const call of successfulCalls) {
-      result += `- ${call.phoneNumber} | ${call.callId}\n`;
-    }
-  }
-
-  if (errors.length > 0) {
-    result += '\nThe following phone numbers couldn\'t be called (to be presented with a list and error message):\n';
-    for (const err of errors) {
-      result += `- ${err.phoneNumber}\n`;
-    }
-  }
-
-  return new PromptResponse(result).promptResponse;
+  return new PromptResponse(JSON.stringify({
+    success: true,
+    conference_id: conferenceId,
+    successful_calls: successfulCalls.map(call => ({
+      phone_number: call.phoneNumber,
+      call_id: call.callId
+    })),
+    failed_calls: errors.map(err => ({
+      phone_number: err.phoneNumber,
+      error: err.error
+    }))
+  })).promptResponse;
 };
