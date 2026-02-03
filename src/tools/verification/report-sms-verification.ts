@@ -1,15 +1,15 @@
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { z } from 'zod';
 import { getVerificationClient } from './utils/verification-service-helper';
-import { getToolName, shouldRegisterTool, VerificationToolKey } from './utils/verification-tools-helper';
-import { isPromptResponse } from '../../utils';
+import { getToolName, VerificationToolKey, verificationToolsConfig } from './utils/verification-tools-helper';
+import { isPromptResponse, matchesAnyTag } from '../../utils';
 import { IPromptResponse, PromptResponse, Tags } from '../../types';
 
 const TOOL_KEY: VerificationToolKey = 'reportSmsVerification';
 const TOOL_NAME = getToolName(TOOL_KEY);
 
 export const registerReportSmsVerification = (server: McpServer, tags: Tags[]) => {
-  if(!shouldRegisterTool(TOOL_KEY, tags)) return;
+  if(!matchesAnyTag(tags, verificationToolsConfig[TOOL_KEY].tags)) return;
 
   server.tool(
     TOOL_NAME,
@@ -25,22 +25,31 @@ export const registerReportSmsVerification = (server: McpServer, tags: Tags[]) =
 export const reportSmsVerificationHandler = async (
   { phoneNumber, oneTimePassword }: { phoneNumber: string; oneTimePassword: string; }
 ): Promise<IPromptResponse> => {
-  const maybeClient = getVerificationClient(TOOL_NAME);
-  if (isPromptResponse(maybeClient)) {
-    return maybeClient.promptResponse;
-  }
-  const verificationService = maybeClient.verification;
-
-  const response = await verificationService.verifications.reportSmsByIdentity({
-    endpoint: phoneNumber,
-    reportSmsVerificationByIdentityRequestBody: {
-      sms: {
-        code: oneTimePassword
-      }
+  try {
+    const maybeClient = getVerificationClient(TOOL_NAME);
+    if (isPromptResponse(maybeClient)) {
+      return maybeClient.promptResponse;
     }
-  });
+    const verificationService = maybeClient.verification;
 
-  return response.status === 'SUCCESSFUL' ?
-    new PromptResponse(`Verification successful for number ${phoneNumber}. The verification ID is ${response.id}`).promptResponse
-    : new PromptResponse(`Failed to verify the phone number ${phoneNumber}. The verification ID is ${response.id}`).promptResponse;
+    const response = await verificationService.verifications.reportSmsByIdentity({
+      endpoint: phoneNumber,
+      reportSmsVerificationByIdentityRequestBody: {
+        sms: {
+          code: oneTimePassword
+        }
+      }
+    });
+
+    return new PromptResponse(JSON.stringify({
+      success: true,
+      verification_id: response.id,
+      status: response.status
+    })).promptResponse;
+  } catch (error) {
+    return new PromptResponse(JSON.stringify({
+      success: false,
+      error: error instanceof Error ? error.message : String(error)
+    })).promptResponse;
+  }
 };
