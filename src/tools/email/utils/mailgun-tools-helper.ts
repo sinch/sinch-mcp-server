@@ -4,7 +4,7 @@ import { ENABLED, toolsStatusMap } from '../../../tools-config';
 import { getMailgunApiKey } from './mailgun-service-helper';
 import crypto from 'crypto';
 
-const toolsConfig: Record<string, ToolsConfig> = {
+export const toolsConfig: Record<string, ToolsConfig> = {
   analyticsMetrics: {
     name: 'analytics-metrics',
     tags: ['all', 'email', 'analytics-metrics'],

@@ -1,16 +1,16 @@
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { fetch, FormData } from 'undici';
 import { z } from 'zod';
-import { formatUserAgent, isPromptResponse } from '../../utils';
+import { formatUserAgent, isPromptResponse, matchesAnyTag } from '../../utils';
 import { IPromptResponse, PromptResponse, Tags } from '../../types';
 import { getMailgunCredentials } from './utils/mailgun-service-helper';
-import { EmailToolKey, getToolName, sha256, shouldRegisterTool } from './utils/mailgun-tools-helper';
+import { EmailToolKey, getToolName, sha256, toolsConfig } from './utils/mailgun-tools-helper';
 
 const TOOL_KEY: EmailToolKey = 'sendEmail';
 const TOOL_NAME = getToolName(TOOL_KEY);
 
 export const registerSendEmail = (server: McpServer, tags: Tags[]) => {
-  if (!shouldRegisterTool(TOOL_KEY, tags)) return;
+  if (!matchesAnyTag(tags, toolsConfig[TOOL_KEY].tags)) return;
 
   server.tool(
     TOOL_NAME,
@@ -54,7 +54,10 @@ export const sendEmailHandler = async ({
   if (!sender) {
     sender = process.env.MAILGUN_SENDER_ADDRESS;
     if (!sender) {
-      return new PromptResponse('The "sender" is not provided and MAILGUN_SENDER_ADDRESS is no set in the environment variables.').promptResponse;
+      return new PromptResponse(JSON.stringify({
+        success: false,
+        error: 'The "sender" is not provided and MAILGUN_SENDER_ADDRESS is no set in the environment variables.'
+      })).promptResponse;
     }
   }
 
@@ -70,7 +73,10 @@ export const sendEmailHandler = async ({
   } else if (body) {
     form.set('html', body);
   } else {
-    return new PromptResponse('The "body" is not provided and no template name is specified.').promptResponse;
+    return new PromptResponse(JSON.stringify({
+      success: false,
+      error: 'The "body" is not provided and no template name is specified.'
+    })).promptResponse;
   }
 
   const resp = await fetch(
@@ -86,10 +92,18 @@ export const sendEmailHandler = async ({
   );
 
   if (resp.status !== 200) {
-    return new PromptResponse(`An error occurred when trying to send the email: ${JSON.stringify(resp)} The status code is ${resp.status}: ${resp.statusText}.`).promptResponse;
+    return new PromptResponse(JSON.stringify({
+      success: false,
+      error: `An error occurred when trying to send the email: ${JSON.stringify(resp)} The status code is ${resp.status}: ${resp.statusText}.`
+    })).promptResponse;
   }
 
   const data = await resp.json() as { id: string };
 
-  return new PromptResponse(`Email sent to ${recipient} with subject "${subject}"! The message ID is ${data.id}`).promptResponse;
+  return new PromptResponse(JSON.stringify({
+    success: true,
+    message_id: data.id,
+    recipient: recipient,
+    subject: subject
+  })).promptResponse;
 };

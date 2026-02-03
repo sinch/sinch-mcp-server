@@ -1,9 +1,9 @@
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { z } from 'zod';
-import { formatUserAgent, isPromptResponse } from '../../utils';
+import { formatUserAgent, isPromptResponse, matchesAnyTag } from '../../utils';
 import { IPromptResponse, PromptResponse, Tags } from '../../types';
 import { getMailgunCredentials } from './utils/mailgun-service-helper';
-import { EmailToolKey, getToolName, sha256, shouldRegisterTool } from './utils/mailgun-tools-helper';
+import { EmailToolKey, getToolName, sha256, toolsConfig } from './utils/mailgun-tools-helper';
 
 interface EventList {
   items: Event[];
@@ -22,7 +22,7 @@ const TOOL_KEY: EmailToolKey = 'retrieveEmailInfo';
 const TOOL_NAME = getToolName(TOOL_KEY);
 
 export const registerRetrieveEmailInfo = (server: McpServer, tags: Tags[]) => {
-  if (!shouldRegisterTool(TOOL_KEY, tags)) return;
+  if (!matchesAnyTag(tags, toolsConfig[TOOL_KEY].tags)) return;
 
   server.tool(
     TOOL_NAME,
@@ -60,21 +60,38 @@ export const retrieveEmailInfoHandler = async({
   );
 
   if (resp.status !== 200) {
-    return new PromptResponse(`An error occurred when trying to retrieve the events related to the email ID ${emailId}. The status code is ${resp.status}.`).promptResponse;
+    return new PromptResponse(JSON.stringify({
+      success: false,
+      error: `An error occurred when trying to retrieve the events related to the email ID ${emailId}. The status code is ${resp.status}.`
+    })).promptResponse;
   }
 
   const data = await resp.json() as EventList;
   let storageUrl;
-  const eventSummary = [];
+  const events = [];
   for (const event of data.items) {
     const eventType = event.event;
     if (eventType === 'accepted') {
       storageUrl = event.storage.url;
     }
-    eventSummary.push(`Event: ${eventType}, Timestamp: ${new Date(event.timestamp * 1000).toISOString()}`);
+    events.push({
+      event: eventType,
+      timestamp: new Date(event.timestamp * 1000).toISOString()
+    });
   }
 
-  let result = `Summary of events to be presented into an table in chronological order: ${eventSummary}.`
+  const result: {
+    message_id: string;
+    from?: string;
+    to?: string;
+    subject?: string;
+    sender?: string;
+    body_html?: string;
+    events: Array<{ event?: string; timestamp: string }>;
+  } = {
+    message_id: emailId,
+    events: events
+  };
 
   const storedEmail = await fetch(
     storageUrl!,
@@ -87,17 +104,14 @@ export const retrieveEmailInfoHandler = async({
     }
   );
 
-  if (resp.status !== 200) {
-    // Don't fail the tool if the email content cannot be retrieved, just inform the user
-    result += `\nBut an error occurred when trying to retrieve the events related to the email ID ${emailId}. The status code is ${resp.status}.`;
-  } else {
+  if (storedEmail.status === 200) {
     const storedEmailData = await storedEmail.json() as { 'body-html': string; Sender: string; From: string; To: string; Subject: string };
-    result += `\nSender: ${storedEmailData['Sender']}.`;
-    result += `\nFrom: ${storedEmailData['From']}.`;
-    result += `\nTo: ${storedEmailData['To']}.`;
-    result += `\nSubject: ${storedEmailData['Subject']}.`;
-    result += `\nEmail content: ${storedEmailData['body-html']}.`;
+    result.sender = storedEmailData['Sender'];
+    result.from = storedEmailData['From'];
+    result.to = storedEmailData['To'];
+    result.subject = storedEmailData['Subject'];
+    result.body_html = storedEmailData['body-html'];
   }
 
-  return new PromptResponse(result).promptResponse;
+  return new PromptResponse(JSON.stringify(result)).promptResponse;
 }

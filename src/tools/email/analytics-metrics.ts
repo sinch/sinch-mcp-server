@@ -2,8 +2,8 @@ import { z } from 'zod';
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { IPromptResponse, PromptResponse, Tags } from '../../types';
 import { getMailgunApiKey} from './utils/mailgun-service-helper';
-import { EmailToolKey, getToolName, sha256, shouldRegisterTool } from './utils/mailgun-tools-helper';
-import { formatUserAgent } from '../../utils';
+import { EmailToolKey, getToolName, sha256, toolsConfig } from './utils/mailgun-tools-helper';
+import { formatUserAgent, matchesAnyTag } from '../../utils';
 
 const metricsTypes = [
   // Counts
@@ -73,7 +73,7 @@ const TOOL_KEY: EmailToolKey = 'analyticsMetrics';
 const TOOL_NAME = getToolName(TOOL_KEY);
 
 export const registerAnalyticsMetrics = (server: McpServer, tags: Tags[]) => {
-  if (!shouldRegisterTool(TOOL_KEY, tags)) return;
+  if (!matchesAnyTag(tags, toolsConfig[TOOL_KEY].tags)) return;
 
   server.tool(
     TOOL_NAME,
@@ -132,20 +132,29 @@ export const analyticsMetricsHandler = async ({
   });
 
   if (!response.ok) {
-    return new PromptResponse(`Mailgun API error: ${response.status} ${response.statusText}`).promptResponse;
+    return new PromptResponse(JSON.stringify({
+      success: false,
+      error: `Mailgun API error: ${response.status} ${response.statusText}`
+    })).promptResponse;
   }
 
   let responseData;
   try {
     responseData = await response.json() as MailgunAnalyticsMetricsResponse;
   } catch (error) {
-    return new PromptResponse(`Failed to parse JSON response: ${error}`).promptResponse;
+    return new PromptResponse(JSON.stringify({
+      success: false,
+      error: error instanceof Error ? error.message : String(error)
+    })).promptResponse;
   }
 
-  let result = `The following data must be presented graphically. Mailgun Analytics Metrics for domain "${domain || 'all'}":\n\n`;
-  result += JSON.stringify(responseData.aggregates)
-
-  return new PromptResponse(result).promptResponse;
+  return new PromptResponse(JSON.stringify({
+    metrics: responseData.aggregates.metrics,
+    period: {
+      begin: beginSearchPeriod,
+      end: endSearchPeriod
+    }
+  })).promptResponse;
 }
 
 interface MailgunAnalyticsMetricsResponse {
