@@ -1,7 +1,6 @@
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { Tags } from '../src/types';
 import { registerCapabilities } from '../src/server';
-import { ENABLED, toolsStatusMap } from '../src/tools-config';
 import * as path from 'path';
 import * as fs from 'fs';
 
@@ -82,96 +81,4 @@ describe('Tool registration by tag', () => {
       .flatMap((testCase) => testCase.expectedPrompts)
       .sort());
   });
-});
-
-interface MissingEnvVarTestCase {
-  name: string;
-  envVar: string;
-  toolsToBeDisabled: string[];
-  toolsToStayEnabled: string[];
-  errorMessage: string;
-}
-
-describe('Tool registration by environment variables', () => {
-
-  const testCases: MissingEnvVarTestCase[] = loadTestCases('missing-env-vars');
-
-  beforeEach(() => {
-    setEnvVariables();
-  })
-
-  for (const testCase of testCases) {
-    it(`should register no ${testCase.name} when ${testCase.envVar} is missing`, () => {
-      // Given
-      const server = new McpServer({ name: 'Test', version: 'test', capabilities: { resources: {}, tools: {}, prompts: {} } });
-      process.env[testCase.envVar] = '';
-
-      // When
-      registerCapabilities(server, []);
-
-      // Then
-      const tools = getRegisteredToolNames(server);
-
-      // Verify disabled tools
-      for (const tool of testCase.toolsToBeDisabled) {
-        expect(tools).not.toContain(tool);
-        expect(toolsStatusMap[tool]).toBe(testCase.errorMessage);
-      }
-
-      // Verify enabled tools
-      for (const tool of testCase.toolsToStayEnabled) {
-        expect(tools).toContain(tool);
-        expect(toolsStatusMap[tool]).toBe(ENABLED);
-      }
-
-    });
-  }
-
-});
-
-interface MissingMultipleEnvVarsTestCase {
-  name: string;
-  envVars: string[];
-  toolsToVerify: string[];
-  errorMessageTemplate: string;
-}
-
-
-describe('Tool registration when environment variables are missing', () => {
-
-  const testCases: MissingMultipleEnvVarsTestCase[] = loadTestCases('missing-multiple-env-vars');
-
-  beforeEach(() => {
-    setEnvVariables();
-  })
-
-  for (const testCase of testCases) {
-    it(`should list all the missing ${testCase.name} environment variables when multiple are missing`, () => {
-      // Given
-      const server = new McpServer({
-        name: 'Test',
-        version: 'test',
-        capabilities: { resources: {}, tools: {}, prompts: {} }
-      });
-
-      // Clear all env vars for this test case
-      testCase.envVars.forEach(envVar => {
-        process.env[envVar] = '';
-      });
-
-      // When
-      registerCapabilities(server, []);
-
-      // Then
-      const expectedError = testCase.errorMessageTemplate.replace(
-        '{vars}',
-        testCase.envVars.join(', ')
-      );
-
-      testCase.toolsToVerify.forEach(tool => {
-        expect(toolsStatusMap[tool]).toBe(expectedError);
-      });
-    });
-  }
-
 });

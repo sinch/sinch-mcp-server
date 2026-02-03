@@ -40,7 +40,16 @@ describe('numberLookupHandler', () => {
 
     // Then
     expect(result.role).toBe('assistant');
-    expect(result).toEqual(new PromptResponse('Line type features: carrier CarrierX, type: mobile), mobileCountryCode: 123, mobileNetworkCode: 456, countryCode: US, number: +1234567890, traceId: trace-1234').promptResponse);
+    const expectedResponse = JSON.stringify({
+      phone_number: '+1234567890',
+      carrier: 'CarrierX',
+      type: 'mobile',
+      mobile_country_code: '123',
+      mobile_network_code: '456',
+      country_code: 'US',
+      trace_id: 'trace-1234'
+    });
+    expect(result).toEqual(new PromptResponse(expectedResponse).promptResponse);
 
     expect(mockedFetch).toHaveBeenCalledTimes(1);
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -52,13 +61,17 @@ describe('numberLookupHandler', () => {
 
   it('returns error if getVerificationCredentials returns a PromptResponse', async () => {
     // Given
-    jest.spyOn(verificationHelper, 'getVerificationCredentials').mockReturnValue(new PromptResponse('Credential error'));
+    const promptResponse = new PromptResponse(JSON.stringify({
+      success: false,
+      error: 'Credential error'
+    }));
+    jest.spyOn(verificationHelper, 'getVerificationCredentials').mockReturnValue(promptResponse);
 
     // When
     const result = await numberLookupHandler({ phoneNumber: '+1234567890' });
 
     // Then
-    expect(result).toEqual(new PromptResponse('Credential error').promptResponse);
+    expect(result).toEqual(promptResponse.promptResponse);
   });
 
   it('returns error if fetch response is not ok', async () => {
@@ -73,25 +86,15 @@ describe('numberLookupHandler', () => {
     const result = await numberLookupHandler({ phoneNumber: '+1234567890' });
 
     // Then
-    expect(result).toEqual(new PromptResponse('Failed to look up number +1234567890. Status: 401, Error: Unauthorized').promptResponse);
-  });
-
-  it('returns error if response contains incomplete data', async () => {
-    // Given
-    mockedFetch.mockResolvedValue({
-      ok: true,
-      json: async () => ({
-        line: {},
-        countryCode: 'US',
-        number: '+1234567890'
-      })
+    const expectedResponse = JSON.stringify({
+      success: false,
+      error: {
+        ok: false,
+        status: 401
+      },
+      error_message: 'Failed to look up number +1234567890: Unauthorized'
     });
-
-    // When
-    const result = await numberLookupHandler({ phoneNumber: '+1234567890' });
-
-    // Then
-    expect(result).toEqual(new PromptResponse('Number lookup for +1234567890 returned incomplete data.').promptResponse);
+    expect(result).toEqual(new PromptResponse(expectedResponse).promptResponse);
   });
 
 });

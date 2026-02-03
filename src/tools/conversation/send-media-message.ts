@@ -82,7 +82,7 @@ export const sendMediaMessageHandler = async({
   } catch (error) {
     return new PromptResponse(JSON.stringify({
       success: false,
-      error: error instanceof Error ? error.message : String(error) + `. Are you sure you are using the right region to send your message? The current region is ${usedRegion}.`
+      error: (error instanceof Error ? error.message : String(error)) + `. Are you sure you are using the right region to send your message? The current region is ${usedRegion}.`
     })).promptResponse;
   }
 };

@@ -81,27 +81,31 @@ describe('listEmailEventsHandler', () => {
     const result = await listEmailEventsHandler({});
 
     // Then
-    const expectedText = [
-      'The following events must be presented with ALL their data, even if the ID is long, it MUST be displayed as this information can be used to get subsequent information on other API endpoints.',
-      'Found 4 email events for domain "example.com":',
-      '**Message ID:** abc123@example.com',
-      'From: sender@example.com',
-      'To: user@example.com',
-      'Subject: Test Subject',
-      '| Event | Timestamp (UTC) |',
-      '|-------|-----------------|',
-      '| accepted | 2024-03-09T16:00:00.755Z |',
-      '| delivered | 2024-03-09T16:01:40.163Z |',
-      '| opened | 2024-03-09T16:03:20.745Z |',
-      '',
-      '**Message ID:** xyz789@example.com',
-      '| Event | Timestamp (UTC) |',
-      '|-------|-----------------|',
-      '| opened | 2024-03-09T16:05:00.859Z |\n'
-    ].join('\n');
+    const expectedResponse = JSON.stringify({
+      events: [
+        {
+          message_id: 'abc123@example.com',
+          from: 'sender@example.com',
+          to: 'user@example.com',
+          subject: 'Test Subject',
+          events: [
+            { event: 'accepted', timestamp: '2024-03-09T16:00:00.755Z' },
+            { event: 'delivered', timestamp: '2024-03-09T16:01:40.163Z' },
+            { event: 'opened', 'timestamp': '2024-03-09T16:03:20.745Z' }
+          ],
+        },
+        {
+          message_id: 'xyz789@example.com',
+          events: [
+            { event: 'opened', timestamp: '2024-03-09T16:05:00.859Z' }
+          ],
+        }
+      ],
+      total_count: 4,
+    });
 
     expect(result.role).toBe('assistant');
-    expect(result.content[0].text).toBe(expectedText);
+    expect(result.content[0].text).toBe(expectedResponse);
   });
 
   it('returns formatted prompt response with grouped events filtered by input parameters', async () => {
@@ -148,22 +152,26 @@ describe('listEmailEventsHandler', () => {
     });
 
     // Then
-    const expectedText = [
-      'The following events must be presented with ALL their data, even if the ID is long, it MUST be displayed as this information can be used to get subsequent information on other API endpoints.',
-      'Found 2 email events for domain "example.com" (filtered by event: opened):',
-      '**Message ID:** abc123@example.com',
-      '| Event | Timestamp (UTC) |',
-      '|-------|-----------------|',
-      '| opened | 2024-03-09T16:03:20.745Z |',
-      '',
-      '**Message ID:** xyz789@example.com',
-      '| Event | Timestamp (UTC) |',
-      '|-------|-----------------|',
-      '| opened | 2024-03-09T16:05:00.859Z |\n'
-    ].join('\n');
+    const expectedResponse = JSON.stringify({
+      events: [
+        {
+          message_id: 'abc123@example.com',
+          events: [
+            { 'event': 'opened', 'timestamp': '2024-03-09T16:03:20.745Z' }
+          ],
+        },
+        {
+          message_id: 'xyz789@example.com',
+          events: [
+            { event: 'opened', timestamp: '2024-03-09T16:05:00.859Z' }
+          ],
+        },
+      ],
+      total_count: 2
+    });
 
     expect(result.role).toBe('assistant');
-    expect(result.content[0].text).toBe(expectedText);
+    expect(result.content[0].text).toBe(expectedResponse);
   });
 
   it('handles Mailgun API error', async () => {
@@ -178,7 +186,11 @@ describe('listEmailEventsHandler', () => {
     const result = await listEmailEventsHandler({});
 
     // Then
-    expect(result).toEqual(new PromptResponse('Mailgun API error: 403 Forbidden').promptResponse);
+    const expectedResponse = JSON.stringify({
+      success: false,
+      error: 'Mailgun API error: 403 Forbidden'
+    });
+    expect(result).toEqual(new PromptResponse(expectedResponse).promptResponse);
   });
 
   it('handles JSON parse error', async () => {
@@ -192,17 +204,25 @@ describe('listEmailEventsHandler', () => {
     const result = await listEmailEventsHandler({});
 
     // Then
-    expect(result).toEqual(new PromptResponse('Failed to parse JSON response: Error: invalid json').promptResponse);
+    const expectedResponse = JSON.stringify({
+      success: false,
+      error: 'invalid json'
+    });
+    expect(result).toEqual(new PromptResponse(expectedResponse).promptResponse);
   });
 
   it('returns early on credential fetch error', async () => {
     // Given
-    jest.spyOn(mailgunHelper, 'getMailgunCredentials').mockReturnValue(new PromptResponse('Missing credentials'));
+    const promptResponse = new PromptResponse(JSON.stringify({
+      success: false,
+      error: 'Missing credentials'
+    }));
+    jest.spyOn(mailgunHelper, 'getMailgunCredentials').mockReturnValue(promptResponse);
 
     // When
     const result = await listEmailEventsHandler({});
 
     // Then
-    expect(result).toEqual(new PromptResponse('Missing credentials').promptResponse);
+    expect(result).toEqual(promptResponse.promptResponse);
   });
 });

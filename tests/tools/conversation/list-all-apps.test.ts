@@ -78,16 +78,23 @@ test('listAllAppsHandler returns formatted app list for all regions', async () =
   expect(setRegionMock).toHaveBeenCalledWith('eu');
   expect(setRegionMock).toHaveBeenCalledWith('br');
 
-  const expectedText = [
-    'List of conversations apps in the \'us\' region: {"apps":[{"id":"us1","channel_credentials":[{"channel":"WHATSAPP"}]}]}',
-    'List of conversations apps in the \'eu\' region: {"apps":[]}',
-    'List of conversations apps in the \'br\' region: {"apps":[{"id":"br1","channel_credentials":[{"channel":"MESSENGER"},{"channel":"RCS"}]}]}.',
-    'Please return the data in a structured array format with each item on a separate line. Just display the Id, display name, channels and region columns. Example:',
-    '| ID   | Display name | Channels       | Region |',
-    '| 0123 | My app name  | SMS, MESSENGER | US     |',
-  ].join('\n');
+  const expectedResponse = JSON.stringify({
+    'apps': [
+      {
+        'id': 'us1',
+        'channel_credentials': [{ 'channel': 'WHATSAPP' }],
+        'region': 'us'
+      },
+      {
+        'id': 'br1',
+        'channel_credentials': [{ 'channel': 'MESSENGER' }, { 'channel': 'RCS' }],
+        'region': 'br',
+      }
+    ],
+    'total_count': 2,
+  });
 
-  expect(result.content[0].text).toBe(expectedText);
+  expect(result.content[0].text).toBe(expectedResponse);
 });
 
 test('listAllAppsHandler returns error response on failure', async () => {
@@ -98,5 +105,9 @@ test('listAllAppsHandler returns error response on failure', async () => {
   // Then
   expect(setRegionMock).toHaveBeenCalledTimes(1);
   expect(setRegionMock).toHaveBeenCalledWith('us');
-  expect(result.content[0].text).toEqual('Error fetching apps: oops');
+  const expectedResponse = JSON.stringify({
+    success: false,
+    error: 'oops'
+  });
+  expect(result.content[0].text).toBe(expectedResponse);
 });

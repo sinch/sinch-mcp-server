@@ -151,13 +151,15 @@ export const analyticsMetricsHandler = async ({
   return new PromptResponse(JSON.stringify({
     metrics: responseData.aggregates.metrics,
     period: {
-      begin: beginSearchPeriod,
-      end: endSearchPeriod
+      begin: responseData.start,
+      end: responseData.end
     }
   })).promptResponse;
 }
 
 interface MailgunAnalyticsMetricsResponse {
+  start: string;
+  end: string;
   aggregates: {
     metrics: Record<MetricsType, number>;
   }

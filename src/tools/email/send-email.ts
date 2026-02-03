@@ -94,7 +94,7 @@ export const sendEmailHandler = async ({
   if (resp.status !== 200) {
     return new PromptResponse(JSON.stringify({
       success: false,
-      error: `An error occurred when trying to send the email: ${JSON.stringify(resp)} The status code is ${resp.status}: ${resp.statusText}.`
+      error: resp
     })).promptResponse;
   }
 

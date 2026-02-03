@@ -64,15 +64,12 @@ export const numberLookupHandler = async (
       const errorText = await resp.text();
       return new PromptResponse(JSON.stringify({
         success: false,
-        error: `Failed to look up number ${phoneNumber}. Status: ${resp.status}, Error: ${errorText}`
+        error: resp,
+        error_message: `Failed to look up number ${phoneNumber}: ${errorText}`
       })).promptResponse;
     }
 
     const data = await resp.json() as NumberLookupResponse;
-
-    if (!data.line || !data.line.carrier || !data.line.type || !data.countryCode || !data.number) {
-      return new PromptResponse(`Number lookup for ${phoneNumber} returned incomplete data.`).promptResponse;
-    }
 
     return new PromptResponse(JSON.stringify({
       phone_number: data.number,

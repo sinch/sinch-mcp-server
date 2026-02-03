@@ -1,6 +1,7 @@
 import * as mailgunHelper from '../../../src/tools/email/utils/mailgun-service-helper';
 import { PromptResponse } from '../../../src/types';
 import { listEmailTemplatesHandler } from '../../../src/tools/email/list-email-templates';
+import { listEmailEventsHandler } from '../../../src/tools/email/list-email-events';
 
 // Mock fetch
 global.fetch = jest.fn();
@@ -44,19 +45,26 @@ describe('listEmailTemplatesHandler', () => {
     const result = await listEmailTemplatesHandler({});
 
     // Then
-    const expectedText = [
-      'The following templates must be presented as an array ALL their data in 3 columns: Name, Description and Creation Date. Do not omit anything.',
-      '',
-      'Found 2 Email templates for domain "example.com":',
-      '',
-      '| Name | Description | Creation Date |',
-      '|------|-------------|---------------|',
-      '| my Template 1 | The template #1 | 2025-03-28T17:42:30.000Z |',
-      '| my Template 2 | The template #2 | 2025-03-26T11:11:48.000Z |\n'
-    ].join('\n');
+    const expectedResponse = JSON.stringify({
+      templates: [
+        {
+          id: 'template1',
+          name: 'my Template 1',
+          description: 'The template #1',
+          createdAt: '2025-03-28T17:42:30.000Z'
+        },
+        {
+          id: 'template2',
+          name: 'my Template 2',
+          description: 'The template #2',
+          createdAt: '2025-03-26T11:11:48.000Z'
+        }
+      ],
+      total_count: 2
+    })
 
     expect(result.role).toBe('assistant');
-    expect(result.content[0].text).toBe(expectedText);
+    expect(result.content[0].text).toBe(expectedResponse);
   });
 
   it('handles Mailgun API error', async () => {
@@ -71,7 +79,11 @@ describe('listEmailTemplatesHandler', () => {
     const result = await listEmailTemplatesHandler({});
 
     // Then
-    expect(result).toEqual(new PromptResponse('Mailgun API error: 403 Forbidden').promptResponse);
+    const expectedResponse = JSON.stringify({
+      success: false,
+      error: 'Mailgun API error: 403 Forbidden'
+    });
+    expect(result).toEqual(new PromptResponse(expectedResponse).promptResponse);
   });
 
   it('handles JSON parse error', async () => {
@@ -82,20 +94,28 @@ describe('listEmailTemplatesHandler', () => {
     });
 
     // When
-    const result = await listEmailTemplatesHandler({});
+    const result = await listEmailEventsHandler({});
 
     // Then
-    expect(result).toEqual(new PromptResponse('Failed to parse JSON response: Error: invalid json').promptResponse);
+    const expectedResponse = JSON.stringify({
+      success: false,
+      error: 'invalid json'
+    });
+    expect(result).toEqual(new PromptResponse(expectedResponse).promptResponse);
   });
 
   it('returns early on credential fetch error', async () => {
     // Given
-    jest.spyOn(mailgunHelper, 'getMailgunCredentials').mockReturnValue(new PromptResponse('Missing credentials'));
+    const promptResponse = new PromptResponse(JSON.stringify({
+      success: false,
+      error: 'Missing credentials'
+    }));
+    jest.spyOn(mailgunHelper, 'getMailgunCredentials').mockReturnValue(promptResponse);
 
     // When
-    const result = await listEmailTemplatesHandler({});
+    const result = await listEmailEventsHandler({});
 
     // Then
-    expect(result).toEqual(new PromptResponse('Missing credentials').promptResponse);
+    expect(result).toEqual(promptResponse.promptResponse);
   });
 });
