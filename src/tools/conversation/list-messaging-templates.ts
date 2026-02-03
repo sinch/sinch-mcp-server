@@ -1,19 +1,15 @@
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
-import { isPromptResponse } from '../../utils';
-import {
-  formatChannelSpecificTemplates,
-  formatOmniChannelTemplates,
-  renderInstructions,
-} from './utils/format-list-all-templates-response';
+import { isPromptResponse, matchesAnyTag } from '../../utils';
+import { formatListAllTemplatesResponse } from './utils/format-list-all-templates-response';
 import { getConversationTemplateClient, setTemplateRegion } from './utils/conversation-service-helper';
-import { ConversationToolKey, getToolName, shouldRegisterTool } from './utils/conversation-tools-helper';
+import { ConversationToolKey, getToolName, toolsConfig } from './utils/conversation-tools-helper';
 import { IPromptResponse, PromptResponse, Tags } from '../../types';
 
 const TOOL_KEY: ConversationToolKey = 'listMessagingTemplates';
 const TOOL_NAME = getToolName(TOOL_KEY);
 
 export const registerListAllTemplates = (server: McpServer, tags: Tags[]) => {
-  if (!shouldRegisterTool(TOOL_KEY, tags)) return;
+  if (!matchesAnyTag(tags, toolsConfig[TOOL_KEY].tags)) return;
 
   server.tool(
     TOOL_NAME,
@@ -29,22 +25,37 @@ export const listAllTemplatesHandler = async (): Promise<IPromptResponse> => {
   }
   const sinchClient = maybeClient;
 
-  setTemplateRegion('us', sinchClient);
-  const responseUS = await sinchClient.conversation.templatesV2.list({});
+  try {
+    setTemplateRegion('us', sinchClient);
+    const responseUS = await sinchClient.conversation.templatesV2.list({});
 
-  setTemplateRegion('eu', sinchClient);
-  const responseEU = await sinchClient.conversation.templatesV2.list({});
+    setTemplateRegion('eu', sinchClient);
+    const responseEU = await sinchClient.conversation.templatesV2.list({});
 
-  setTemplateRegion('br', sinchClient);
-  const responseBR = await sinchClient.conversation.templatesV2.list({});
+    setTemplateRegion('br', sinchClient);
+    const responseBR = await sinchClient.conversation.templatesV2.list({});
 
-  const replyParts = [];
-  replyParts.push(formatOmniChannelTemplates(responseUS, responseEU, responseBR));
-  const whatsAppTemplates = await fetchWhatsAppSpecificTemplates();
-  replyParts.push(formatChannelSpecificTemplates(whatsAppTemplates));
-  replyParts.push(renderInstructions.trim());
+    const whatsAppTemplates = await fetchWhatsAppSpecificTemplates();
 
-  return new PromptResponse(replyParts.join('\n\n')).promptResponse;
+    const omniChannelTemplates = [
+      ...formatListAllTemplatesResponse(responseUS).map(t => ({ ...t, region: 'us' })),
+      ...formatListAllTemplatesResponse(responseEU).map(t => ({ ...t, region: 'eu' })),
+      ...formatListAllTemplatesResponse(responseBR).map(t => ({ ...t, region: 'br' }))
+    ];
+
+    return new PromptResponse(JSON.stringify({
+      templates: {
+        omni_channel: omniChannelTemplates,
+        whatsapp: whatsAppTemplates
+      },
+      total_count: omniChannelTemplates.length + whatsAppTemplates.length
+    })).promptResponse;
+  } catch (error) {
+    return new PromptResponse(JSON.stringify({
+      success: false,
+      error: error instanceof Error ? error.message : String(error)
+    })).promptResponse;
+  }
 };
 
 interface WhatsAppTemplate {

@@ -7,8 +7,8 @@ import {
   getConversationClient,
   setConversationRegion,
 } from './utils/conversation-service-helper';
-import { ConversationToolKey, getToolName, shouldRegisterTool } from './utils/conversation-tools-helper';
-import { isPromptResponse } from '../../utils';
+import { ConversationToolKey, getToolName, toolsConfig } from './utils/conversation-tools-helper';
+import { isPromptResponse, matchesAnyTag } from '../../utils';
 import { buildMessageBase } from './utils/send-message-builder';
 import { IPromptResponse, PromptResponse, Tags } from '../../types';
 
@@ -16,7 +16,7 @@ const TOOL_KEY: ConversationToolKey = 'sendMediaMessage';
 const TOOL_NAME = getToolName(TOOL_KEY);
 
 export const registerSendMediaMessage = (server: McpServer, tags: Tags[]) => {
-  if (!shouldRegisterTool(TOOL_KEY, tags)) return;
+  if (!matchesAnyTag(tags, toolsConfig[TOOL_KEY].tags)) return;
 
   server.tool(
     TOOL_NAME,
@@ -73,14 +73,16 @@ export const sendMediaMessageHandler = async({
     }
   };
 
-  let response: Conversation.SendMessageResponse;
-  let reply: string;
-  try{
-    response = await sinchClient.conversation.messages.sendMediaMessage(request);
-    reply = `Media message submitted on channel ${channel}! The message ID is ${response.message_id}`;
+  try {
+    const response = await sinchClient.conversation.messages.sendMediaMessage(request);
+    return new PromptResponse(JSON.stringify({
+      success: true,
+      message_id: response.message_id
+    })).promptResponse;
   } catch (error) {
-    reply = `An error occurred when trying to send the media message: ${JSON.stringify(error)}. Are you sure you are using the right region to send your message? The current region is ${usedRegion}.`;
+    return new PromptResponse(JSON.stringify({
+      success: false,
+      error: error instanceof Error ? error.message : String(error) + `. Are you sure you are using the right region to send your message? The current region is ${usedRegion}.`
+    })).promptResponse;
   }
-
-  return new PromptResponse(reply).promptResponse;
 };

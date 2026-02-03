@@ -2,13 +2,13 @@ import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { Conversation } from '@sinch/sdk-core';
 import { z } from 'zod';
 import { IPromptResponse, PromptResponse, Tags } from '../../types';
-import { isPromptResponse } from '../../utils';
+import { isPromptResponse, matchesAnyTag } from '../../utils';
 import {
   getConversationAppId,
-  // getConversationRegion,
-  getConversationClient, setConversationRegion,
+  getConversationClient,
+  setConversationRegion,
 } from './utils/conversation-service-helper';
-import { ConversationToolKey, getToolName, shouldRegisterTool } from './utils/conversation-tools-helper';
+import { ConversationToolKey, getToolName, toolsConfig } from './utils/conversation-tools-helper';
 import { buildMessageBase } from './utils/send-message-builder';
 import {
   Recipient,
@@ -21,7 +21,7 @@ const TOOL_KEY: ConversationToolKey = 'sendWhatsAppTemplateMessage';
 const TOOL_NAME = getToolName(TOOL_KEY);
 
 export const registerSendWhatsAppTemplateMessage = (server: McpServer, tags: Tags[]) => {
-  if (!shouldRegisterTool(TOOL_KEY, tags)) return;
+  if (!matchesAnyTag(tags, toolsConfig[TOOL_KEY].tags)) return;
 
   server.tool(
     TOOL_NAME,
@@ -100,14 +100,16 @@ export const sendTemplateMessageHandler = async ({
     }
   };
 
-  let response: Conversation.SendMessageResponse;
-  let reply: string;
   try {
-    response = await sinchClient.conversation.messages.sendTemplateMessage(request);
-    reply = `Template message submitted on WhatsApp channel! The message ID is ${response.message_id}`;
+    const response = await sinchClient.conversation.messages.sendTemplateMessage(request);
+    return new PromptResponse(JSON.stringify({
+      success: true,
+      message_id: response.message_id
+    })).promptResponse;
   } catch (error) {
-    reply = `An error occurred when trying to send the WhatsApp template message: ${JSON.stringify(error)}. Are you sure you are using the right region to send your message? The current region is ${usedRegion}.`;
+    return new PromptResponse(JSON.stringify({
+      success: false,
+      error: error instanceof Error ? error.message : String(error) + `. Are you sure you are using the right region to send your message? The current region is ${usedRegion}.`
+    })).promptResponse;
   }
-
-  return new PromptResponse(reply).promptResponse;
 };

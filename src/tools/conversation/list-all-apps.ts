@@ -1,15 +1,15 @@
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
-import { isPromptResponse } from '../../utils';
+import { isPromptResponse, matchesAnyTag } from '../../utils';
 import { formatListAllAppsResponse } from './utils/format-list-all-apps-response';
 import { getConversationClient, setConversationRegion } from './utils/conversation-service-helper';
-import { ConversationToolKey, getToolName, shouldRegisterTool } from './utils/conversation-tools-helper';
+import { ConversationToolKey, getToolName, toolsConfig } from './utils/conversation-tools-helper';
 import { IPromptResponse, PromptResponse, Tags } from '../../types';
 
 const TOOL_KEY: ConversationToolKey = 'listConversationApps';
 const TOOL_NAME = getToolName(TOOL_KEY);
 
 export const registerListAllApps = (server: McpServer, tags: Tags[]) => {
-  if (!shouldRegisterTool(TOOL_KEY, tags)) return;
+  if (!matchesAnyTag(tags, toolsConfig[TOOL_KEY].tags)) return;
 
   server.tool(
     TOOL_NAME,
@@ -28,18 +28,27 @@ export const listAllAppsHandler = async (): Promise<IPromptResponse> => {
 
   const regions = [ 'us', 'eu', 'br' ];
 
-  let reply = '';
   try {
+    const allApps: any[] = [];
     for (const region of regions) {
       setConversationRegion(region, sinchClient);
       const response = await sinchClient.conversation.app.list({});
-      reply += `${reply ? '\n' : ''}List of conversations apps in the '${region}' region: ${JSON.stringify(formatListAllAppsResponse(response))}`;
+      const formatted = formatListAllAppsResponse(response);
+      if (formatted.apps && formatted.apps.length > 0) {
+        allApps.push(...formatted.apps.map((app: any) => ({
+          ...app,
+          region
+        })));
+      }
     }
+    return new PromptResponse(JSON.stringify({
+      apps: allApps,
+      total_count: allApps.length
+    })).promptResponse;
   } catch (error) {
-    return new PromptResponse(`Error fetching apps: ${error instanceof Error ? error.message : 'Unknown error'}`).promptResponse;
+    return new PromptResponse(JSON.stringify({
+      success: false,
+      error: error instanceof Error ? error.message : 'Unknown error'
+    })).promptResponse;
   }
-
-  return new PromptResponse(`${reply}.\nPlease return the data in a structured array format with each item on a separate line. Just display the Id, display name, channels and region columns. Example:
-| ID   | Display name | Channels       | Region |
-| 0123 | My app name  | SMS, MESSENGER | US     |`).promptResponse;
 };

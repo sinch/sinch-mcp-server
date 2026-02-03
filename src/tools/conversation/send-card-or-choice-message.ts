@@ -6,7 +6,7 @@ import {
   getConversationClient,
   setConversationRegion,
 } from './utils/conversation-service-helper';
-import { ConversationToolKey, getToolName, shouldRegisterTool } from './utils/conversation-tools-helper';
+import { ConversationToolKey, getToolName, toolsConfig } from './utils/conversation-tools-helper';
 import { buildMessageBase } from './utils/send-message-builder';
 import { getLatitudeLongitudeFromAddress } from './utils/geocoding';
 import {
@@ -16,7 +16,7 @@ import {
   ConversationRegionOverride,
   MessageSenderNumberOverride,
 } from './prompt-schemas';
-import { isPromptResponse } from '../../utils';
+import { isPromptResponse, matchesAnyTag } from '../../utils';
 import { IPromptResponse, PromptResponse, Tags } from '../../types';
 
 const choiceMessage = z.object({
@@ -45,7 +45,7 @@ const TOOL_KEY: ConversationToolKey = 'sendCardOrChoiceMessage';
 const TOOL_NAME = getToolName(TOOL_KEY);
 
 export const registerSendCardOrChoiceMessage = (server: McpServer, tags: Tags[]) => {
-  if (!shouldRegisterTool(TOOL_KEY, tags)) return;
+  if (!matchesAnyTag(tags, toolsConfig[TOOL_KEY].tags)) return;
 
   server.tool(
     TOOL_NAME,
@@ -177,18 +177,21 @@ export const sendCardOrChoiceMessageHandler = async ({
     };
   }
 
-  let response: Conversation.SendMessageResponse;
-  let reply: string;
   try {
+    let response: Conversation.SendMessageResponse;
     if (mediaUrl) {
       response = await sinchClient.conversation.messages.sendCardMessage(request as Conversation.SendCardMessageRequestData<Conversation.IdentifiedBy>);
     } else {
       response = await sinchClient.conversation.messages.sendChoiceMessage(request as Conversation.SendChoiceMessageRequestData<Conversation.IdentifiedBy>);
     }
-    reply = `${mediaUrl ? 'Card' : 'Choice'} message submitted on channel ${channel}! The message ID is ${response.message_id}`;
+    return new PromptResponse(JSON.stringify({
+      success: true,
+      message_id: response.message_id
+    })).promptResponse;
   } catch (error) {
-    reply = `An error occurred when trying to send the ${mediaUrl ? 'card' : 'choice'} message: ${JSON.stringify(error)}. Are you sure you are using the right region to send your message? The current region is ${usedRegion}.`;
+    return new PromptResponse(JSON.stringify({
+      success: false,
+      error: (error instanceof Error ? error.message : String(error)) + `. Are you sure you are using the right region to send your message? The current region is ${usedRegion}.`
+    })).promptResponse;
   }
-
-  return new PromptResponse(reply).promptResponse;
 }
