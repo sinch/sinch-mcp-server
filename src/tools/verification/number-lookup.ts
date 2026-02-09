@@ -64,8 +64,7 @@ export const numberLookupHandler = async (
       const errorText = await resp.text();
       return new PromptResponse(JSON.stringify({
         success: false,
-        error: resp,
-        error_message: `Failed to look up number ${phoneNumber}: ${errorText}`
+        error: `(${resp.status} - ${resp.statusText}) Failed to look up number ${phoneNumber}: ${errorText}`
       })).promptResponse;
     }
 

@@ -2,7 +2,7 @@ import { Conversation } from '@sinch/sdk-core';
 import { formatListAllAppsResponse } from '../../../../src/tools/conversation/utils/format-list-all-apps-response';
 
 describe('formatListAllAppsResponse', () => {
-  it('formats a list of apps with channel credentials', () => {
+  it('removes sensitive credential data from app channel configurations', () => {
     const input: Conversation.ListAppsResponse = {
       apps: [
         {

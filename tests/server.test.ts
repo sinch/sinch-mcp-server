@@ -41,7 +41,7 @@ interface TagFilteringTestCase {
   expectedPrompts: string[];
 }
 
-describe('Tool registration by tag', () => {
+describe('MCP Server capability registration', () => {
 
   const testCases: TagFilteringTestCase[] = loadTestCases('tag-filtering');
 
@@ -50,7 +50,7 @@ describe('Tool registration by tag', () => {
   })
 
   for (const testCase of testCases) {
-    it(`registers correct tools when tag is '${testCase.tag}'`, () => {
+    it(`registers tools and prompts matching the '${testCase.tag}' tag`, () => {
       // Given
       const server = new McpServer({ name: 'Test', version: 'test', capabilities: { resources: {}, tools: {}, prompts: {} } });
       // When
@@ -63,7 +63,7 @@ describe('Tool registration by tag', () => {
     });
   }
 
-  it('registers all tools when no tags are provided', () => {
+  it('registers all tools and prompts when no tags are provided', () => {
     // Given
     const server = new McpServer({ name: 'Test', version: 'test', capabilities: { resources: {}, tools: {}, prompts: {} } });
     // When

@@ -23,6 +23,7 @@
     "noEmit": false,
     "outDir": "dist"
   },
+  "include": ["src/**/*", "package.json"],
   "exclude": ["jest.config.ts", "eslint.config.mjs", "dist", "bin"],
   "ts-node": {
     "esm": true

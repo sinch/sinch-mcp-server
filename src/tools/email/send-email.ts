@@ -63,8 +63,8 @@ export const sendEmailHandler = async ({
 
   const form = new FormData();
   form.set('from', sender);
-  form.set('to',recipient);
-  form.set('subject',subject);
+  form.set('to', recipient);
+  form.set('subject', subject);
   if (template) {
     form.set('template', template);
     if (templateVariables) {
@@ -94,7 +94,7 @@ export const sendEmailHandler = async ({
   if (resp.status !== 200) {
     return new PromptResponse(JSON.stringify({
       success: false,
-      error: resp
+      error: `(${resp.status} - ${resp.statusText}) An error occurred when sending an email to  ${recipient}: ${await resp.text()}`
     })).promptResponse;
   }
 
