@@ -79,6 +79,7 @@ describe('numberLookupHandler', () => {
     mockedFetch.mockResolvedValue({
       ok: false,
       status: 401,
+      statusText: 'Unauthorized',
       text: async () => 'Unauthorized'
     });
 
@@ -88,11 +89,7 @@ describe('numberLookupHandler', () => {
     // Then
     const expectedResponse = JSON.stringify({
       success: false,
-      error: {
-        ok: false,
-        status: 401
-      },
-      error_message: 'Failed to look up number +1234567890: Unauthorized'
+      error: '(401 - Unauthorized) Failed to look up number +1234567890: Unauthorized'
     });
     expect(result).toEqual(new PromptResponse(expectedResponse).promptResponse);
   });

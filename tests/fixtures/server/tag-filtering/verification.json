@@ -3,8 +3,7 @@
   "expectedTools": [
     "number-lookup",
     "report-sms-verification",
-    "start-sms-verification",
-    "sinch-mcp-configuration"
+    "start-sms-verification"
   ],
   "expectedPrompts": []
 }

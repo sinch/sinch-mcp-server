@@ -5,8 +5,7 @@
     "list-email-templates",
     "analytics-metrics",
     "retrieve-email-info",
-    "send-email",
-    "sinch-mcp-configuration"
+    "send-email"
   ],
   "expectedPrompts": []
 }

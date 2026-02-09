@@ -101,7 +101,8 @@ describe('sendEmailHandler', () => {
     (fetch as jest.Mock).mockResolvedValue({
       ok: false,
       status: 403,
-      statusText: 'Forbidden'
+      statusText: 'Forbidden',
+      text: async () => 'Forbidden'
     });
 
     // When
@@ -115,11 +116,7 @@ describe('sendEmailHandler', () => {
     // Then
     const expectedResponse = JSON.stringify({
       success: false,
-      error: {
-        ok: false,
-        status: 403,
-        statusText: 'Forbidden'
-      }
+      error: '(403 - Forbidden) An error occurred when sending an email to user@example.com: Forbidden'
     });
     expect(result).toEqual(new PromptResponse(expectedResponse).promptResponse);
   });
