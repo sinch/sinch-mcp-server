@@ -1,7 +1,7 @@
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { isPromptResponse, matchesAnyTag } from '../../utils';
 import { formatListAllTemplatesResponse } from './utils/format-list-all-templates-response';
-import { getConversationTemplateClient, setTemplateRegion } from './utils/conversation-service-helper';
+import { getConversationTemplateService, setTemplateRegion } from './utils/conversation-service-helper';
 import { ConversationToolKey, getToolName, toolsConfig } from './utils/conversation-tools-helper';
 import { IPromptResponse, PromptResponse, Tags } from '../../types';
 
@@ -19,21 +19,21 @@ export const registerListAllTemplates = (server: McpServer, tags: Tags[]) => {
 };
 
 export const listAllTemplatesHandler = async (): Promise<IPromptResponse> => {
-  const maybeClient = getConversationTemplateClient(TOOL_NAME);
-  if (isPromptResponse(maybeClient)) {
-    return maybeClient.promptResponse;
+  const maybeService = getConversationTemplateService(TOOL_NAME);
+  if (isPromptResponse(maybeService)) {
+    return maybeService.promptResponse;
   }
-  const sinchClient = maybeClient;
+  const conversationService = maybeService;
 
   try {
-    setTemplateRegion('us', sinchClient);
-    const responseUS = await sinchClient.conversation.templatesV2.list({});
+    setTemplateRegion('us', conversationService);
+    const responseUS = await conversationService.templatesV2.list({});
 
-    setTemplateRegion('eu', sinchClient);
-    const responseEU = await sinchClient.conversation.templatesV2.list({});
+    setTemplateRegion('eu', conversationService);
+    const responseEU = await conversationService.templatesV2.list({});
 
-    setTemplateRegion('br', sinchClient);
-    const responseBR = await sinchClient.conversation.templatesV2.list({});
+    setTemplateRegion('br', conversationService);
+    const responseBR = await conversationService.templatesV2.list({});
 
     const whatsAppTemplates = await fetchWhatsAppSpecificTemplates();
 
@@ -71,7 +71,7 @@ interface WhatsAppTemplatesResponse {
 
 const fetchWhatsAppSpecificTemplates = async () => {
   const resp = await fetch(
-    `https://provisioning.api.sinch.com/v1/projects/${process.env.CONVERSATION_PROJECT_ID}/whatsapp/templates`,
+    `https://provisioning.api.sinch.com/v1/projects/${process.env.PROJECT_ID}/whatsapp/templates`,
     {
       method: 'GET',
       headers: {

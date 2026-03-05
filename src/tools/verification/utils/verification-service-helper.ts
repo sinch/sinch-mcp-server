@@ -5,19 +5,19 @@ import {
   buildHeader,
   XTimestampRequest,
   SigningRequest,
-  SinchClient,
   VERIFICATION_HOSTNAME,
-} from '@sinch/sdk-core';
+} from '@sinch/sdk-client';
+import { VerificationService } from '@sinch/verification';
 import { formatUserAgent } from '../../../utils';
 
 export const getVerificationCredentials = (): PromptResponse | { applicationKey: string; applicationSecret: string; } => {
-  const applicationKey = process.env.VERIFICATION_APPLICATION_KEY;
-  const applicationSecret = process.env.VERIFICATION_APPLICATION_SECRET;
+  const applicationKey = process.env.APPLICATION_KEY;
+  const applicationSecret = process.env.APPLICATION_SECRET;
 
   if (!applicationKey || !applicationSecret) {
     return new PromptResponse(JSON.stringify({
       success: false,
-      error: 'Missing env vars: VERIFICATION_APPLICATION_KEY, VERIFICATION_APPLICATION_SECRET.'
+      error: 'Missing env vars: APPLICATION_KEY, APPLICATION_SECRET.'
     }));
   }
 
@@ -38,28 +38,28 @@ const addPropertiesToApi = (api: ApiService, client: ApiFetchClient) => {
   api.setHostname(VERIFICATION_HOSTNAME);
 };
 
-export const getVerificationClient = (toolName: string): SinchClient | PromptResponse => {
+export const getVerificationService = (toolName: string): VerificationService | PromptResponse => {
 
-  const applicationKey = process.env.VERIFICATION_APPLICATION_KEY;
-  const applicationSecret = process.env.VERIFICATION_APPLICATION_SECRET;
+  const applicationKey = process.env.APPLICATION_KEY;
+  const applicationSecret = process.env.APPLICATION_SECRET;
 
   if (!applicationKey && !applicationSecret) {
     return new PromptResponse(
-      'Missing environment variables: "VERIFICATION_APPLICATION_KEY" and "VERIFICATION_APPLICATION_SECRET".'
+      'Missing environment variables: "APPLICATION_KEY" and "APPLICATION_SECRET".'
     );
   }
   if (!applicationKey) {
     return new PromptResponse(
-      'Missing environment variable: "VERIFICATION_APPLICATION_KEY".'
+      'Missing environment variable: "APPLICATION_KEY".'
     );
   }
   if (!applicationSecret) {
     return new PromptResponse(
-      'Missing environment variable: "VERIFICATION_APPLICATION_SECRET".'
+      'Missing environment variable: "APPLICATION_SECRET".'
     );
   }
 
-  const sinchClient  = new SinchClient({});
+  const verificationService  = new VerificationService({});
   const apiFetchClient = new ApiFetchClient({
     requestPlugins: [
       new XTimestampRequest(),
@@ -74,11 +74,11 @@ export const getVerificationClient = (toolName: string): SinchClient | PromptRes
   });
 
   const apis = [
-    sinchClient.verification.verifications,
-    sinchClient.verification.verificationStatus,
+    verificationService.verifications,
+    verificationService.verificationStatus,
   ];
 
   apis.forEach((api) => addPropertiesToApi(api as unknown as ApiService, apiFetchClient));
 
-  return sinchClient;
+  return verificationService;
 };

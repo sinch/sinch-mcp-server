@@ -21,7 +21,11 @@
     "conference-callout",
     "manage-conference-participant",
     "tts-callout",
-    "get-call-information"
+    "get-call-information",
+    "list-available-regions",
+    "list-rented-numbers",
+    "rent-sinch-virtual-numbers",
+    "search-for-available-numbers"
   ],
   "expectedPrompts": [
     "conversation-app-id"

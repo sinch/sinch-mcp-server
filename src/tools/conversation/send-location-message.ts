@@ -1,9 +1,9 @@
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
-import { Conversation } from '@sinch/sdk-core';
+import { Conversation } from '@sinch/conversation';
 import { z } from 'zod';
 import {
   getConversationAppId,
-  getConversationClient,
+  getConversationService,
   setConversationRegion,
 } from './utils/conversation-service-helper';
 import { ConversationToolKey, getToolName, toolsConfig } from './utils/conversation-tools-helper';
@@ -68,12 +68,12 @@ export const sendLocationMessageHandler = async ({
   }
   const conversationAppId = maybeAppId;
 
-  const maybeClient = getConversationClient(TOOL_NAME);
-  if (isPromptResponse(maybeClient)) {
-    return maybeClient.promptResponse;
+  const maybeService = getConversationService(TOOL_NAME);
+  if (isPromptResponse(maybeService)) {
+    return maybeService.promptResponse;
   }
-  const sinchClient = maybeClient;
-  const usedRegion = setConversationRegion(region, sinchClient);
+  const conversationService = maybeService;
+  const usedRegion = setConversationRegion(region, conversationService);
 
   let latitude = 0, longitude = 0;
   let formattedAddress = 'Default tile';
@@ -87,7 +87,7 @@ export const sendLocationMessageHandler = async ({
     longitude = address.long;
     formattedAddress = address.title;
   }
-  const requestBase = await buildMessageBase(sinchClient, conversationAppId, recipient, channel, sender);
+  const requestBase = await buildMessageBase(conversationService, conversationAppId, recipient, channel, sender);
   const request: Conversation.SendLocationMessageRequestData<Conversation.IdentifiedBy> = {
     sendMessageRequestBody: {
       ...requestBase,
@@ -104,7 +104,7 @@ export const sendLocationMessageHandler = async ({
   };
 
   try {
-    const response = await sinchClient.conversation.messages.sendLocationMessage(request);
+    const response = await conversationService.messages.sendLocationMessage(request);
     return new PromptResponse(JSON.stringify({
       success: true,
       message_id: response.message_id

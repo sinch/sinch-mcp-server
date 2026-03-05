@@ -1,4 +1,4 @@
-import { Conversation } from '@sinch/sdk-core';
+import { Conversation } from '@sinch/conversation';
 
 export const formatListAllAppsResponse = (response: Conversation.ListAppsResponse | undefined) => {
   if (!response || !response.apps) {

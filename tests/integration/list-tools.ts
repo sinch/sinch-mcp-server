@@ -11,14 +11,12 @@ export const listTools = async () => {
       args: ['dist/index.js'],
       env: {
         ...process.env,
-        CONVERSATION_PROJECT_ID: 'test-conversation-project-id',
-        CONVERSATION_KEY_ID: 'test-conversation-key-id',
-        CONVERSATION_KEY_SECRET: 'test-conversation-key-secret',
+        PROJECT_ID: 'test-project-id',
+        KEY_ID: 'test-key-id',
+        KEY_SECRET: 'test-key-secret',
         MAILGUN_API_KEY: 'test-mailgun-api-key',
-        VERIFICATION_APPLICATION_KEY: 'test-verification-application-key',
-        VERIFICATION_APPLICATION_SECRET: 'test-verification-application-secret',
-        VOICE_APPLICATION_KEY: 'test-voice-application-key',
-        VOICE_APPLICATION_SECRET: 'test-voice-application-secret',
+        APPLICATION_KEY: 'test-application-key',
+        APPLICATION_SECRET: 'test-application-secret',
       }
     }));
 

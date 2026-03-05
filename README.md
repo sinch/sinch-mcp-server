@@ -67,20 +67,20 @@ Here is the list of tools available in the MCP server (all the phone numbers mus
 
 To use the APIs used by the MCP tools, you will need the following credentials:
 - Conversation API credentials:
-  - (Required) `CONVERSATION_PROJECT_ID`: Select the project you want to use from your [Sinch Build dashboard](https://dashboard.sinch.com/dashboard) (Located at the left of the top toolbar)
+  - (Required) `PROJECT_ID`: Select the project you want to use from your [Sinch Build dashboard](https://dashboard.sinch.com/dashboard) (Located at the left of the top toolbar)
 ![Project ID selection](./docs/projectId-selection.png)
-  - (Required) `CONVERSATION_KEY_ID`: Select or create a new access key in the [Access keys section](https://dashboard.sinch.com/settings/access-keys) of the Sinch Build dashboard.
-  - (Required) `CONVERSATION_KEY_SECRET`: This is the secret associated with the `Access Key` you selected or created in the previous step. Be careful, the `Access Key Secret` is only shown once when you create the `Access Key`. If you lose it, you will need to create a new `Access Key`.
+  - (Required) `KEY_ID`: Select or create a new access key in the [Access keys section](https://dashboard.sinch.com/settings/access-keys) of the Sinch Build dashboard.
+  - (Required) `KEY_SECRET`: This is the secret associated with the `Access Key` you selected or created in the previous step. Be careful, the `Access Key Secret` is only shown once when you create the `Access Key`. If you lose it, you will need to create a new `Access Key`.
   - `CONVERSATION_APP_ID`: This is the ID of the conversation app you want to use. You can find it in the [Conversation API / Apps section](https://dashboard.sinch.com/convapi/apps) of the Sinch Build dashboard. If you don't set it, you will have to specify it in the prompt.
   - `CONVERSATION_REGION`: This is the region where your conversation app and templates are located. It can be `us`, `eu`, or `br`. If you don't set it, it defaults to `us`.
   - When using the SMS channel, you can also set the `DEFAULT_SMS_ORIGINATOR` environment variable to the phone number that will be used as the sender for SMS messages. Depending on your country, this setting may be required.
   - You can also set the `GEOCODING_API_KEY` environment variable to your Google Geocoding API key if you want to use the location feature. This is needed to convert an address to a latitude/longitude pair.
 - Verification API credentials: navigate to the [Verification / Apps section](https://dashboard.sinch.com/verification/apps) of the Sinch Build dashboard and create a new app or select an existing one. You will need the following credentials:
-  - (Required) `VERIFICATION_APPLICATION_KEY`
-  - (Required) `VERIFICATION_APPLICATION_SECRET`
+  - (Required) `APPLICATION_KEY`
+  - (Required) `APPLICATION_SECRET`
 - Voice API credentials: navigate to the [Voice / Apps section](https://dashboard.sinch.com/voice/apps) of the Sinch Build dashboard and create a new app or select an existing one. You will need the following credentials:
-  - (Required) `VOICE_APPLICATION_KEY`
-  - (Required) `VOICE_APPLICATION_SECRET`
+  - (Required) `APPLICATION_KEY`
+  - (Required) `APPLICATION_SECRET`
   - You can also set the `CALLING_LINE_IDENTIFICATION` environment variable to the phone number that will be displayed to the user when they receive a call.
 - Mailgun API credentials: navigate to the [Mailgun / Domains section](https://app.mailgun.com/app/domains) of the Mailgun dashboard and create a new domain or select an existing one. You will need the following credentials:
   - (Required) `MAILGUN_API_KEY`
@@ -101,17 +101,15 @@ The Sinch MCP server is available as an NPM package to the executed. Here is how
         "@sinch/mcp"
       ],
       "env": {
-        "CONVERSATION_PROJECT_ID": "",
-        "CONVERSATION_KEY_ID": "",
-        "CONVERSATION_KEY_SECRET": "",
+        "PROJECT_ID": "",
+        "KEY_ID": "",
+        "KEY_SECRET": "",
         "CONVERSATION_APP_ID": "",
         "CONVERSATION_REGION": "",
         "DEFAULT_SMS_ORIGINATOR": "",
         "GEOCODING_API_KEY": "",
-        "VERIFICATION_APPLICATION_KEY": "",
-        "VERIFICATION_APPLICATION_SECRET": "",
-        "VOICE_APPLICATION_KEY": "",
-        "VOICE_APPLICATION_SECRET": "",
+        "APPLICATION_KEY": "",
+        "APPLICATION_SECRET": "",
         "CALLING_LINE_IDENTIFICATION": "",
         "MAILGUN_API_KEY": "",
         "MAILGUN_DOMAIN": "",
@@ -157,17 +155,15 @@ Here is an example of how to configure the MCP server in the [Claude Desktop](ht
         "/your/path/to/sinch-mcp-server/dist/index.js"
       ],
       "env": {
-        "CONVERSATION_PROJECT_ID": "",
-        "CONVERSATION_KEY_ID": "",
-        "CONVERSATION_KEY_SECRET": "",
+        "PROJECT_ID": "",
+        "KEY_ID": "",
+        "KEY_SECRET": "",
         "CONVERSATION_APP_ID": "",
         "CONVERSATION_REGION": "",
         "DEFAULT_SMS_ORIGINATOR": "",
         "GEOCODING_API_KEY": "",
-        "VERIFICATION_APPLICATION_KEY": "",
-        "VERIFICATION_APPLICATION_SECRET": "",
-        "VOICE_APPLICATION_KEY": "",
-        "VOICE_APPLICATION_SECRET": "",
+        "APPLICATION_KEY": "",
+        "APPLICATION_SECRET": "",
         "CALLING_LINE_IDENTIFICATION": "",
         "MAILGUN_API_KEY": "",
         "MAILGUN_DOMAIN": "",
@@ -224,10 +220,10 @@ npm run build
 
 Copy the file `.template.env` and rename it `.env`. Then replace the placeholders with your own credentials and delete any key you don't need. The `.env` file should look like this ():
 ```dotenv
-# Conversation tools related environment variables
-CONVERSATION_PROJECT_ID=
-CONVERSATION_KEY_ID=
-CONVERSATION_KEY_SECRET=
+# Conversation / Numbers tools related environment variables
+PROJECT_ID=
+KEY_ID=
+KEY_SECRET=
 ## Optional but recommended: the App ID holding your channels integration configuration. If not set it must be present in the prompt
 CONVERSATION_APP_ID=
 ## Optional, defaults to "us". Other possible values are "eu" and "br"
@@ -237,13 +233,9 @@ DEFAULT_SMS_ORIGINATOR=
 ## Needed only if you want to send location messages: it converts an address to a latitude/longitude pair
 GEOCODING_API_KEY=
 
-# Verification tools related environment variables
-VERIFICATION_APPLICATION_KEY=
-VERIFICATION_APPLICATION_SECRET=
-
-# Voice tools related environment variables (Application key and secret can be the same as for Verification)
-VOICE_APPLICATION_KEY=
-VOICE_APPLICATION_SECRET=
+# Verification / Voice tools related environment variables
+APPLICATION_KEY=
+APPLICATION_SECRET=
 ## Needed only if you want to make calls: it is the number that will be displayed to the user when they receive a call
 CALLING_LINE_IDENTIFICATION=
 
@@ -256,21 +248,21 @@ MAILGUN_SENDER_ADDRESS=
 ### Step 3: Start the MCP server
 
 ```bash
-npm run start
+npm run start:stdio
 ```
 
 By default, this command will start the MCP with all the tools available. If you want to filter the tools that are available in the MCP server, you can use the `--tags` option. For example, if you want to only use the conversation tools, you can modify the command as follows:
 ```bash
 # Original command
-"start": "tsc && (npx -y supergateway --stdio \"node dist/index.js\" --port 8000 --baseUrl http://localhost:8000 --ssePath /sse --messagePath /message)"
+"start:sse": "tsc --project tsconfig.build.json && (npx -y supergateway --stdio \"node dist/index.js\" --port 8000 --baseUrl http://localhost:8000 --ssePath /sse --messagePath /message)"
 
 # Modified command to only use conversation tools
-"start": "tsc && (npx -y supergateway --stdio \"node dist/index.js --tag conversation\" --port 8000 --baseUrl http://localhost:8000 --ssePath /sse --messagePath /message)"
+"start:sse": "tsc --project tsconfig.build.json && (npx -y supergateway --stdio \"node dist/index.js --tag conversation\" --port 8000 --baseUrl http://localhost:8000 --ssePath /sse --messagePath /message)"
 ```
 
 You can combine multiple tags by separating them with commas. For example, if you want to use both conversation and verification tools, you can use the following command:
 ```bash
-"start": "tsc && (npx -y supergateway --stdio \"node dist/index.js --tag conversation,verification\" --port 8000 --baseUrl http://localhost:8000 --ssePath /sse --messagePath /message)"
+"start": "tsc --project tsconfig.build.json && (npx -y supergateway --stdio \"node dist/index.js --tag conversation,verification\" --port 8000 --baseUrl http://localhost:8000 --ssePath /sse --messagePath /message)"
 ```
 
 ### Step 4: Configure the MCP server in Claude Desktop

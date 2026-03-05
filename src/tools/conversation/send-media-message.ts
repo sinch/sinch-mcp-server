@@ -1,10 +1,10 @@
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
-import { Conversation } from '@sinch/sdk-core';
+import { Conversation } from '@sinch/conversation';
 import { z } from 'zod';
 import { Recipient, ConversationAppIdOverride, ConversationChannel, ConversationRegionOverride, MessageSenderNumberOverride } from './prompt-schemas';
 import {
   getConversationAppId,
-  getConversationClient,
+  getConversationService,
   setConversationRegion,
 } from './utils/conversation-service-helper';
 import { ConversationToolKey, getToolName, toolsConfig } from './utils/conversation-tools-helper';
@@ -54,14 +54,14 @@ export const sendMediaMessageHandler = async({
   }
   const conversationAppId = maybeAppId;
 
-  const maybeClient = getConversationClient(TOOL_NAME);
-  if (isPromptResponse(maybeClient)) {
-    return maybeClient.promptResponse;
+  const maybeService = getConversationService(TOOL_NAME);
+  if (isPromptResponse(maybeService)) {
+    return maybeService.promptResponse;
   }
-  const sinchClient = maybeClient;
-  const usedRegion = setConversationRegion(region, sinchClient);
+  const conversationService = maybeService;
+  const usedRegion = setConversationRegion(region, conversationService);
 
-  const requestBase = await buildMessageBase(sinchClient, conversationAppId, recipient, channel, sender);
+  const requestBase = await buildMessageBase(conversationService, conversationAppId, recipient, channel, sender);
   const request: Conversation.SendMediaMessageRequestData<Conversation.IdentifiedBy> = {
     sendMessageRequestBody: {
       ...requestBase,
@@ -74,7 +74,7 @@ export const sendMediaMessageHandler = async({
   };
 
   try {
-    const response = await sinchClient.conversation.messages.sendMediaMessage(request);
+    const response = await conversationService.messages.sendMediaMessage(request);
     return new PromptResponse(JSON.stringify({
       success: true,
       message_id: response.message_id

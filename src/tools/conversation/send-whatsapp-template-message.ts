@@ -1,11 +1,11 @@
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
-import { Conversation } from '@sinch/sdk-core';
+import { Conversation } from '@sinch/conversation';
 import { z } from 'zod';
 import { IPromptResponse, PromptResponse, Tags } from '../../types';
 import { isPromptResponse, matchesAnyTag } from '../../utils';
 import {
   getConversationAppId,
-  getConversationClient,
+  getConversationService,
   setConversationRegion,
 } from './utils/conversation-service-helper';
 import { ConversationToolKey, getToolName, toolsConfig } from './utils/conversation-tools-helper';
@@ -68,14 +68,14 @@ export const sendTemplateMessageHandler = async ({
   }
   const conversationAppId = maybeAppId;
 
-  const maybeClient = getConversationClient(TOOL_NAME);
-  if (isPromptResponse(maybeClient)) {
-    return maybeClient.promptResponse;
+  const maybeService = getConversationService(TOOL_NAME);
+  if (isPromptResponse(maybeService)) {
+    return maybeService.promptResponse;
   }
-  const sinchClient = maybeClient;
-  const usedRegion = setConversationRegion(region, sinchClient);
+  const conversationService = maybeService;
+  const usedRegion = setConversationRegion(region, conversationService);
 
-  const requestBase = await buildMessageBase(sinchClient, conversationAppId, recipient, ['WHATSAPP'], sender);
+  const requestBase = await buildMessageBase(conversationService, conversationAppId, recipient, ['WHATSAPP'], sender);
   const whatsappMessage: Conversation.TemplateMessageItem = {
     channel_template: {
       WHATSAPP: {
@@ -101,7 +101,7 @@ export const sendTemplateMessageHandler = async ({
   };
 
   try {
-    const response = await sinchClient.conversation.messages.sendTemplateMessage(request);
+    const response = await conversationService.messages.sendTemplateMessage(request);
     return new PromptResponse(JSON.stringify({
       success: true,
       message_id: response.message_id

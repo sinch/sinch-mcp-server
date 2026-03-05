@@ -1,21 +1,24 @@
-import { getVoiceClient } from '../../../../src/tools/voice/utils/voice-service-helper';
-import { ApiFetchClient, SinchClient, VOICE_HOSTNAME } from '@sinch/sdk-core';
+import { getVoiceService } from '../../../../src/tools/voice/utils/voice-service-helper';
+import { ApiFetchClient, VOICE_HOSTNAME } from '@sinch/sdk-client';
+import { VoiceService } from '@sinch/voice';
 import { formatUserAgent } from '../../../../src/utils';
 
 const mockApi = () => ({
   setHostname: jest.fn(),
 });
 
-jest.mock('@sinch/sdk-core', () => {
-  const actual = jest.requireActual('@sinch/sdk-core');
+jest.mock('@sinch/sdk-core/package.json', () => ({
+  version: '1.0.0',
+}), { virtual: true });
+
+jest.mock('@sinch/voice', () => {
+  const actual = jest.requireActual('@sinch/voice');
   return {
     ...actual,
-    SinchClient: jest.fn(() => ({
-      voice: {
-        callouts: mockApi(),
-        conferences: mockApi(),
-        calls: mockApi(),
-      },
+    VoiceService: jest.fn(() => ({
+      callouts: mockApi(),
+      conferences: mockApi(),
+      calls: mockApi(),
     })),
   }
 });
@@ -28,19 +31,21 @@ describe('getVoiceService', () => {
   beforeEach(() => {
     jest.resetModules();
     process.env = { ...OLD_ENV };
-    process.env.VOICE_APPLICATION_KEY = APPLICATION_KEY;
-    process.env.VOICE_APPLICATION_SECRET = 'test-application-secret';
+    process.env.APPLICATION_KEY = APPLICATION_KEY;
+    process.env.APPLICATION_SECRET = 'test-application-secret';
   });
 
   afterAll(() => {
     process.env = OLD_ENV;
   });
 
-  test('returns a configured SinchClient from getVoiceService', async () => {
-    const client = getVoiceClient(TOOL_NAME);
-    expect(client).toHaveProperty('voice');
+  test('returns a configured VoiceService from getVoiceService', async () => {
+    const service = getVoiceService(TOOL_NAME);
+    expect(service).toHaveProperty('callouts');
+    expect(service).toHaveProperty('conferences');
+    expect(service).toHaveProperty('calls');
 
-    const apis = (client as SinchClient).voice;
+    const apis = service as VoiceService;
 
     for(const api of Object.values(apis)) {
       expect(api.setHostname).toHaveBeenCalledWith(VOICE_HOSTNAME.replace('{region}', ''));
