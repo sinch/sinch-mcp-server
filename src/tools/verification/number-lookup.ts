@@ -71,13 +71,16 @@ export const numberLookupHandler = async (
     const data = await resp.json() as NumberLookupResponse;
 
     return new PromptResponse(JSON.stringify({
-      phone_number: data.number,
-      carrier: data.line?.carrier,
-      type: data.line?.type,
-      mobile_country_code: data.line?.mobileCountryCode,
-      mobile_network_code: data.line?.mobileNetworkCode,
-      country_code: data.countryCode,
-      trace_id: data.traceId
+      success: true,
+      data: {
+        phone_number: data.number,
+        carrier: data.line?.carrier,
+        type: data.line?.type,
+        mobile_country_code: data.line?.mobileCountryCode,
+        mobile_network_code: data.line?.mobileNetworkCode,
+        country_code: data.countryCode,
+        trace_id: data.traceId
+      }
     })).promptResponse;
   } catch (error) {
     return new PromptResponse(JSON.stringify({

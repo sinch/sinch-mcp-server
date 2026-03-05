@@ -144,45 +144,37 @@ export const sendCardOrChoiceMessageHandler = async ({
 
   const requestBase = await buildMessageBase(sinchClient, conversationAppId, recipient, channel, sender);
 
-  let request: Conversation.SendChoiceMessageRequestData<Conversation.IdentifiedBy> | Conversation.SendCardMessageRequestData<Conversation.IdentifiedBy>;
-
-  if (mediaUrl) {
-    request = {
-      sendMessageRequestBody: {
-        ...requestBase,
-        message: {
-          card_message: {
-            choices,
-            title: text,
-            media_message: {
-              url: mediaUrl
-            }
-          }
-        }
-      }
-    };
-  } else {
-    request = {
-      sendMessageRequestBody: {
-        ...requestBase,
-        message: {
-          choice_message: {
-            choices,
-            text_message:{
-              text
-            }
-          }
-        }
-      }
-    };
-  }
-
   try {
     let response: Conversation.SendMessageResponse;
     if (mediaUrl) {
-      response = await sinchClient.conversation.messages.sendCardMessage(request as Conversation.SendCardMessageRequestData<Conversation.IdentifiedBy>);
+      response = await sinchClient.conversation.messages.sendCardMessage({
+        sendMessageRequestBody: {
+          ...requestBase,
+          message: {
+            card_message: {
+              choices,
+              title: text,
+              media_message: {
+                url: mediaUrl
+              }
+            }
+          }
+        }
+      });
     } else {
-      response = await sinchClient.conversation.messages.sendChoiceMessage(request as Conversation.SendChoiceMessageRequestData<Conversation.IdentifiedBy>);
+      response = await sinchClient.conversation.messages.sendChoiceMessage({
+        sendMessageRequestBody: {
+          ...requestBase,
+          message: {
+            choice_message: {
+              choices,
+              text_message:{
+                text
+              }
+            }
+          }
+        }
+      });
     }
     return new PromptResponse(JSON.stringify({
       success: true,

@@ -26,27 +26,32 @@ export const listAllTemplatesHandler = async (): Promise<IPromptResponse> => {
   const sinchClient = maybeClient;
 
   try {
-    setTemplateRegion('us', sinchClient);
-    const responseUS = await sinchClient.conversation.templatesV2.list({});
+    const regions = ['us', 'eu', 'br'] as const;
+    const omniChannelTemplates: any[] = [];
+    const errors: { region: string; error: string }[] = [];
 
-    setTemplateRegion('eu', sinchClient);
-    const responseEU = await sinchClient.conversation.templatesV2.list({});
-
-    setTemplateRegion('br', sinchClient);
-    const responseBR = await sinchClient.conversation.templatesV2.list({});
+    for (const region of regions) {
+      try {
+        setTemplateRegion(region, sinchClient);
+        const response = await sinchClient.conversation.templatesV2.list({});
+        const formatted = formatListAllTemplatesResponse(response);
+        omniChannelTemplates.push(...formatted.map(t => ({ ...t, region })));
+      } catch (error) {
+        errors.push({
+          region,
+          error: error instanceof Error ? error.message : 'Unknown error'
+        });
+      }
+    }
 
     const whatsAppTemplates = await fetchWhatsAppSpecificTemplates();
 
-    const omniChannelTemplates = [
-      ...formatListAllTemplatesResponse(responseUS).map(t => ({ ...t, region: 'us' })),
-      ...formatListAllTemplatesResponse(responseEU).map(t => ({ ...t, region: 'eu' })),
-      ...formatListAllTemplatesResponse(responseBR).map(t => ({ ...t, region: 'br' }))
-    ];
-
     return new PromptResponse(JSON.stringify({
+      success: errors.length === 0,
       templates: {
         omni_channel: omniChannelTemplates,
-        whatsapp: whatsAppTemplates
+        whatsapp: whatsAppTemplates,
+        ...(errors.length > 0 && { errors })
       },
       total_count: omniChannelTemplates.length + whatsAppTemplates.length
     })).promptResponse;

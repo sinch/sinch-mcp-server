@@ -30,20 +30,32 @@ export const listAllAppsHandler = async (): Promise<IPromptResponse> => {
 
   try {
     const allApps: any[] = [];
+    const errors: { region: string; error: string }[] = [];
+
     for (const region of regions) {
-      setConversationRegion(region, sinchClient);
-      const response = await sinchClient.conversation.app.list({});
-      const formatted = formatListAllAppsResponse(response);
-      if (formatted.apps && formatted.apps.length > 0) {
-        allApps.push(...formatted.apps.map((app: any) => ({
-          ...app,
-          region
-        })));
+      try {
+        setConversationRegion(region, sinchClient);
+        const response = await sinchClient.conversation.app.list({});
+        const formatted = formatListAllAppsResponse(response);
+        if (formatted.apps && formatted.apps.length > 0) {
+          allApps.push(...formatted.apps.map((app: any) => ({
+            ...app,
+            region
+          })));
+        }
+      } catch (error) {
+        errors.push({
+          region,
+          error: error instanceof Error ? error.message : 'Unknown error'
+        });
       }
     }
+
     return new PromptResponse(JSON.stringify({
+      success: errors.length === 0,
       apps: allApps,
-      total_count: allApps.length
+      total_count: allApps.length,
+      ...(errors.length > 0 && { errors })
     })).promptResponse;
   } catch (error) {
     return new PromptResponse(JSON.stringify({
