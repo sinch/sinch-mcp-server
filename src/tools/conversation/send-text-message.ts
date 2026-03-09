@@ -83,8 +83,7 @@ export const sendTextMessageHandler = async({
     const response = await conversationService.messages.sendTextMessage(request);
     return new PromptResponse(JSON.stringify({
       success: true,
-      message_id: response.message_id,
-      channel: channel[0]
+      message_id: response.message_id
     })).promptResponse;
   } catch (error) {
     return new PromptResponse(JSON.stringify({

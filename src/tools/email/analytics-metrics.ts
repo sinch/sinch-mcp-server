@@ -149,6 +149,7 @@ export const analyticsMetricsHandler = async ({
   }
 
   return new PromptResponse(JSON.stringify({
+    success: true,
     metrics: responseData.aggregates.metrics,
     period: {
       begin: responseData.start,

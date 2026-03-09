@@ -43,15 +43,14 @@ test('sendTextMessageHandler returns success response', async () => {
 
   const expectedResponse = JSON.stringify({
     success:true,
-    message_id:'abc123',
-    channel:'WHATSAPP'
+    message_id:'abc123'
   });
 
   expect(result.content[0].text).toEqual(expectedResponse);
 });
 
 test('sendTextMessageHandler returns error response on failure', async () => {
-  mockSendTextMessage.mockRejectedValue(new Error('oops'));
+  mockSendTextMessage.mockRejectedValue(new Error('Oops'));
   const region = 'eu';
   (setConversationRegion as jest.Mock).mockReturnValue(region);
 
@@ -66,7 +65,7 @@ test('sendTextMessageHandler returns error response on failure', async () => {
 
   const expectedResponse = JSON.stringify({
     success:false,
-    error:'oops. Are you sure you are using the right region to send your message? The current region is eu.'
+    error:'Oops. Are you sure you are using the right region to send your message? The current region is eu.'
   });
 
   expect(result.content[0].text).toEqual(expectedResponse);

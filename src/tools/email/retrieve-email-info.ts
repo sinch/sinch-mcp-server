@@ -111,7 +111,12 @@ export const retrieveEmailInfoHandler = async({
     result.to = storedEmailData['To'];
     result.subject = storedEmailData['Subject'];
     result.body_html = storedEmailData['body-html'];
+  } else {
+    return new PromptResponse(JSON.stringify({
+      success: false,
+      error: `An error occurred when trying to retrieve the events related to the email ID ${emailId}. The status code is ${storedEmail.status}.`
+    })).promptResponse;
   }
 
-  return new PromptResponse(JSON.stringify(result)).promptResponse;
+  return new PromptResponse(JSON.stringify({ success: true, data: result })).promptResponse;
 }

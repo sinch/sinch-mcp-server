@@ -48,20 +48,21 @@ describe('analyticsMetricsHandler', () => {
 
     // Then
     const expectedText = JSON.stringify({
-        metrics: {
-          accepted_count: 10,
-          delivered_count: 8,
-          failed_count: 2,
-          opened_count: 5,
-          clicked_count: 3,
-          unsubscribed_count: 1,
-          complained_count: 0,
-        },
-        period: {
-          begin: 'Mon, 02 Jun 2025 00:00:00 +0000',
-          end: 'Mon, 09 Jun 2025 00:00:00 +0000'
-        }
-      });
+      success: true,
+      metrics: {
+        accepted_count: 10,
+        delivered_count: 8,
+        failed_count: 2,
+        opened_count: 5,
+        clicked_count: 3,
+        unsubscribed_count: 1,
+        complained_count: 0,
+      },
+      period: {
+        begin: 'Mon, 02 Jun 2025 00:00:00 +0000',
+        end: 'Mon, 09 Jun 2025 00:00:00 +0000'
+      }
+    });
     expect(result.role).toBe('assistant');
     expect(result.content[0].text).toBe(expectedText);
 

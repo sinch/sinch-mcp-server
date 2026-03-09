@@ -81,19 +81,20 @@ test('listAllAppsHandler returns formatted app list for all regions', async () =
   expect(setRegionMock).toHaveBeenCalledWith('br');
 
   const expectedResponse = JSON.stringify({
-    'apps': [
+    success: true,
+    apps: [
       {
-        'id': 'us1',
-        'channel_credentials': [{ 'channel': 'WHATSAPP' }],
-        'region': 'us'
+        id: 'us1',
+        channel_credentials: [{ 'channel': 'WHATSAPP' }],
+        region: 'us'
       },
       {
-        'id': 'br1',
-        'channel_credentials': [{ 'channel': 'MESSENGER' }, { 'channel': 'RCS' }],
-        'region': 'br',
+        id: 'br1',
+        channel_credentials: [{ 'channel': 'MESSENGER' }, { 'channel': 'RCS' }],
+        region: 'br',
       }
     ],
-    'total_count': 2,
+    total_count: 2,
   });
 
   expect(result.content[0].text).toBe(expectedResponse);
@@ -101,15 +102,32 @@ test('listAllAppsHandler returns formatted app list for all regions', async () =
 
 test('listAllAppsHandler returns error response on failure', async () => {
   // Given
-  mockListApps.mockRejectedValue(new Error('oops'));
+  mockListApps.mockRejectedValue(new Error('Oops'));
   // When
   const result = await listAllAppsHandler();
   // Then
-  expect(setRegionMock).toHaveBeenCalledTimes(1);
+  expect(setRegionMock).toHaveBeenCalledTimes(3);
   expect(setRegionMock).toHaveBeenCalledWith('us');
+  expect(setRegionMock).toHaveBeenCalledWith('eu');
+  expect(setRegionMock).toHaveBeenCalledWith('br');
   const expectedResponse = JSON.stringify({
     success: false,
-    error: 'oops'
+    apps: [],
+    total_count: 0,
+    errors: [
+      {
+        region: 'us',
+        error: 'Oops'
+      },
+      {
+        region: 'eu',
+        error: 'Oops'
+      },
+      {
+        region: 'br',
+        error: 'Oops'
+      }
+    ]
   });
   expect(result.content[0].text).toBe(expectedResponse);
 });

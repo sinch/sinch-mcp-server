@@ -45,13 +45,16 @@ describe('numberLookupHandler', () => {
     // Then
     expect(result.role).toBe('assistant');
     const expectedResponse = JSON.stringify({
-      phone_number: '+1234567890',
-      carrier: 'CarrierX',
-      type: 'mobile',
-      mobile_country_code: '123',
-      mobile_network_code: '456',
-      country_code: 'US',
-      trace_id: 'trace-1234'
+      success: true,
+      data: {
+        phone_number: '+1234567890',
+        carrier: 'CarrierX',
+        type: 'mobile',
+        mobile_country_code: '123',
+        mobile_network_code: '456',
+        country_code: 'US',
+        trace_id: 'trace-1234'
+      }
     });
     expect(result).toEqual(new PromptResponse(expectedResponse).promptResponse);
 
