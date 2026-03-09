@@ -1,9 +1,9 @@
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { z } from 'zod';
-import { formatUserAgent, isPromptResponse } from '../../utils';
+import { formatUserAgent, isPromptResponse, matchesAnyTag } from '../../utils';
 import { IPromptResponse, PromptResponse, Tags } from '../../types';
 import { getMailgunCredentials } from './utils/mailgun-service-helper';
-import { EmailToolKey, getToolName, sha256, shouldRegisterTool } from './utils/mailgun-tools-helper';
+import { EmailToolKey, getToolName, sha256, toolsConfig } from './utils/mailgun-tools-helper';
 
 const eventTypes = [
   'accepted', 'rejected', 'delivered', 'failed',
@@ -26,7 +26,7 @@ const TOOL_KEY: EmailToolKey = 'listEmailEvents';
 const TOOL_NAME = getToolName(TOOL_KEY);
 
 export const registerListEmailEvents = (server: McpServer, tags: Tags[]) => {
-  if (!shouldRegisterTool(TOOL_KEY, tags)) return;
+  if (!matchesAnyTag(tags, toolsConfig[TOOL_KEY].tags)) return;
 
   server.tool(
     TOOL_NAME,
@@ -68,14 +68,20 @@ export const listEmailEventsHandler = async ({
   });
 
   if (!response.ok) {
-    return new PromptResponse(`Mailgun API error: ${response.status} ${response.statusText}`).promptResponse;
+    return new PromptResponse(JSON.stringify({
+      success: false,
+      error: `Mailgun API error: ${response.status} ${response.statusText}`
+    })).promptResponse;
   }
 
   let responseData;
   try {
     responseData = await response.json() as MailgunEventsResponse;
   } catch (error) {
-    return new PromptResponse(`Failed to parse JSON response: ${error}`).promptResponse;
+    return new PromptResponse(JSON.stringify({
+      success: false,
+      error: error instanceof Error ? error.message : String(error)
+    })).promptResponse;
   }
 
   const grouped: Map<string, { recipient?: string; subject?: string; from?: string; events: { event: string; timestamp: string }[] }> = new Map();
@@ -107,23 +113,18 @@ export const listEmailEventsHandler = async ({
     });
   }
 
-  let reply = `The following events must be presented with ALL their data, even if the ID is long, it MUST be displayed as this information can be used to get subsequent information on other API endpoints.`;
-  reply += `\nFound ${events.length} email events for domain "${credentials.domain}"`
-  if (event) reply += ` (filtered by event: ${event})`;
-  reply += ':';
+  const groupedArray = Array.from(grouped.entries()).map(([messageId, data]) => ({
+    message_id: messageId,
+    from: data.from,
+    to: data.recipient,
+    subject: data.subject,
+    events: data.events
+  }));
 
-  for (const [messageId, { recipient, subject, from, events }] of grouped.entries()) {
-    reply += `\n**Message ID:** ${messageId}\n`;
-    if (from) reply += `From: ${from}\n`;
-    if (recipient) reply += `To: ${recipient}\n`;
-    if (subject) reply += `Subject: ${subject}\n`;
-    reply += '| Event | Timestamp (UTC) |\n|-------|-----------------|\n';
-    for (const ev of events) {
-      reply += `| ${ev.event} | ${ev.timestamp} |\n`;
-    }
-  }
-
-  return new PromptResponse(reply).promptResponse;
+  return new PromptResponse(JSON.stringify({
+    events: groupedArray,
+    total_count: events.length
+  })).promptResponse;
 };
 
 interface MailgunEventsResponse {

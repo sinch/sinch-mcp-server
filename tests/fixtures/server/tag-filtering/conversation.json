@@ -8,8 +8,7 @@
     "send-media-message",
     "send-template-message",
     "send-whatsapp-template-message",
-    "send-text-message",
-    "sinch-mcp-configuration"
+    "send-text-message"
   ],
   "expectedPrompts": [
     "conversation-app-id"

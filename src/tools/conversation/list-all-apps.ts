@@ -1,15 +1,15 @@
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
-import { isPromptResponse } from '../../utils';
+import { isPromptResponse, matchesAnyTag } from '../../utils';
 import { formatListAllAppsResponse } from './utils/format-list-all-apps-response';
 import { getConversationClient, setConversationRegion } from './utils/conversation-service-helper';
-import { ConversationToolKey, getToolName, shouldRegisterTool } from './utils/conversation-tools-helper';
+import { ConversationToolKey, getToolName, toolsConfig } from './utils/conversation-tools-helper';
 import { IPromptResponse, PromptResponse, Tags } from '../../types';
 
 const TOOL_KEY: ConversationToolKey = 'listConversationApps';
 const TOOL_NAME = getToolName(TOOL_KEY);
 
 export const registerListAllApps = (server: McpServer, tags: Tags[]) => {
-  if (!shouldRegisterTool(TOOL_KEY, tags)) return;
+  if (!matchesAnyTag(tags, toolsConfig[TOOL_KEY].tags)) return;
 
   server.tool(
     TOOL_NAME,
@@ -28,18 +28,39 @@ export const listAllAppsHandler = async (): Promise<IPromptResponse> => {
 
   const regions = [ 'us', 'eu', 'br' ];
 
-  let reply = '';
   try {
-    for (const region of regions) {
-      setConversationRegion(region, sinchClient);
-      const response = await sinchClient.conversation.app.list({});
-      reply += `${reply ? '\n' : ''}List of conversations apps in the '${region}' region: ${JSON.stringify(formatListAllAppsResponse(response))}`;
-    }
-  } catch (error) {
-    return new PromptResponse(`Error fetching apps: ${error instanceof Error ? error.message : 'Unknown error'}`).promptResponse;
-  }
+    const allApps: any[] = [];
+    const errors: { region: string; error: string }[] = [];
 
-  return new PromptResponse(`${reply}.\nPlease return the data in a structured array format with each item on a separate line. Just display the Id, display name, channels and region columns. Example:
-| ID   | Display name | Channels       | Region |
-| 0123 | My app name  | SMS, MESSENGER | US     |`).promptResponse;
+    for (const region of regions) {
+      try {
+        setConversationRegion(region, sinchClient);
+        const response = await sinchClient.conversation.app.list({});
+        const formatted = formatListAllAppsResponse(response);
+        if (formatted.apps && formatted.apps.length > 0) {
+          allApps.push(...formatted.apps.map((app: any) => ({
+            ...app,
+            region
+          })));
+        }
+      } catch (error) {
+        errors.push({
+          region,
+          error: error instanceof Error ? error.message : 'Unknown error'
+        });
+      }
+    }
+
+    return new PromptResponse(JSON.stringify({
+      success: errors.length === 0,
+      apps: allApps,
+      total_count: allApps.length,
+      ...(errors.length > 0 && { errors })
+    })).promptResponse;
+  } catch (error) {
+    return new PromptResponse(JSON.stringify({
+      success: false,
+      error: error instanceof Error ? error.message : 'Unknown error'
+    })).promptResponse;
+  }
 };

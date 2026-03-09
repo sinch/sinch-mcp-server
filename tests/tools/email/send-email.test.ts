@@ -43,7 +43,13 @@ describe('sendEmailHandler', () => {
     });
 
     // Then
-    expect(result.content[0].text).toBe('Email sent to user@example.com with subject "Test Subject"! The message ID is <test-id-123.mailgun.org>');
+    const expectedResponse = JSON.stringify({
+      success: true,
+      message_id: '<test-id-123.mailgun.org>',
+      recipient: 'user@example.com',
+      subject: 'Test Subject'
+    })
+    expect(result.content[0].text).toBe(expectedResponse);
   });
 
   it('sends an email using a template', async () => {
@@ -65,7 +71,13 @@ describe('sendEmailHandler', () => {
     });
 
     // Then
-    expect(result.content[0].text).toBe('Email sent to user@example.com with subject "Template Subject"! The message ID is <template-id-456.mailgun.org>');
+    const expectedResponse = JSON.stringify({
+      success: true,
+      message_id: '<template-id-456.mailgun.org>',
+      recipient: 'user@example.com',
+      subject: 'Template Subject'
+    });
+    expect(result.content[0].text).toBe(expectedResponse);
   });
 
   it('fails when no body or template is provided', async () => {
@@ -77,7 +89,11 @@ describe('sendEmailHandler', () => {
     });
 
     // Then
-    expect(result.content[0].text).toBe('The "body" is not provided and no template name is specified.');
+    const expectedResponse = JSON.stringify({
+      success: false,
+      error: 'The "body" is not provided and no template name is specified.'
+    });
+    expect(result.content[0].text).toBe(expectedResponse);
   });
 
   it('handles Mailgun API error', async () => {
@@ -85,7 +101,8 @@ describe('sendEmailHandler', () => {
     (fetch as jest.Mock).mockResolvedValue({
       ok: false,
       status: 403,
-      statusText: 'Forbidden'
+      statusText: 'Forbidden',
+      text: async () => 'Forbidden'
     });
 
     // When
@@ -97,12 +114,20 @@ describe('sendEmailHandler', () => {
     });
 
     // Then
-    expect(result).toEqual(new PromptResponse('An error occurred when trying to send the email: {"ok":false,"status":403,"statusText":"Forbidden"} The status code is 403: Forbidden.').promptResponse);
+    const expectedResponse = JSON.stringify({
+      success: false,
+      error: '(403 - Forbidden) An error occurred when sending an email to user@example.com: Forbidden'
+    });
+    expect(result).toEqual(new PromptResponse(expectedResponse).promptResponse);
   });
 
   it('returns early on credential fetch error', async () => {
     // Given
-    jest.spyOn(mailgunHelper, 'getMailgunCredentials').mockReturnValue(new PromptResponse('Missing credentials'));
+    const promptResponse = new PromptResponse(JSON.stringify({
+      success: false,
+      error: 'Missing credentials'
+    }));
+    jest.spyOn(mailgunHelper, 'getMailgunCredentials').mockReturnValue(promptResponse);
 
     // When
     const result = await sendEmailHandler({
@@ -113,7 +138,7 @@ describe('sendEmailHandler', () => {
     });
 
     // Then
-    expect(result).toEqual(new PromptResponse('Missing credentials').promptResponse);
+    expect(result).toEqual(promptResponse.promptResponse);
   });
 
 });

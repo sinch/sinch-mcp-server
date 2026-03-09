@@ -2,14 +2,14 @@ import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { IPromptResponse, PromptResponse, Tags } from '../../types';
 import { z } from 'zod';
 import { getMailgunCredentials } from './utils/mailgun-service-helper';
-import { EmailToolKey, getToolName, sha256, shouldRegisterTool } from './utils/mailgun-tools-helper';
-import { formatUserAgent, isPromptResponse } from '../../utils';
+import { EmailToolKey, getToolName, sha256, toolsConfig } from './utils/mailgun-tools-helper';
+import { formatUserAgent, isPromptResponse, matchesAnyTag } from '../../utils';
 
 const TOOL_KEY: EmailToolKey = 'listEmailTemplates';
 const TOOL_NAME = getToolName(TOOL_KEY);
 
 export const registerListEmailTemplates = (server: McpServer, tags: Tags[]) => {
-  if (!shouldRegisterTool(TOOL_KEY, tags)) return;
+  if (!matchesAnyTag(tags, toolsConfig[TOOL_KEY].tags)) return;
 
   server.tool(
     TOOL_NAME,
@@ -42,25 +42,31 @@ export const listEmailTemplatesHandler = async ({
   });
 
   if (!response.ok) {
-    return new PromptResponse(`Mailgun API error: ${response.status} ${response.statusText}`).promptResponse;
+    return new PromptResponse(JSON.stringify({
+      success: false,
+      error: `Mailgun API error: ${response.status} ${response.statusText}`
+    })).promptResponse;
   }
 
   let responseData;
   try {
     responseData = await response.json() as MailgunTemplatesResponse;
   } catch (error) {
-    return new PromptResponse(`Failed to parse JSON response: ${error}`).promptResponse;
+    return new PromptResponse(JSON.stringify({
+      success: false,
+      error: error instanceof Error ? error.message : String(error)
+    })).promptResponse;
   }
 
-  let reply = `The following templates must be presented as an array ALL their data in 3 columns: Name, Description and Creation Date. Do not omit anything.\n\n`;
-  reply += `Found ${responseData.items.length} Email templates for domain "${credentials.domain}":\n\n`;
-  reply += '| Name | Description | Creation Date |\n'
-  reply += '|------|-------------|---------------|\n';
-  for (const template of responseData.items) {
-    reply += `| ${template.name} | ${template.description || '(No description)'} | ${template.createdAt ? new Date(template.createdAt).toISOString() : ''} |\n`;
-  }
-
-  return new PromptResponse(reply).promptResponse;
+  return new PromptResponse(JSON.stringify({
+    templates: responseData.items.map(template => ({
+      id: template.id,
+      name: template.name,
+      description: template.description || null,
+      createdAt: template.createdAt ? new Date(template.createdAt).toISOString() : null
+    })),
+    total_count: responseData.items.length
+  })).promptResponse;
 }
 
 interface MailgunTemplatesResponse {

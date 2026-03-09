@@ -21,8 +21,7 @@
     "conference-callout",
     "manage-conference-participant",
     "tts-callout",
-    "get-call-information",
-    "sinch-mcp-configuration"
+    "get-call-information"
   ],
   "expectedPrompts": [
     "conversation-app-id"

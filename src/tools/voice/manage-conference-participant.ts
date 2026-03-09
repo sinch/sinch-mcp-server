@@ -1,15 +1,15 @@
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { z } from 'zod';
 import { getVoiceClient } from './utils/voice-service-helper';
-import { getToolName, shouldRegisterTool, VoiceToolKey } from './utils/voice-tools-helper';
-import { isPromptResponse } from '../../utils';
+import { getToolName, VoiceToolKey, voiceToolsConfig } from './utils/voice-tools-helper';
+import { isPromptResponse, matchesAnyTag } from '../../utils';
 import { IPromptResponse, PromptResponse, Tags } from '../../types';
 
 const TOOL_KEY: VoiceToolKey = 'manageConferenceParticipant';
 const TOOL_NAME = getToolName(TOOL_KEY);
 
 export const registerManageConferenceParticipant = (server: McpServer, tags: Tags[]) => {
-  if (!shouldRegisterTool(TOOL_KEY, tags)) return;
+  if (!matchesAnyTag(tags, voiceToolsConfig[TOOL_KEY].tags)) return;
 
   server.tool(
     TOOL_NAME,
@@ -37,26 +37,25 @@ export const manageConferenceParticipantHandler = async ({
   }
   const voiceService = maybeClient.voice;
 
-  await voiceService.conferences.manageParticipant({
-    conferenceId,
-    callId: participantId,
-    manageParticipantRequestBody: {
-      command: action
-    }
-  });
+  try {
+    await voiceService.conferences.manageParticipant({
+      conferenceId,
+      callId: participantId,
+      manageParticipantRequestBody: {
+        command: action
+      }
+    });
 
-  let result;
-  if (action === 'mute') {
-    result = `The participant [add here the association with the phone number] (${participantId}) has been muted`;
-  } else if (action === 'unmute') {
-    result = `The participant [add here the association with the phone number] (${participantId}) has been unmuted`;
-  } else if (action === 'onhold') {
-    result = `The participant [add here the association with the phone number] (${participantId}) has been put on hold`;
-  } else if (action === 'resume') {
-    result = `The participant [add here the association with the phone number] (${participantId}) has been brought back in the call`;
-  } else {
-    result = `The action ${action} is not supported: you need to use "mute", "unmute", "onhold" or "resume"`;
+    return new PromptResponse(JSON.stringify({
+      success: true,
+      conference_id: conferenceId,
+      participant_id: participantId,
+      action: action
+    })).promptResponse;
+  } catch (error) {
+    return new PromptResponse(JSON.stringify({
+      success: false,
+      error: error instanceof Error ? error.message : String(error)
+    })).promptResponse;
   }
-
-  return new PromptResponse(result).promptResponse;
 };

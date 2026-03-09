@@ -15,9 +15,10 @@ export const getVerificationCredentials = (): PromptResponse | { applicationKey:
   const applicationSecret = process.env.VERIFICATION_APPLICATION_SECRET;
 
   if (!applicationKey || !applicationSecret) {
-    return new PromptResponse(
-      'Missing env vars: VERIFICATION_APPLICATION_KEY, VERIFICATION_APPLICATION_SECRET.'
-    );
+    return new PromptResponse(JSON.stringify({
+      success: false,
+      error: 'Missing env vars: VERIFICATION_APPLICATION_KEY, VERIFICATION_APPLICATION_SECRET.'
+    }));
   }
 
   return {
