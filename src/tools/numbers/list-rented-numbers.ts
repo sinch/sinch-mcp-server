@@ -1,9 +1,9 @@
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { z } from 'zod';
 import { PromptResponse, Tags } from '../../types';
-import { isPromptResponse, matchesAnyTag } from '../../utils';
+import { formatUserAgent, matchesAnyTag } from '../../utils';
 import { getToolName, NumbersToolKey, toolsConfig } from './utils/numbers-tools-helper';
-import { getNumbersClient } from './utils/numbers-service-helper';
+import { Numbers } from '@sinch/numbers';
 
 const TOOL_KEY: NumbersToolKey = 'listRentedNumbers';
 const TOOL_NAME = getToolName(TOOL_KEY);
@@ -36,25 +36,53 @@ export const listRentedNumbersHandler = async (
     size?: number;
   }
 ) => {
+  const projectId = process.env.PROJECT_ID;
+  const keyId     = process.env.KEY_ID;
+  const keySecret = process.env.KEY_SECRET;
 
-  const maybeService = getNumbersClient(TOOL_NAME);
-  if (isPromptResponse(maybeService)) {
-    return maybeService.promptResponse;
+  if (!projectId || !keyId || !keySecret) {
+    return new PromptResponse(
+      JSON.stringify({
+        success: false,
+        error:'Missing env vars: PROJECT_ID, KEY_ID, KEY_SECRET.'
+      })).promptResponse;
   }
-  const numbersService = maybeService;
 
-  try{
-    const response = await numbersService.activeNumber.list({
-      regionCode: regionCode ?? '', // TODO fix with SDK 1.4
-      type: type ?? '', // TODO fix with SDK 1.4
-      'numberPattern.pattern': searchPattern,
-      'numberPattern.searchPattern': patternPosition,
-      capability,
-      pageSize: size,
-    });
+  try {
+    const queryParams = new URLSearchParams();
+    if (regionCode) queryParams.append('regionCode', regionCode);
+    if (type) queryParams.append('type', type);
+    if (searchPattern) queryParams.append('numberPattern.pattern', searchPattern);
+    if (patternPosition) queryParams.append('numberPattern.searchPattern', patternPosition);
+    if (capability) queryParams.append('capability', capability);
+    if (size) queryParams.append('pageSize', size.toString());
+
+    const response = await fetch(
+      `https://numbers.api.sinch.com/v1/projects/${projectId}/activeNumbers${queryParams.toString() ? '?' + queryParams.toString() : ''}`,
+      {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: 'Basic ' + Buffer.from(`${keyId}:${keySecret}`).toString('base64'),
+          'User-Agent': formatUserAgent(TOOL_NAME, projectId),
+        },
+
+      }
+    );
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      return new PromptResponse(JSON.stringify({
+        success: false,
+        error: `(${response.status} - ${response.statusText}) Failed to list the rented numbers: ${errorText}`
+      })).promptResponse;
+    }
+
+    const parsedResponse = await response.json() as Numbers.ActiveNumbersResponse;
+
     return new PromptResponse(JSON.stringify({
       success: true,
-      data: response.data
+      data: parsedResponse.activeNumbers
     })).promptResponse;
   } catch (error) {
     return new PromptResponse(JSON.stringify({
