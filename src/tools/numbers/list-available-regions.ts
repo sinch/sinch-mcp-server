@@ -3,7 +3,7 @@ import { z } from 'zod';
 import { PromptResponse, Tags } from '../../types';
 import { isPromptResponse, matchesAnyTag } from '../../utils';
 import { getToolName, NumbersToolKey, toolsConfig } from './utils/numbers-tools-helper';
-import { getNumbersClient } from './utils/numbers-service-helper';
+import { getNumbersService } from './utils/numbers-service-helper';
 
 const TOOL_KEY: NumbersToolKey = 'listAvailableRegions';
 const TOOL_NAME = getToolName(TOOL_KEY);
@@ -27,7 +27,7 @@ export const listAvailableRegionsHandler = async (
   }
 ) => {
 
-  const maybeService = getNumbersClient(TOOL_NAME);
+  const maybeService = getNumbersService(TOOL_NAME);
   if (isPromptResponse(maybeService)) {
     return maybeService.promptResponse;
   }

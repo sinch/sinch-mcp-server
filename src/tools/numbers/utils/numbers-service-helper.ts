@@ -9,7 +9,7 @@ import { NumbersService } from '@sinch/numbers';
 import { PromptResponse } from '../../../types';
 import { formatUserAgent } from '../../../utils';
 
-export function getNumbersClient(
+export function getNumbersService(
   toolName: string
 ): NumbersService | PromptResponse {
   const projectId = process.env.PROJECT_ID;

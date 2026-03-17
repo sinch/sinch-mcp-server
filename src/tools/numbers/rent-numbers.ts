@@ -3,7 +3,7 @@ import { z } from 'zod';
 import { PromptResponse, Tags } from '../../types';
 import { isPromptResponse, matchesAnyTag } from '../../utils';
 import { getToolName, NumbersToolKey, toolsConfig } from './utils/numbers-tools-helper';
-import { getNumbersClient } from './utils/numbers-service-helper';
+import { getNumbersService } from './utils/numbers-service-helper';
 import { Numbers } from '@sinch/numbers';
 
 const TOOL_KEY: NumbersToolKey = 'rentNumbers';
@@ -26,7 +26,7 @@ export const rentNumbersHandler = async (
   { numbers }: { numbers: string[]; }
 ) => {
 
-  const maybeService = getNumbersClient(TOOL_NAME);
+  const maybeService = getNumbersService(TOOL_NAME);
   if (isPromptResponse(maybeService)) {
     return maybeService.promptResponse;
   }
