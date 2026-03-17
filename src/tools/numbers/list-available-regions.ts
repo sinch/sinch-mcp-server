@@ -15,7 +15,7 @@ export const registerListAvailableRegions = (server: McpServer, tags: Tags[]) =>
     TOOL_NAME,
     'Lists all regions for numbers provided for the project ID.',
     {
-      types: z.array(z.enum(['MOBILE', 'LOCAL', 'TOLL_FREE'])).describe('Only return regions for which numbers are provided with the given types: MOBILE, LOCAL or TOLL_FREE.'),
+      types: z.array(z.enum(['MOBILE', 'LOCAL', 'TOLL_FREE'])).optional().describe('Only return regions for which numbers are provided with the given types: MOBILE, LOCAL or TOLL_FREE.'),
     },
     listAvailableRegionsHandler
   );
@@ -23,7 +23,7 @@ export const registerListAvailableRegions = (server: McpServer, tags: Tags[]) =>
 
 export const listAvailableRegionsHandler = async (
   { types }: {
-    types: ('MOBILE' | 'LOCAL' | 'TOLL_FREE')[];
+    types?: ('MOBILE' | 'LOCAL' | 'TOLL_FREE')[];
   }
 ) => {
 

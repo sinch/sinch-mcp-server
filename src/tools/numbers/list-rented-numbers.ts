@@ -29,7 +29,7 @@ export const registerListRentedNumbers = (server: McpServer, tags: Tags[]) => {
 export const listRentedNumbersHandler = async (
   { regionCode, type, searchPattern, patternPosition, capability, size }: {
     regionCode?: string;
-    type?: 'MOBILE' | 'LOCAL' | 'TOLL_FREE' | '';
+    type?: 'MOBILE' | 'LOCAL' | 'TOLL_FREE';
     searchPattern?: string;
     patternPosition?: 'START' | 'END' | 'CONTAINS';
     capability?: 'SMS' | 'VOICE';
@@ -62,11 +62,9 @@ export const listRentedNumbersHandler = async (
       {
         method: 'GET',
         headers: {
-          'Content-Type': 'application/json',
           Authorization: 'Basic ' + Buffer.from(`${keyId}:${keySecret}`).toString('base64'),
           'User-Agent': formatUserAgent(TOOL_NAME, projectId),
         },
-
       }
     );
 

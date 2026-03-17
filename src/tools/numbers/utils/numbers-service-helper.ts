@@ -7,7 +7,6 @@ import {
 } from '@sinch/sdk-client';
 import { NumbersService } from '@sinch/numbers';
 import { PromptResponse } from '../../../types';
-import process from 'process';
 import { formatUserAgent } from '../../../utils';
 
 export function getNumbersClient(
@@ -18,9 +17,10 @@ export function getNumbersClient(
   const keySecret = process.env.KEY_SECRET;
 
   if (!projectId || !keyId || !keySecret) {
-    return new PromptResponse(
-      'Missing env vars: PROJECT_ID, KEY_ID, KEY_SECRET.'
-    );
+    return new PromptResponse(JSON.stringify({
+        success: false,
+        error: 'Missing env vars: PROJECT_ID, KEY_ID, KEY_SECRET.'
+      }));
   }
 
   const numbersService  = new NumbersService({
