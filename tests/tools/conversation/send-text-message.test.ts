@@ -1,26 +1,28 @@
 import { sendTextMessageHandler } from '../../../src/tools/conversation/send-text-message';
 import {
   getConversationAppId,
-  getConversationClient,
+  getConversationService,
   setConversationRegion,
 } from '../../../src/tools/conversation/utils/conversation-service-helper';
 import { buildMessageBase } from '../../../src/tools/conversation/utils/send-message-builder';
+
+jest.mock('@sinch/sdk-core/package.json', () => ({
+  version: '1.0.0',
+}), { virtual: true });
 
 jest.mock('../../../src/tools/conversation/utils/conversation-service-helper');
 jest.mock('../../../src/tools/conversation/utils/send-message-builder');
 
 const mockSendTextMessage = jest.fn();
-const mockSinchClient = {
-  conversation: {
-    setRegion: jest.fn(),
-    messages: {
-      sendTextMessage: mockSendTextMessage,
-    },
+const mockConversationService = {
+  setRegion: jest.fn(),
+  messages: {
+    sendTextMessage: mockSendTextMessage,
   },
 };
 
 (getConversationAppId as jest.Mock).mockImplementation((id) => id ?? 'mock-app-id');
-(getConversationClient as jest.Mock).mockReturnValue(mockSinchClient);
+(getConversationService as jest.Mock).mockReturnValue(mockConversationService);
 (buildMessageBase as jest.Mock).mockResolvedValue({ to: 'recipient', from: 'sender', channel: 'WHATSAPP' });
 
 beforeEach(() => {

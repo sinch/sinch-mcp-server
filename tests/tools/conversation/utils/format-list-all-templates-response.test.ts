@@ -1,4 +1,4 @@
-import { Conversation } from '@sinch/sdk-core';
+import { Conversation } from '@sinch/conversation';
 import {
   formatListAllTemplatesResponse
 } from '../../../../src/tools/conversation/utils/format-list-all-templates-response';

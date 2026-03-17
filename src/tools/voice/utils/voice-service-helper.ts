@@ -5,11 +5,11 @@ import {
   buildHeader,
   XTimestampRequest,
   SigningRequest,
-  SinchClient,
   VOICE_HOSTNAME,
   REGION_PATTERN,
   VoiceRegion,
-} from '@sinch/sdk-core';
+} from '@sinch/sdk-client';
+import { VoiceService } from '@sinch/voice';
 import { formatUserAgent } from '../../../utils';
 
 // Hack: VoiceDomainApi is not exposed
@@ -23,28 +23,28 @@ const addPropertiesToApi = (api: ApiService, client: ApiFetchClient) => {
   api.setHostname(VOICE_HOSTNAME.replace(REGION_PATTERN, VoiceRegion.DEFAULT));
 };
 
-export const getVoiceClient = (toolName: string): SinchClient | PromptResponse => {
+export const getVoiceService = (toolName: string): VoiceService | PromptResponse => {
 
-  const applicationKey = process.env.VOICE_APPLICATION_KEY;
-  const applicationSecret = process.env.VOICE_APPLICATION_SECRET;
+  const applicationKey = process.env.APPLICATION_KEY;
+  const applicationSecret = process.env.APPLICATION_SECRET;
 
   if (!applicationKey && !applicationSecret) {
     return new PromptResponse(
-      'Missing environment variables: "VOICE_APPLICATION_KEY" and "VOICE_APPLICATION_SECRET".'
+      'Missing environment variables: "APPLICATION_KEY" and "APPLICATION_SECRET".'
     );
   }
   if (!applicationKey) {
     return new PromptResponse(
-      'Missing environment variable: "VOICE_APPLICATION_KEY".'
+      'Missing environment variable: "APPLICATION_KEY".'
     );
   }
   if (!applicationSecret) {
     return new PromptResponse(
-      'Missing environment variable: "VOICE_APPLICATION_SECRET".'
+      'Missing environment variable: "APPLICATION_SECRET".'
     );
   }
 
-  const sinchClient  = new SinchClient({});
+  const voiceService  = new VoiceService({});
   const apiFetchClient = new ApiFetchClient({
     requestPlugins: [
       new XTimestampRequest(),
@@ -59,12 +59,12 @@ export const getVoiceClient = (toolName: string): SinchClient | PromptResponse =
   });
 
   const apis = [
-    sinchClient.voice.callouts,
-    sinchClient.voice.conferences,
-    sinchClient.voice.calls,
+    voiceService.callouts,
+    voiceService.conferences,
+    voiceService.calls,
   ];
 
   apis.forEach((api) => addPropertiesToApi(api as unknown as ApiService, apiFetchClient));
 
-  return sinchClient;
+  return voiceService;
 };

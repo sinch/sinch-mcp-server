@@ -1,7 +1,7 @@
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { isPromptResponse, matchesAnyTag } from '../../utils';
 import { formatListAllAppsResponse } from './utils/format-list-all-apps-response';
-import { getConversationClient, setConversationRegion } from './utils/conversation-service-helper';
+import { getConversationService, setConversationRegion } from './utils/conversation-service-helper';
 import { ConversationToolKey, getToolName, toolsConfig } from './utils/conversation-tools-helper';
 import { IPromptResponse, PromptResponse, Tags } from '../../types';
 
@@ -20,11 +20,11 @@ export const registerListAllApps = (server: McpServer, tags: Tags[]) => {
 
 export const listAllAppsHandler = async (): Promise<IPromptResponse> => {
 
-  const maybeClient = getConversationClient(TOOL_NAME);
-  if (isPromptResponse(maybeClient)) {
-    return maybeClient.promptResponse;
+  const maybeService = getConversationService(TOOL_NAME);
+  if (isPromptResponse(maybeService)) {
+    return maybeService.promptResponse;
   }
-  const sinchClient = maybeClient;
+  const conversationService = maybeService;
 
   const regions = [ 'us', 'eu', 'br' ];
 
@@ -34,8 +34,8 @@ export const listAllAppsHandler = async (): Promise<IPromptResponse> => {
 
     for (const region of regions) {
       try {
-        setConversationRegion(region, sinchClient);
-        const response = await sinchClient.conversation.app.list({});
+        setConversationRegion(region, conversationService);
+        const response = await conversationService.app.list({});
         const formatted = formatListAllAppsResponse(response);
         if (formatted.apps && formatted.apps.length > 0) {
           allApps.push(...formatted.apps.map((app: any) => ({

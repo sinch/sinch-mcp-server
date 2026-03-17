@@ -1,6 +1,6 @@
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { z } from 'zod';
-import { getVerificationClient } from './utils/verification-service-helper';
+import { getVerificationService } from './utils/verification-service-helper';
 import { getToolName, VerificationToolKey, verificationToolsConfig } from './utils/verification-tools-helper';
 import { isPromptResponse, matchesAnyTag } from '../../utils';
 import { IPromptResponse, PromptResponse, Tags } from '../../types';
@@ -25,11 +25,11 @@ export const startSmsVerificationHandler = async (
   { phoneNumber }: { phoneNumber: string }
 ): Promise<IPromptResponse> => {
   try {
-    const maybeClient = getVerificationClient(TOOL_NAME);
-    if (isPromptResponse(maybeClient)) {
-      return maybeClient.promptResponse;
+    const maybeService = getVerificationService(TOOL_NAME);
+    if (isPromptResponse(maybeService)) {
+      return maybeService.promptResponse;
     }
-    const verificationService = maybeClient.verification;
+    const verificationService = maybeService;
 
     const response = await verificationService.verifications.startSms({
       startVerificationWithSmsRequestBody: {

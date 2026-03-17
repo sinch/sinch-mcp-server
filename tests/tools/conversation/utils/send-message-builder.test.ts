@@ -1,13 +1,11 @@
 import { buildMessageBase } from '../../../../src/tools/conversation/utils/send-message-builder';
-import { Conversation } from '@sinch/sdk-core';
+import { Conversation } from '@sinch/conversation';
 
 const mockGetApp = jest.fn();
 
-const mockSinchClient = {
-  conversation: {
-    app: {
-      get: mockGetApp
-    }
+const mockConversationService = {
+  app: {
+    get: mockGetApp
   }
 };
 
@@ -26,7 +24,7 @@ beforeEach(() => {
 test('buildMessageBase sets correct base structure and adds SMS fallback when needed', async () => {
   mockGetApp.mockResolvedValue(baseAppConfig);
 
-  const result = await buildMessageBase(mockSinchClient as any, 'my-app-id', '+1234567890', ['WHATSAPP']);
+  const result = await buildMessageBase(mockConversationService as any, 'my-app-id', '+1234567890', ['WHATSAPP']);
 
   expect(result).toMatchObject({
     app_id: 'my-app-id',
@@ -48,7 +46,7 @@ test('buildMessageBase sets correct base structure and adds SMS fallback when ne
 test('MMS fallback switches to SMS when MMS is not configured', async () => {
   mockGetApp.mockResolvedValue({ channel_credentials: [] });
 
-  const result = await buildMessageBase(mockSinchClient as any, 'my-app-id', '+1234567890', ['MMS']);
+  const result = await buildMessageBase(mockConversationService as any, 'my-app-id', '+1234567890', ['MMS']);
 
   expect(result.recipient.identified_by.channel_identities[0].channel).toBe('SMS');
 });
@@ -56,7 +54,7 @@ test('MMS fallback switches to SMS when MMS is not configured', async () => {
 test('No SMS fallback is added if already included', async () => {
   mockGetApp.mockResolvedValue(baseAppConfig);
 
-  const result = await buildMessageBase(mockSinchClient as any, 'my-app-id', '+1234567890', ['WHATSAPP', 'SMS']);
+  const result = await buildMessageBase(mockConversationService as any, 'my-app-id', '+1234567890', ['WHATSAPP', 'SMS']);
 
   const channels = result.recipient.identified_by.channel_identities.map(ci => ci.channel);
   const smsCount = channels.filter(c => c === 'SMS').length;
@@ -68,7 +66,7 @@ test('Does not set channel_properties if sender is undefined and env var is miss
   delete process.env.DEFAULT_SMS_ORIGINATOR;
   mockGetApp.mockResolvedValue(baseAppConfig);
 
-  const result = await buildMessageBase(mockSinchClient as any, 'my-app-id', '+1234567890', ['SMS']);
+  const result = await buildMessageBase(mockConversationService as any, 'my-app-id', '+1234567890', ['SMS']);
 
   expect(result.channel_properties).toBeUndefined();
 });

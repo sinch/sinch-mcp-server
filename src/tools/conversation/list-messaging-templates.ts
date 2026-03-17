@@ -1,7 +1,7 @@
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { isPromptResponse, matchesAnyTag } from '../../utils';
 import { formatListAllTemplatesResponse } from './utils/format-list-all-templates-response';
-import { getConversationTemplateClient, setTemplateRegion } from './utils/conversation-service-helper';
+import { getConversationTemplateService, setTemplateRegion } from './utils/conversation-service-helper';
 import { ConversationToolKey, getToolName, toolsConfig } from './utils/conversation-tools-helper';
 import { IPromptResponse, PromptResponse, Tags } from '../../types';
 
@@ -19,11 +19,11 @@ export const registerListAllTemplates = (server: McpServer, tags: Tags[]) => {
 };
 
 export const listAllTemplatesHandler = async (): Promise<IPromptResponse> => {
-  const maybeClient = getConversationTemplateClient(TOOL_NAME);
-  if (isPromptResponse(maybeClient)) {
-    return maybeClient.promptResponse;
+  const maybeService = getConversationTemplateService(TOOL_NAME);
+  if (isPromptResponse(maybeService)) {
+    return maybeService.promptResponse;
   }
-  const sinchClient = maybeClient;
+  const conversationService = maybeService;
 
   try {
     const regions = ['us', 'eu', 'br'] as const;
@@ -32,8 +32,8 @@ export const listAllTemplatesHandler = async (): Promise<IPromptResponse> => {
 
     for (const region of regions) {
       try {
-        setTemplateRegion(region, sinchClient);
-        const response = await sinchClient.conversation.templatesV2.list({});
+        setTemplateRegion(region, conversationService);
+        const response = await conversationService.templatesV2.list({});
         const formatted = formatListAllTemplatesResponse(response);
         omniChannelTemplates.push(...formatted.map(t => ({ ...t, region })));
       } catch (error) {
@@ -76,7 +76,7 @@ interface WhatsAppTemplatesResponse {
 
 const fetchWhatsAppSpecificTemplates = async () => {
   const resp = await fetch(
-    `https://provisioning.api.sinch.com/v1/projects/${process.env.CONVERSATION_PROJECT_ID}/whatsapp/templates`,
+    `https://provisioning.api.sinch.com/v1/projects/${process.env.PROJECT_ID}/whatsapp/templates`,
     {
       method: 'GET',
       headers: {

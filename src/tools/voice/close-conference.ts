@@ -2,7 +2,7 @@ import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { z } from 'zod';
 import { isPromptResponse, matchesAnyTag } from '../../utils';
 import { IPromptResponse, PromptResponse, Tags } from '../../types';
-import { getVoiceClient } from './utils/voice-service-helper';
+import { getVoiceService } from './utils/voice-service-helper';
 import { getToolName, VoiceToolKey, voiceToolsConfig } from './utils/voice-tools-helper';
 
 const TOOL_KEY: VoiceToolKey = 'closeConference';
@@ -24,11 +24,11 @@ export const registerCloseConference = (server: McpServer, tags: Tags[]) => {
 export const closeConferenceHandler = async (
   { conferenceId }: { conferenceId: string }
 ): Promise<IPromptResponse> => {
-  const maybeClient = getVoiceClient(TOOL_NAME);
-  if (isPromptResponse(maybeClient)) {
-    return maybeClient.promptResponse;
+  const maybeService = getVoiceService(TOOL_NAME);
+  if (isPromptResponse(maybeService)) {
+    return maybeService.promptResponse;
   }
-  const voiceService = maybeClient.voice;
+  const voiceService = maybeService;
 
   try {
     await voiceService.conferences.kickAll({

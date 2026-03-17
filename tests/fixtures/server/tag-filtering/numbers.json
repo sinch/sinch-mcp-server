@@ -1,0 +1,10 @@
+{
+  "tag": "numbers",
+  "expectedTools": [
+    "list-available-regions",
+    "list-rented-numbers",
+    "rent-sinch-virtual-numbers",
+    "search-for-available-numbers"
+  ],
+  "expectedPrompts": []
+}

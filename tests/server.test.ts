@@ -4,6 +4,10 @@ import { registerCapabilities } from '../src/server';
 import * as path from 'path';
 import * as fs from 'fs';
 
+jest.mock('@sinch/sdk-core/package.json', () => ({
+  version: '1.0.0',
+}), { virtual: true });
+
 const loadTestCases = (useCase: string) => {
   const fixturesDir = path.join(__dirname, 'fixtures', 'server', useCase);
   const files = fs.readdirSync(fixturesDir);
@@ -26,13 +30,11 @@ const getRegisteredPromptNames = (server: McpServer) => {
 
 const setEnvVariables = () => {
   process.env.MAILGUN_API_KEY = 'test-mailgun-api-key';
-  process.env.CONVERSATION_PROJECT_ID = 'test-conversation-project-id';
-  process.env.CONVERSATION_KEY_ID = 'test-conversation-key-id';
-  process.env.CONVERSATION_KEY_SECRET = 'test-conversation-key-secret';
-  process.env.VERIFICATION_APPLICATION_KEY = 'test-verification-application-key';
-  process.env.VERIFICATION_APPLICATION_SECRET = 'test-verification-application-secret';
-  process.env.VOICE_APPLICATION_KEY = 'test-voice-application-key';
-  process.env.VOICE_APPLICATION_SECRET = 'test-voice-application-secret';
+  process.env.PROJECT_ID = 'test-project-id';
+  process.env.KEY_ID = 'test-key-id';
+  process.env.KEY_SECRET = 'test-key-secret';
+  process.env.APPLICATION_KEY = 'test-application-key';
+  process.env.APPLICATION_SECRET = 'test-application-secret';
 }
 
 interface TagFilteringTestCase {

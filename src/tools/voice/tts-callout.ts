@@ -1,7 +1,7 @@
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
-import { Voice } from '@sinch/sdk-core';
+import { Voice } from '@sinch/voice';
 import { z } from 'zod';
-import { getVoiceClient } from './utils/voice-service-helper';
+import { getVoiceService } from './utils/voice-service-helper';
 import { getToolName, VoiceToolKey, voiceToolsConfig } from './utils/voice-tools-helper';
 import { isPromptResponse, matchesAnyTag } from '../../utils';
 import { IPromptResponse, PromptResponse, Tags } from '../../types';
@@ -30,11 +30,11 @@ export const ttsCalloutHandler = async ({
   phoneNumber: string;
   message: string;
 }): Promise<IPromptResponse> => {
-  const maybeClient = getVoiceClient(TOOL_NAME);
-  if (isPromptResponse(maybeClient)) {
-    return maybeClient.promptResponse;
+  const maybeService = getVoiceService(TOOL_NAME);
+  if (isPromptResponse(maybeService)) {
+    return maybeService.promptResponse;
   }
-  const voiceService = maybeClient.voice;
+  const voiceService = maybeService;
 
   const cli = process.env.CALLING_LINE_IDENTIFICATION;
 

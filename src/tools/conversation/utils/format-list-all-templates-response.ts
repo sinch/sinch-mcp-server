@@ -1,4 +1,4 @@
-import { Conversation } from '@sinch/sdk-core';
+import { Conversation } from '@sinch/conversation';
 
 export const formatListAllTemplatesResponse = (
   data: Conversation.V2ListTemplatesResponse

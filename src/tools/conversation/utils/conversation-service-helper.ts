@@ -6,24 +6,24 @@ import {
   ConversationRegion,
   Oauth2TokenRequest,
   REGION_PATTERN,
-  SinchClient,
   buildHeader,
   formatRegionalizedHostname,
-} from '@sinch/sdk-core';
+} from '@sinch/sdk-client';
+import { ConversationService } from '@sinch/conversation';
 import process from 'process';
 import { PromptResponse } from '../../../types';
 import { formatUserAgent } from '../../../utils';
 
-export function getConversationClient(toolName: string): SinchClient | PromptResponse {
-  return getSinchClient(
+export function getConversationService(toolName: string): ConversationService | PromptResponse {
+  return getService(
     CONVERSATION_HOSTNAME,
     toolName,
     (client, fetcher, hostname) => configureConversationApis(client, fetcher, hostname),
   );
 }
 
-export function getConversationTemplateClient(toolName: string): SinchClient | PromptResponse {
-  return getSinchClient(
+export function getConversationTemplateService(toolName: string): ConversationService | PromptResponse {
+  return getService(
     CONVERSATION_TEMPLATES_HOSTNAME,
     toolName,
     (client, fetcher, hostname) => configureTemplatesApis(client, fetcher, hostname),
@@ -31,22 +31,22 @@ export function getConversationTemplateClient(toolName: string): SinchClient | P
 }
 
 /** Shared helper for both “conversation” and “templates” */
-function getSinchClient(
+function getService(
   hostnameTemplate: string,
   toolName: string,
-  configure: (client: SinchClient, fetcher: ApiFetchClient, hostname: string) => void
-): SinchClient | PromptResponse {
-  const projectId = process.env.CONVERSATION_PROJECT_ID;
-  const keyId     = process.env.CONVERSATION_KEY_ID;
-  const keySecret = process.env.CONVERSATION_KEY_SECRET;
+  configure: (conversationService: ConversationService, fetcher: ApiFetchClient, hostname: string) => void
+): ConversationService | PromptResponse {
+  const projectId = process.env.PROJECT_ID;
+  const keyId     = process.env.KEY_ID;
+  const keySecret = process.env.KEY_SECRET;
 
   if (!projectId || !keyId || !keySecret) {
     return new PromptResponse(
-      'Missing env vars: CONVERSATION_PROJECT_ID, CONVERSATION_KEY_ID, CONVERSATION_KEY_SECRET.'
+      'Missing env vars: PROJECT_ID, KEY_ID, KEY_SECRET.'
     );
   }
 
-  const client  = new SinchClient({});
+  const client  = new ConversationService({});
   const fetcher = new ApiFetchClient({
     projectId,
     requestPlugins: [
@@ -81,32 +81,32 @@ const addPropertiesToApi = (api: ApiService, client: ApiFetchClient, hostname: s
 };
 
 const configureConversationApis = (
-  sinchClient: SinchClient,
+  conversationService: ConversationService,
   apiFetchClient: ApiFetchClient,
   hostnameTemplate: string
 ) => {
   const hostname = hostnameTemplate.replace(REGION_PATTERN, `${ConversationRegion.UNITED_STATES}.`);
   const apis = [
-    sinchClient.conversation.app,
-    sinchClient.conversation.contact,
-    sinchClient.conversation.conversation,
-    sinchClient.conversation.messages,
-    sinchClient.conversation.events,
-    sinchClient.conversation.capability,
-    sinchClient.conversation.transcoding,
-    sinchClient.conversation.webhooks,
+    conversationService.app,
+    conversationService.contact,
+    conversationService.conversation,
+    conversationService.messages,
+    conversationService.events,
+    conversationService.capability,
+    conversationService.transcoding,
+    conversationService.webhooks,
   ];
 
   apis.forEach((api) => addPropertiesToApi(api as unknown as ApiService, apiFetchClient, hostname));
 };
 
 const configureTemplatesApis = (
-  sinchClient: SinchClient,
+  conversationService: ConversationService,
   apiFetchClient: ApiFetchClient,
   hostnameTemplate: string
 ) => {
   const hostname = hostnameTemplate.replace(REGION_PATTERN, `${ConversationRegion.UNITED_STATES}.`);
-  addPropertiesToApi(sinchClient.conversation.templatesV2 as unknown as ApiService, apiFetchClient, hostname);
+  addPropertiesToApi(conversationService.templatesV2 as unknown as ApiService, apiFetchClient, hostname);
 };
 
 export const getConversationAppId = (appId: string | undefined): string | PromptResponse => {
@@ -119,24 +119,24 @@ export const getConversationAppId = (appId: string | undefined): string | Prompt
   return appId;
 }
 
-export const setConversationRegion = (promptRegion: string | undefined, sinchClient: SinchClient) => {
+export const setConversationRegion = (promptRegion: string | undefined, conversationService: ConversationService) => {
   const region = promptRegion ?? process.env.CONVERSATION_REGION ?? ConversationRegion.UNITED_STATES;
-  sinchClient.conversation.setRegion(region);
+  conversationService.setRegion(region);
   const formattedRegion = region !== '' ? `${region}.` : '';
   const hostname = formatRegionalizedHostname(CONVERSATION_HOSTNAME, formattedRegion);
-  (sinchClient.conversation.messages as any).client.apiClientOptions.hostname = hostname;
-  (sinchClient.conversation.messages as any).sinchClientParameters.conversationHostname = hostname;
-  (sinchClient.conversation.app as any).client.apiClientOptions.hostname = hostname;
-  (sinchClient.conversation.app as any).sinchClientParameters.conversationHostname = hostname;
+  (conversationService.messages as any).client.apiClientOptions.hostname = hostname;
+  (conversationService.messages as any).sinchClientParameters.conversationHostname = hostname;
+  (conversationService.app as any).client.apiClientOptions.hostname = hostname;
+  (conversationService.app as any).sinchClientParameters.conversationHostname = hostname;
   return region;
 }
 
-export const setTemplateRegion = (promptRegion: string | undefined, sinchClient: SinchClient) => {
+export const setTemplateRegion = (promptRegion: string | undefined, conversationService: ConversationService) => {
   const region = promptRegion ?? process.env.CONVERSATION_REGION ?? ConversationRegion.UNITED_STATES;
-  sinchClient.conversation.setRegion(region);
+  conversationService.setRegion(region);
   const formattedRegion = region !== '' ? `${region}.` : '';
   const hostname = formatRegionalizedHostname(CONVERSATION_TEMPLATES_HOSTNAME, formattedRegion);
-  (sinchClient.conversation.templatesV2 as any).client.apiClientOptions.hostname = hostname;
-  (sinchClient.conversation.templatesV2 as any).sinchClientParameters.conversationTemplatesHostname = hostname;
+  (conversationService.templatesV2 as any).client.apiClientOptions.hostname = hostname;
+  (conversationService.templatesV2 as any).sinchClientParameters.conversationTemplatesHostname = hostname;
   return region;
 }

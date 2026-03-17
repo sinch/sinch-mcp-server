@@ -5,6 +5,10 @@ import { formatUserAgent } from '../../../src/utils';
 
 global.fetch = jest.fn();
 
+jest.mock('@sinch/sdk-core/package.json', () => ({
+  version: '1.0.0',
+}), { virtual: true });
+
 describe('numberLookupHandler', () => {
   const mockedFetch = fetch as jest.Mock;
 

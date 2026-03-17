@@ -2,7 +2,7 @@ import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { z } from 'zod';
 import { getToolName, VoiceToolKey, voiceToolsConfig } from './utils/voice-tools-helper';
 import { IPromptResponse, PromptResponse, Tags } from '../../types';
-import { getVoiceClient } from './utils/voice-service-helper';
+import { getVoiceService } from './utils/voice-service-helper';
 import { isPromptResponse, matchesAnyTag } from '../../utils';
 
 const TOOL_KEY: VoiceToolKey = 'getCallInformation';
@@ -22,11 +22,11 @@ export const registerGetCallInformation = (server: McpServer, tags: Tags[]) => {
 };
 
 export const getCallInformationHandler = async ({ callId }: { callId: string }): Promise<IPromptResponse> => {
-  const maybeClient = getVoiceClient(TOOL_NAME);
-  if (isPromptResponse(maybeClient)) {
-    return maybeClient.promptResponse;
+  const maybeService = getVoiceService(TOOL_NAME);
+  if (isPromptResponse(maybeService)) {
+    return maybeService.promptResponse;
   }
-  const voiceService = maybeClient.voice;
+  const voiceService = maybeService;
 
   try {
     const response = await voiceService.calls.get({ callId });

@@ -1,12 +1,16 @@
 import { listAllAppsHandler } from '../../../src/tools/conversation/list-all-apps';
 import {
-  getConversationClient,
+  getConversationService,
 } from '../../../src/tools/conversation/utils/conversation-service-helper';
 
+jest.mock('@sinch/sdk-core/package.json', () => ({
+  version: '1.0.0',
+}), { virtual: true });
+
 jest.mock('../../../src/tools/conversation/utils/conversation-service-helper', () => ({
-  getConversationClient: jest.fn(),
-  setConversationRegion: jest.fn((region: string, client: any) => {
-    client.conversation.setRegion(region);
+  getConversationService: jest.fn(),
+  setConversationRegion: jest.fn((region: string, service: any) => {
+    service.setRegion(region);
   }),
 }));
 
@@ -49,16 +53,14 @@ const setRegionMock = jest.fn((region: string) => {
 
 const mockListApps = jest.fn();
 
-const mockSinchClient = {
-  conversation: {
-    app: {
-      list: mockListApps,
-    },
-    setRegion: setRegionMock,
+const mockConversationService = {
+  app: {
+    list: mockListApps,
   },
+  setRegion: setRegionMock,
 };
 
-(getConversationClient as jest.Mock).mockReturnValue(mockSinchClient);
+(getConversationService as jest.Mock).mockReturnValue(mockConversationService);
 
 beforeEach(() => {
   jest.clearAllMocks();

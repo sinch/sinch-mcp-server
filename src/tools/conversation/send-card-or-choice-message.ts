@@ -1,9 +1,9 @@
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
-import { Conversation } from '@sinch/sdk-core';
+import { Conversation } from '@sinch/conversation';
 import { z } from 'zod';
 import {
   getConversationAppId,
-  getConversationClient,
+  getConversationService,
   setConversationRegion,
 } from './utils/conversation-service-helper';
 import { ConversationToolKey, getToolName, toolsConfig } from './utils/conversation-tools-helper';
@@ -89,12 +89,12 @@ export const sendCardOrChoiceMessageHandler = async ({
   }
   const conversationAppId = maybeAppId;
 
-  const maybeClient = getConversationClient(TOOL_NAME);
-  if (isPromptResponse(maybeClient)) {
-    return maybeClient.promptResponse;
+  const maybeService = getConversationService(TOOL_NAME);
+  if (isPromptResponse(maybeService)) {
+    return maybeService.promptResponse;
   }
-  const sinchClient = maybeClient;
-  const usedRegion = setConversationRegion(region, sinchClient);
+  const conversationService = maybeService;
+  const usedRegion = setConversationRegion(region, conversationService);
 
   const choices: Conversation.Choice[] = [];
   for (const choice of choiceContent || []) {
@@ -142,12 +142,12 @@ export const sendCardOrChoiceMessageHandler = async ({
     }
   }
 
-  const requestBase = await buildMessageBase(sinchClient, conversationAppId, recipient, channel, sender);
+  const requestBase = await buildMessageBase(conversationService, conversationAppId, recipient, channel, sender);
 
   try {
     let response: Conversation.SendMessageResponse;
     if (mediaUrl) {
-      response = await sinchClient.conversation.messages.sendCardMessage({
+      response = await conversationService.messages.sendCardMessage({
         sendMessageRequestBody: {
           ...requestBase,
           message: {
@@ -162,7 +162,7 @@ export const sendCardOrChoiceMessageHandler = async ({
         }
       });
     } else {
-      response = await sinchClient.conversation.messages.sendChoiceMessage({
+      response = await conversationService.messages.sendChoiceMessage({
         sendMessageRequestBody: {
           ...requestBase,
           message: {

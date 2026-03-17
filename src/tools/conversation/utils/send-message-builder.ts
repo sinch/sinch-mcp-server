@@ -1,7 +1,7 @@
-import { Conversation, SinchClient } from '@sinch/sdk-core';
+import { Conversation, ConversationService } from '@sinch/conversation';
 
 export const buildMessageBase = async (
-  sinchClient: SinchClient,
+  conversationService: ConversationService,
   appId: string,
   recipient: string,
   channel: string[],
@@ -14,7 +14,7 @@ export const buildMessageBase = async (
   };
 
   const channel_identities: Conversation.ChannelRecipientIdentity[] = [];
-  const appConfiguration = await sinchClient.conversation.app.get({ app_id: appId });
+  const appConfiguration = await conversationService.app.get({ app_id: appId });
   const configuredChannels: string[] = appConfiguration.channel_credentials?.map(channel => channel.channel) || [];
   for (let c of channel) {
     if (c === 'MMS' && !configuredChannels.includes('MMS')) {
