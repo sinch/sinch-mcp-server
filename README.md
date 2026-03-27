@@ -49,6 +49,15 @@ Here is the list of tools available in the MCP server (all the phone numbers mus
 | **manage-conference-participant** | Mute, unmute, hold, or resume an individual participant in a conference call. <br> *Example prompt*: "Mute the caller with ID xyz789 in the conference."                                                 | voice                      |
 | **close-conference**              | End a conference call by disconnecting all the participants using the ID of the conference. <br> *Example prompt*: "End the current conference call with ID abc123."                                     | voice                      |
 
+### Numbers Tools
+
+| Tool                              | Description                                                                                                                                                                                                    | Tags    |
+|-----------------------------------|----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|---------|
+| **list-available-regions**        | List all regions where phone numbers are available for the project. Can filter by number type (MOBILE, LOCAL, TOLL_FREE). <br> *Example prompt*: "Which regions have toll-free numbers available?"              | numbers |
+| **list-rented-numbers**           | List all active (rented) phone numbers for the project. Can filter by region, type, pattern, and capability. <br> *Example prompt*: "Show me all my active phone numbers in the US."                           | numbers |
+| **search-for-available-numbers**  | Search for phone numbers available to rent, with filters for region, type, pattern, and capabilities. <br> *Example prompt*: "Find available local numbers in the US that support SMS."                         | numbers |
+| **rent-sinch-virtual-numbers**    | Rent (activate) one or more phone numbers by providing them in E.164 format. <br> *Example prompt*: "Rent the phone number +12025551234."                                                                      | numbers |
+
 ### Configuration Tools
 
 | Tool                        | Description                                                                                                                                                                                           | Tags |
@@ -66,7 +75,7 @@ Here is the list of tools available in the MCP server (all the phone numbers mus
 ### API credentials
 
 To use the APIs used by the MCP tools, you will need the following credentials:
-- Conversation API credentials:
+- Conversation / Numbers API credentials:
   - (Required) `PROJECT_ID`: Select the project you want to use from your [Sinch Build dashboard](https://dashboard.sinch.com/dashboard) (Located at the left of the top toolbar)
 ![Project ID selection](./docs/projectId-selection.png)
   - (Required) `KEY_ID`: Select or create a new access key in the [Access keys section](https://dashboard.sinch.com/settings/access-keys) of the Sinch Build dashboard.
