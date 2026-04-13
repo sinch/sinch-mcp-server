@@ -1,21 +1,9 @@
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { z } from 'zod';
-import { getVerificationCredentials } from './utils/verification-service-helper';
-import { formatUserAgent, isPromptResponse, matchesAnyTag } from '../../utils';
+import { isPromptResponse, matchesAnyTag } from '../../utils';
 import { IPromptResponse, PromptResponse, Tags } from '../../types';
 import { getToolName, VerificationToolKey, verificationToolsConfig } from './utils/verification-tools-helper';
-
-interface NumberLookupResponse {
-  line?: {
-    carrier?: string;
-    type?: string;
-    mobileCountryCode?: string;
-    mobileNetworkCode?: string;
-  };
-  countryCode?: string;
-  number?: string;
-  traceId?: string;
-}
+import { getNumberLookupService } from './utils/number-lookup-service-helper';
 
 const TOOL_KEY: VerificationToolKey = 'numberLookup';
 const TOOL_NAME = getToolName(TOOL_KEY);
@@ -36,57 +24,29 @@ export const registerNumberLookup = (server: McpServer, tags: Tags[]) => {
 export const numberLookupHandler = async (
   { phoneNumber }: { phoneNumber: string }
 ): Promise<IPromptResponse> => {
+
+  const maybeService = getNumberLookupService(TOOL_NAME);
+  if (isPromptResponse(maybeService)) {
+    return maybeService.promptResponse;
+  }
+  const numberLookupService = maybeService;
+
   try {
-    const maybeCredentials = getVerificationCredentials();
-    if (isPromptResponse(maybeCredentials)) {
-      return maybeCredentials.promptResponse;
-    }
-    const credentials = maybeCredentials;
-
-    // TODO: use the SinchClient once it supports the Number Lookup API to use the signed request instead of basic authentication
-    const resp = await fetch(
-      'https://number-lookup.api.sinch.com/v1/lookups',
-      {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: 'Basic ' + Buffer.from(`${credentials.applicationKey}:${credentials.applicationSecret}`).toString('base64'),
-          'User-Agent': formatUserAgent(TOOL_NAME, credentials.applicationKey),
-        },
-        body: JSON.stringify({
-          number: phoneNumber,
-          features: ['LineType']
-        })
+    const response = await numberLookupService.lookup({
+      numberLookupRequestBody: {
+        number: phoneNumber,
+        features: ['LineType']
       }
-    );
-
-    if (!resp.ok) {
-      const errorText = await resp.text();
-      return new PromptResponse(JSON.stringify({
-        success: false,
-        error: `(${resp.status} - ${resp.statusText}) Failed to look up number ${phoneNumber}: ${errorText}`
-      })).promptResponse;
-    }
-
-    const data = await resp.json() as NumberLookupResponse;
-
+    })
     return new PromptResponse(JSON.stringify({
       success: true,
-      data: {
-        phone_number: data.number,
-        carrier: data.line?.carrier,
-        type: data.line?.type,
-        mobile_country_code: data.line?.mobileCountryCode,
-        mobile_network_code: data.line?.mobileNetworkCode,
-        country_code: data.countryCode,
-        trace_id: data.traceId
-      }
+      data: response
     })).promptResponse;
   } catch (error) {
     return new PromptResponse(JSON.stringify({
       success: false,
-      error: error instanceof Error ? error.message : String(error)
-    })).promptResponse;
+      error:  `Failed to look up number '${phoneNumber}': ${error instanceof Error ? error.message : String(error)}`
+  })).promptResponse;
   }
 
 };

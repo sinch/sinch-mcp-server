@@ -1,9 +1,10 @@
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { isPromptResponse, matchesAnyTag } from '../../utils';
 import { formatListAllTemplatesResponse } from './utils/format-list-all-templates-response';
-import { getConversationTemplateService, setTemplateRegion } from './utils/conversation-service-helper';
+import { getConversationService, setTemplateRegion } from './utils/conversation-service-helper';
 import { ConversationToolKey, getToolName, toolsConfig } from './utils/conversation-tools-helper';
 import { IPromptResponse, PromptResponse, Tags } from '../../types';
+import process from 'process';
 
 const TOOL_KEY: ConversationToolKey = 'listMessagingTemplates';
 const TOOL_NAME = getToolName(TOOL_KEY);
@@ -19,7 +20,7 @@ export const registerListAllTemplates = (server: McpServer, tags: Tags[]) => {
 };
 
 export const listAllTemplatesHandler = async (): Promise<IPromptResponse> => {
-  const maybeService = getConversationTemplateService(TOOL_NAME);
+  const maybeService = getConversationService(TOOL_NAME);
   if (isPromptResponse(maybeService)) {
     return maybeService.promptResponse;
   }
@@ -81,7 +82,7 @@ const fetchWhatsAppSpecificTemplates = async () => {
       method: 'GET',
       headers: {
         'Content-Type': 'application/json',
-        Authorization: 'Basic ' + Buffer.from(`${process.env.CONVERSATION_KEY_ID}:${process.env.CONVERSATION_KEY_SECRET}`).toString('base64')
+        Authorization: 'Basic ' + Buffer.from(`${process.env.KEY_ID}:${process.env.KEY_SECRET}`).toString('base64')
       }
     }
   );

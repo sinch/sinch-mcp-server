@@ -2,37 +2,14 @@ import { ApiFetchClient } from '@sinch/sdk-client';
 import { ConversationService } from '@sinch/conversation';
 import {
   getConversationService,
-  getConversationTemplateService,
   getConversationAppId,
 } from '../../../../src/tools/conversation/utils/conversation-service-helper';
 import { PromptResponse } from '../../../../src/types';
 import { formatUserAgent } from '../../../../src/utils';
 
-const mockApi = () => ({
-  setHostname: jest.fn(),
-});
-
 jest.mock('@sinch/sdk-core/package.json', () => ({
   version: '1.0.0',
 }), { virtual: true });
-
-jest.mock('@sinch/conversation', () => {
-  const actual = jest.requireActual('@sinch/conversation');
-  return {
-    ...actual,
-    ConversationService: jest.fn(() => ({
-      app: mockApi(),
-      contact: mockApi(),
-      conversation: mockApi(),
-      messages: mockApi(),
-      events: mockApi(),
-      capability: mockApi(),
-      transcoding: mockApi(),
-      webhooks: mockApi(),
-      templatesV2: mockApi(),
-    })),
-  }
-});
 
 describe('getConversationService / getConversationTemplateService', () => {
   const OLD_ENV = process.env;
@@ -52,44 +29,30 @@ describe('getConversationService / getConversationTemplateService', () => {
   });
 
   test('returns a configured ConversationService from getConversationService', async () => {
-    const service = getConversationService(TOOL_NAME);
-    expect(service).toHaveProperty('app');
-    expect(service).toHaveProperty('contact');
-    expect(service).toHaveProperty('conversation');
-    expect(service).toHaveProperty('messages');
-    expect(service).toHaveProperty('events');
-    expect(service).toHaveProperty('capability');
-    expect(service).toHaveProperty('transcoding');
-    expect(service).toHaveProperty('webhooks');
-    expect(service).toHaveProperty('templatesV2');
-
-    const apis = service as ConversationService;
+    const service = getConversationService(TOOL_NAME) as ConversationService;
     const expectedHostname = 'https://us.conversation.api.sinch.com';
+    const conversationFetchClient = service.lazyConversationClient.apiFetchClient;
 
-    for (const [key, api] of Object.entries(apis)) {
-      if (key !== 'templatesV2') {
-        expect(api.setHostname).toHaveBeenCalledWith(expectedHostname);
-        expect(api.client).toBeInstanceOf(ApiFetchClient);
-        const userAgentPlugin = (api.client as ApiFetchClient).apiClientOptions.requestPlugins?.find((plugin) => plugin.getName() === 'AdditionalHeadersRequest');
-        expect(userAgentPlugin).toBeDefined();
-        const expectedUserAgent = formatUserAgent(TOOL_NAME, PROJECT_ID);
-        expect((await (userAgentPlugin as any).additionalHeaders.headers)['User-Agent']).toBe(expectedUserAgent);
-      }
-    }
+    expect(conversationFetchClient).toBeInstanceOf(ApiFetchClient);
+    expect(conversationFetchClient!.apiClientOptions.hostname).toBe(expectedHostname);
+    expect(conversationFetchClient!.apiClientOptions.requestPlugins?.length).toBe(2);
 
+    const userAgentPlugin = conversationFetchClient!.apiClientOptions.requestPlugins?.find((plugin) => plugin.getName() === 'AdditionalHeadersRequest');
+    expect(userAgentPlugin).toBeDefined();
+    const expectedUserAgent = formatUserAgent(TOOL_NAME, PROJECT_ID);
+    expect((await (userAgentPlugin as any).additionalHeaders.headers)['User-Agent']).toBe(expectedUserAgent);
   });
 
   test('returns a configured ConversationService from getConversationTemplateService', async () => {
-    const service = getConversationTemplateService(TOOL_NAME);
-    expect(service).toHaveProperty('conversation');
-
-    const api = (service as ConversationService).templatesV2;
+    const service = getConversationService(TOOL_NAME) as ConversationService;
     const expectedHostname = 'https://us.template.api.sinch.com';
+    const templateFetchClient = service.lazyConversationTemplateClient.apiFetchClient;
 
-    expect(api.setHostname).toHaveBeenCalledWith(expectedHostname);
-    expect(api.client).toBeInstanceOf(ApiFetchClient);
-    expect(api.client!.apiClientOptions.requestPlugins?.length).toBe(2);
-    const userAgentPlugin = (api.client as ApiFetchClient).apiClientOptions.requestPlugins?.find((plugin) => plugin.getName() === 'AdditionalHeadersRequest');
+    expect(templateFetchClient).toBeInstanceOf(ApiFetchClient);
+    expect(templateFetchClient!.apiClientOptions.hostname).toBe(expectedHostname);
+    expect(templateFetchClient!.apiClientOptions.requestPlugins?.length).toBe(2);
+
+    const userAgentPlugin = templateFetchClient!.apiClientOptions.requestPlugins?.find((plugin) => plugin.getName() === 'AdditionalHeadersRequest');
     expect(userAgentPlugin).toBeDefined();
     const expectedUserAgent = formatUserAgent(TOOL_NAME, PROJECT_ID);
     expect((await (userAgentPlugin as any).additionalHeaders.headers)['User-Agent']).toBe(expectedUserAgent);

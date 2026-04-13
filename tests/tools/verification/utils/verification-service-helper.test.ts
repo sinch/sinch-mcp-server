@@ -1,26 +1,11 @@
-import { ApiFetchClient, VERIFICATION_HOSTNAME } from '@sinch/sdk-client';
+import { ApiFetchClient } from '@sinch/sdk-client';
 import { VerificationService } from '@sinch/verification';
 import { getVerificationService } from '../../../../src/tools/verification/utils/verification-service-helper';
 import { formatUserAgent } from '../../../../src/utils';
 
-const mockApi = () => ({
-  setHostname: jest.fn(),
-});
-
 jest.mock('@sinch/sdk-core/package.json', () => ({
   version: '1.0.0',
 }), { virtual: true });
-
-jest.mock('@sinch/verification', () => {
-  const actual = jest.requireActual('@sinch/verification');
-  return {
-    ...actual,
-    VerificationService: jest.fn(() => ({
-      verifications: mockApi(),
-      verificationStatus: mockApi(),
-    })),
-  }
-});
 
 describe('getVerificationService', () => {
   const OLD_ENV = process.env;
@@ -39,20 +24,19 @@ describe('getVerificationService', () => {
   });
 
   test('returns a configured SinchClient from getVerificationService', async () => {
-    const client = getVerificationService(TOOL_NAME);
-    expect(client).toHaveProperty('verifications');
-    expect(client).toHaveProperty('verificationStatus');
+    const service = getVerificationService(TOOL_NAME) as VerificationService;
+    const expectedHostname = 'https://verification.api.sinch.com';
 
-    const apis = client as VerificationService;
+    const verificationFetchClient = service.lazyClient.apiFetchClient;
 
-    for(const api of Object.values(apis)) {
-      expect(api.setHostname).toHaveBeenCalledWith(VERIFICATION_HOSTNAME);
-      expect(api.client).toBeInstanceOf(ApiFetchClient);
-      const userAgentPlugin = (api.client as ApiFetchClient).apiClientOptions.requestPlugins?.find((plugin) => plugin.getName() === 'AdditionalHeadersRequest');
-      expect(userAgentPlugin).toBeDefined();
-      const expectedUserAgent = formatUserAgent(TOOL_NAME, APPLICATION_KEY);
-      expect((await (userAgentPlugin as any).additionalHeaders.headers)['User-Agent']).toBe(expectedUserAgent);
-    }
+    expect(verificationFetchClient).toBeInstanceOf(ApiFetchClient);
+    expect(verificationFetchClient!.apiClientOptions.hostname).toBe(expectedHostname);
+    expect(verificationFetchClient!.apiClientOptions.requestPlugins?.length).toBe(3);
+
+    const userAgentPlugin = verificationFetchClient!.apiClientOptions.requestPlugins?.find((plugin) => plugin.getName() === 'AdditionalHeadersRequest');
+    expect(userAgentPlugin).toBeDefined();
+    const expectedUserAgent = formatUserAgent(TOOL_NAME, APPLICATION_KEY);
+    expect((await (userAgentPlugin as any).additionalHeaders.headers)['User-Agent']).toBe(expectedUserAgent);
   });
 
 });

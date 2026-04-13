@@ -12,17 +12,6 @@ import {
 import { VoiceService } from '@sinch/voice';
 import { formatUserAgent } from '../../../utils';
 
-// Hack: VoiceDomainApi is not exposed
-interface ApiService {
-  client: ApiFetchClient;
-  setHostname: (hostname: string) => void;
-}
-
-const addPropertiesToApi = (api: ApiService, client: ApiFetchClient) => {
-  api.client = client;
-  api.setHostname(VOICE_HOSTNAME.replace(REGION_PATTERN, VoiceRegion.DEFAULT));
-};
-
 export const getVoiceService = (toolName: string): VoiceService | PromptResponse => {
 
   const applicationKey = process.env.APPLICATION_KEY;
@@ -45,7 +34,7 @@ export const getVoiceService = (toolName: string): VoiceService | PromptResponse
   }
 
   const voiceService  = new VoiceService({});
-  const apiFetchClient = new ApiFetchClient({
+  const fetcher = new ApiFetchClient({
     requestPlugins: [
       new XTimestampRequest(),
       new SigningRequest(applicationKey, applicationSecret),
@@ -58,13 +47,11 @@ export const getVoiceService = (toolName: string): VoiceService | PromptResponse
     ],
   });
 
-  const apis = [
-    voiceService.callouts,
-    voiceService.conferences,
-    voiceService.calls,
-  ];
+  // Remove the VersionRequest plugin, as we override the user-agent header
+  fetcher.apiClientOptions.requestPlugins?.shift();
+  fetcher.apiClientOptions.hostname = VOICE_HOSTNAME.replace(REGION_PATTERN, VoiceRegion.DEFAULT);
 
-  apis.forEach((api) => addPropertiesToApi(api as unknown as ApiService, apiFetchClient));
+  voiceService.lazyVoiceClient.apiFetchClient = fetcher;
 
   return voiceService;
 };

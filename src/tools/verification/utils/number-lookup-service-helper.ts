@@ -2,28 +2,28 @@ import {
   AdditionalHeadersRequest,
   ApiFetchClient,
   buildHeader,
-  NUMBERS_HOSTNAME,
+  NUMBER_LOOKUP_HOSTNAME,
   Oauth2TokenRequest,
 } from '@sinch/sdk-client';
-import { NumbersService } from '@sinch/numbers';
 import { PromptResponse } from '../../../types';
 import { formatUserAgent } from '../../../utils';
+import { NumberLookupService } from '@sinch/number-lookup';
 
-export function getNumbersService(
+export function getNumberLookupService(
   toolName: string
-): NumbersService | PromptResponse {
+): NumberLookupService | PromptResponse {
   const projectId = process.env.PROJECT_ID;
   const keyId     = process.env.KEY_ID;
   const keySecret = process.env.KEY_SECRET;
 
   if (!projectId || !keyId || !keySecret) {
     return new PromptResponse(JSON.stringify({
-        success: false,
-        error: 'Missing env vars: PROJECT_ID, KEY_ID, KEY_SECRET.'
-      }));
+      success: false,
+      error: 'Missing env vars: PROJECT_ID, KEY_ID, KEY_SECRET.'
+    }));
   }
 
-  const numbersService  = new NumbersService({});
+  const numberLookupService = new NumberLookupService({});
   const fetcher = new ApiFetchClient({
     projectId,
     requestPlugins: [
@@ -38,9 +38,9 @@ export function getNumbersService(
   });
   // Remove the VersionRequest plugin, as we override the user-agent header
   fetcher.apiClientOptions.requestPlugins?.shift();
-  fetcher.apiClientOptions.hostname = NUMBERS_HOSTNAME;
+  fetcher.apiClientOptions.hostname = NUMBER_LOOKUP_HOSTNAME;
 
-  numbersService.lazyClient.apiFetchClient = fetcher;
+  numberLookupService.lazyClient.apiFetchClient = fetcher;
 
-  return numbersService;
+  return numberLookupService;
 }
