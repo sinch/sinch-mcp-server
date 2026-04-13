@@ -75,7 +75,7 @@ describe('numberLookupHandler', () => {
     // Then
     const expectedResponse = JSON.stringify({
       success: false,
-      error: 'Failed to look up number +1234567890: Unauthorized'
+      error: 'Failed to look up number \'+1234567890\': Unauthorized'
     });
     expect(result).toEqual(new PromptResponse(expectedResponse).promptResponse);
   });
