@@ -4,6 +4,7 @@ import { formatListAllAppsResponse } from './utils/format-list-all-apps-response
 import { getConversationService, setConversationRegion } from './utils/conversation-service-helper';
 import { ConversationToolKey, getToolName, toolsConfig } from './utils/conversation-tools-helper';
 import { IPromptResponse, PromptResponse, Tags } from '../../types';
+import { SupportedConversationRegion } from '@sinch/sdk-client';
 
 const TOOL_KEY: ConversationToolKey = 'listConversationApps';
 const TOOL_NAME = getToolName(TOOL_KEY);
@@ -26,13 +27,13 @@ export const listAllAppsHandler = async (): Promise<IPromptResponse> => {
   }
   const conversationService = maybeService;
 
-  const regions = [ 'us', 'eu', 'br' ];
+  const supportedRegions = Object.values(SupportedConversationRegion);
 
   try {
     const allApps: any[] = [];
     const errors: { region: string; error: string }[] = [];
 
-    for (const region of regions) {
+    for (const region of supportedRegions) {
       try {
         setConversationRegion(region, conversationService);
         const response = await conversationService.app.list({});

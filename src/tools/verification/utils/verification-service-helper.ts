@@ -10,34 +10,6 @@ import {
 import { VerificationService } from '@sinch/verification';
 import { formatUserAgent } from '../../../utils';
 
-export const getVerificationCredentials = (): PromptResponse | { applicationKey: string; applicationSecret: string; } => {
-  const applicationKey = process.env.APPLICATION_KEY;
-  const applicationSecret = process.env.APPLICATION_SECRET;
-
-  if (!applicationKey || !applicationSecret) {
-    return new PromptResponse(JSON.stringify({
-      success: false,
-      error: 'Missing env vars: APPLICATION_KEY, APPLICATION_SECRET.'
-    }));
-  }
-
-  return {
-    applicationKey,
-    applicationSecret,
-  };
-}
-
-// Hack: VerificationDomainApi is not exposed
-interface ApiService {
-  client: ApiFetchClient;
-  setHostname: (hostname: string) => void;
-}
-
-const addPropertiesToApi = (api: ApiService, client: ApiFetchClient) => {
-  api.client = client;
-  api.setHostname(VERIFICATION_HOSTNAME);
-};
-
 export const getVerificationService = (toolName: string): VerificationService | PromptResponse => {
 
   const applicationKey = process.env.APPLICATION_KEY;
@@ -60,7 +32,7 @@ export const getVerificationService = (toolName: string): VerificationService | 
   }
 
   const verificationService  = new VerificationService({});
-  const apiFetchClient = new ApiFetchClient({
+  const fetcher = new ApiFetchClient({
     requestPlugins: [
       new XTimestampRequest(),
       new SigningRequest(applicationKey, applicationSecret),
@@ -72,13 +44,11 @@ export const getVerificationService = (toolName: string): VerificationService | 
       }),
     ],
   });
+  // Remove the VersionRequest plugin, as we override the user-agent header
+  fetcher.apiClientOptions.requestPlugins?.shift();
+  fetcher.apiClientOptions.hostname = VERIFICATION_HOSTNAME;
 
-  const apis = [
-    verificationService.verifications,
-    verificationService.verificationStatus,
-  ];
-
-  apis.forEach((api) => addPropertiesToApi(api as unknown as ApiService, apiFetchClient));
+  verificationService.lazyClient.apiFetchClient = fetcher;
 
   return verificationService;
 };
