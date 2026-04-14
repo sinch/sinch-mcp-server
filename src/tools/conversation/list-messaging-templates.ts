@@ -4,6 +4,7 @@ import { formatListAllTemplatesResponse } from './utils/format-list-all-template
 import { getConversationService, setTemplateRegion } from './utils/conversation-service-helper';
 import { ConversationToolKey, getToolName, toolsConfig } from './utils/conversation-tools-helper';
 import { IPromptResponse, PromptResponse, Tags } from '../../types';
+import { SupportedConversationRegion } from '@sinch/sdk-client';
 import process from 'process';
 
 const TOOL_KEY: ConversationToolKey = 'listMessagingTemplates';
@@ -27,11 +28,11 @@ export const listAllTemplatesHandler = async (): Promise<IPromptResponse> => {
   const conversationService = maybeService;
 
   try {
-    const regions = ['us', 'eu', 'br'] as const;
+    const supportedRegions = Object.values(SupportedConversationRegion);
     const omniChannelTemplates: any[] = [];
     const errors: { region: string; error: string }[] = [];
 
-    for (const region of regions) {
+    for (const region of supportedRegions) {
       try {
         setTemplateRegion(region, conversationService);
         const response = await conversationService.templatesV2.list({});

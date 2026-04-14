@@ -3,6 +3,8 @@ import { ConversationService } from '@sinch/conversation';
 import {
   getConversationService,
   getConversationAppId,
+  setConversationRegion,
+  setTemplateRegion,
 } from '../../../../src/tools/conversation/utils/conversation-service-helper';
 import { PromptResponse } from '../../../../src/types';
 import { formatUserAgent } from '../../../../src/utils';
@@ -56,6 +58,22 @@ describe('getConversationService / getConversationTemplateService', () => {
     expect(userAgentPlugin).toBeDefined();
     const expectedUserAgent = formatUserAgent(TOOL_NAME, PROJECT_ID);
     expect((await (userAgentPlugin as any).additionalHeaders.headers)['User-Agent']).toBe(expectedUserAgent);
+  });
+
+  test('setConversationRegion updates hostname to the given non-default region', () => {
+    const service = getConversationService(TOOL_NAME) as ConversationService;
+    setConversationRegion('eu', service);
+
+    expect(service.lazyConversationClient.apiFetchClient!.apiClientOptions.hostname)
+      .toBe('https://eu.conversation.api.sinch.com');
+  });
+
+  test('setTemplateRegion updates hostname to the given non-default region', () => {
+    const service = getConversationService(TOOL_NAME) as ConversationService;
+    setTemplateRegion('eu', service);
+
+    expect(service.lazyConversationTemplateClient.apiFetchClient!.apiClientOptions.hostname)
+      .toBe('https://eu.template.api.sinch.com');
   });
 
   test('returns PromptResponse when env vars are missing', () => {
