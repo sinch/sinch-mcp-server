@@ -17,6 +17,10 @@ export const toolsConfig = defineToolsConfig({
     name: 'rent-sinch-virtual-numbers',
     tags: ['all', 'numbers', 'rent-sinch-virtual-numbers'],
   },
+  releaseRentedNumber: {
+    name: 'release-rented-number',
+    tags: ['all', 'numbers', 'release-rented-number'],
+  },
   searchForAvailableNumbers: {
     name: 'search-for-available-numbers',
     tags: ['all', 'numbers', 'search-for-available-numbers'],
