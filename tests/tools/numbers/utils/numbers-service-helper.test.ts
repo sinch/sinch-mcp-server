@@ -19,20 +19,18 @@ describe('getNumbersService', () => {
     process.env.PROJECT_ID = PROJECT_ID;
     process.env.KEY_ID = 'test-key-id';
     process.env.KEY_SECRET = 'test-secret';
-    delete process.env.NUMBERS_HOSTNAME;
   });
 
   afterAll(() => {
     process.env = OLD_ENV;
   });
 
-  it('returns a configured NumbersService with default hostname', async () => {
+  it('returns a configured NumbersService with production hostname', async () => {
     const service = getNumbersService(TOOL_NAME) as NumbersService;
     const numbersFetchClient = service.lazyClient.apiFetchClient;
 
     expect(numbersFetchClient).toBeInstanceOf(ApiFetchClient);
     expect(numbersFetchClient!.apiClientOptions.hostname).toBe(NUMBERS_HOSTNAME);
-    expect(service.lazyClient.sharedConfig.numbersHostname).toBe(NUMBERS_HOSTNAME);
 
     const userAgentPlugin = numbersFetchClient!.apiClientOptions.requestPlugins?.find(
       (plugin) => plugin.getName() === 'AdditionalHeadersRequest'
@@ -42,16 +40,6 @@ describe('getNumbersService', () => {
     expect(
       (await (userAgentPlugin as any).additionalHeaders.headers)['User-Agent']
     ).toBe(expectedUserAgent);
-  });
-
-  it('uses NUMBERS_HOSTNAME env var when set', () => {
-    process.env.NUMBERS_HOSTNAME = 'http://localhost:3013';
-
-    const service = getNumbersService(TOOL_NAME) as NumbersService;
-    const numbersFetchClient = service.lazyClient.apiFetchClient;
-
-    expect(numbersFetchClient!.apiClientOptions.hostname).toBe('http://localhost:3013');
-    expect(service.lazyClient.sharedConfig.numbersHostname).toBe('http://localhost:3013');
   });
 
   it('returns prompt response when credentials are missing', () => {

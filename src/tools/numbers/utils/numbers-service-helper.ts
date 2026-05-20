@@ -23,12 +23,10 @@ export function getNumbersService(
       }));
   }
 
-  const numbersHostname = process.env.NUMBERS_HOSTNAME ?? NUMBERS_HOSTNAME;
   const numbersService = new NumbersService({
     projectId,
     keyId,
     keySecret,
-    numbersHostname,
   });
   const fetcher = new ApiFetchClient({
     projectId,
@@ -44,7 +42,7 @@ export function getNumbersService(
   });
   // Remove the VersionRequest plugin, as we override the user-agent header
   fetcher.apiClientOptions.requestPlugins?.shift();
-  fetcher.apiClientOptions.hostname = numbersHostname;
+  fetcher.apiClientOptions.hostname = NUMBERS_HOSTNAME;
 
   numbersService.lazyClient.apiFetchClient = fetcher;
 
