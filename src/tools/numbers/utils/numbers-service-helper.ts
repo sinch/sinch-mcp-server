@@ -23,11 +23,7 @@ export function getNumbersService(
       }));
   }
 
-  const numbersService = new NumbersService({
-    projectId,
-    keyId,
-    keySecret,
-  });
+  const numbersService = new NumbersService({});
   const fetcher = new ApiFetchClient({
     projectId,
     requestPlugins: [

@@ -1,28 +1,28 @@
 import { releaseRentedNumberHandler } from '../../../src/tools/numbers/release-rented-number';
 import { PromptResponse } from '../../../src/types';
-import { getNumbersService } from '../../../src/tools/numbers/utils/numbers-service-helper';
+import * as numbersServiceHelper from '../../../src/tools/numbers/utils/numbers-service-helper';
 
 jest.mock('@sinch/sdk-core/package.json', () => ({
   version: '1.0.0',
 }), { virtual: true });
 
-jest.mock('../../../src/tools/numbers/utils/numbers-service-helper');
-
 const mockNumbersService = {
   release: jest.fn(),
 };
-(getNumbersService as jest.Mock).mockReturnValue(mockNumbersService);
 
 describe('releaseRentedNumberHandler', () => {
   const OLD_ENV = process.env;
 
   beforeEach(() => {
+    jest.restoreAllMocks();
+    jest
+      .spyOn(numbersServiceHelper, 'getNumbersService')
+      .mockReturnValue(mockNumbersService as never);
     jest.clearAllMocks();
     process.env = { ...OLD_ENV };
     process.env.PROJECT_ID = 'test-project';
     process.env.KEY_ID = 'test-key-id';
     process.env.KEY_SECRET = 'test-secret';
-    (getNumbersService as jest.Mock).mockReturnValue(mockNumbersService);
   });
 
   afterAll(() => {
@@ -68,14 +68,9 @@ describe('releaseRentedNumberHandler', () => {
   });
 
   it('returns prompt response when credentials are missing', async () => {
-    (getNumbersService as jest.Mock).mockReturnValue(
-      new PromptResponse(
-        JSON.stringify({
-          success: false,
-          error: 'Missing env vars: PROJECT_ID, KEY_ID, KEY_SECRET.',
-        })
-      )
-    );
+    jest.restoreAllMocks();
+
+    delete process.env.PROJECT_ID;
 
     const result = await releaseRentedNumberHandler({
       phoneNumber: '+12015555555',

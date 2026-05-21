@@ -13,7 +13,7 @@ export const registerReleaseRentedNumber = (server: McpServer, tags: Tags[]) => 
 
   server.tool(
     TOOL_NAME,
-    'Releases an active phone number from your project.',
+    'Releases a rented phone number from your project.',
     {
       phoneNumber: z
         .string()
