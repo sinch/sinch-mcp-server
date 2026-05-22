@@ -13,6 +13,8 @@
     "send-template-message",
     "send-whatsapp-template-message",
     "list-conversation-apps",
+    "create-conversation-app",
+    "configure-conversation-app-channel",
     "list-messaging-templates"
   ],
   "expectedPrompts": [

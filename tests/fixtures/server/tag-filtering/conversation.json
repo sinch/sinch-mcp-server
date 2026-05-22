@@ -2,6 +2,8 @@
   "tag": "conversation",
   "expectedTools": [
     "list-conversation-apps",
+    "create-conversation-app",
+    "configure-conversation-app-channel",
     "list-messaging-templates",
     "send-choice-message",
     "send-location-message",

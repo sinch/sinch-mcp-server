@@ -9,6 +9,14 @@ export const toolsConfig = defineToolsConfig({
     name: 'list-conversation-apps',
     tags: ['all', 'conversation', 'notification', 'list-conversation-apps'],
   },
+  createConversationApp: {
+    name: 'create-conversation-app',
+    tags: ['all', 'conversation', 'notification', 'create-conversation-app'],
+  },
+  configureConversationAppChannel: {
+    name: 'configure-conversation-app-channel',
+    tags: ['all', 'conversation', 'notification', 'configure-conversation-app-channel'],
+  },
   listMessagingTemplates: {
     name: 'list-messaging-templates',
     tags: ['all', 'conversation', 'notification', 'list-messaging-templates'],
