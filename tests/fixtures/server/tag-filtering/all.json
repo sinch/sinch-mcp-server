@@ -25,6 +25,7 @@
     "list-available-regions",
     "list-rented-numbers",
     "rent-sinch-virtual-numbers",
+    "release-rented-number",
     "search-for-available-numbers"
   ],
   "expectedPrompts": [

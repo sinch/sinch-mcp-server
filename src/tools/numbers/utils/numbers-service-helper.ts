@@ -23,7 +23,7 @@ export function getNumbersService(
       }));
   }
 
-  const numbersService  = new NumbersService({});
+  const numbersService = new NumbersService({});
   const fetcher = new ApiFetchClient({
     projectId,
     requestPlugins: [
