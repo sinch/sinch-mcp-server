@@ -294,6 +294,10 @@ You can then configure the MCP server in the Claude configuration file as follow
 
 ## Contributing: Defining new tools
 
+### Dependency versions
+
+This project pins **exact** dependency versions in `package.json` (no `^` caret ranges) because it is an application, not a library consumed by other packages. See [docs/dependency-versioning.md](./docs/dependency-versioning.md) for the rationale and links to further reading.
+
 Tools are registered in the `src/index.ts` file.
 - Conversation tools: send various types of messages, list conversation apps, templates
 - Verification tools: lookup for a number, perform a verification flow
