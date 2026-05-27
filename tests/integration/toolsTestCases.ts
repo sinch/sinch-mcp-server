@@ -95,6 +95,19 @@ export const toolTestCases: ToolTestCase[] = [
     expectedArguments: undefined,
   },
   {
+    prompt: "List all webhooks for my Conversation app.",
+    expectedToolName: "list-webhooks",
+    expectedArguments: undefined,
+  },
+  {
+    prompt: "Create a webhook for inbound messages at https://example.com/callback with triggers MESSAGE_INBOUND.",
+    expectedToolName: "create-webhook",
+    expectedArguments: {
+      target: "https://example.com/callback",
+      triggers: ["MESSAGE_INBOUND"],
+    },
+  },
+  {
     prompt: "Lookup for the following phone number capabilities: +33612345678",
     expectedToolName: "number-lookup",
     expectedArguments: { phoneNumber: "+33612345678" },

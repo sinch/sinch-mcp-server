@@ -11,6 +11,11 @@ import { registerSendMediaMessage } from './send-media-message';
 import { registerSendTemplateMessage } from './send-template-message';
 import { registerSendWhatsAppTemplateMessage } from './send-whatsapp-template-message';
 import { registerSendTextMessage } from './send-text-message';
+import { registerListWebhooks } from './list-webhooks';
+import { registerGetWebhook } from './get-webhook';
+import { registerCreateWebhook } from './create-webhook';
+import { registerUpdateWebhook } from './update-webhook';
+import { registerDeleteWebhook } from './delete-webhook';
 import { registerConversationResources } from './resources/register-conversation-resources';
 import { Tags } from '../../types';
 
@@ -27,5 +32,10 @@ export const registerConversationTools = (server: McpServer, tags: Tags[]) => {
   registerSetRcsChannelOnApp(server, tags);
   registerSetWhatsAppChannelOnApp(server, tags);
   registerListAllTemplates(server, tags);
+  registerListWebhooks(server, tags);
+  registerGetWebhook(server, tags);
+  registerCreateWebhook(server, tags);
+  registerUpdateWebhook(server, tags);
+  registerDeleteWebhook(server, tags);
   registerConversationResources(server, tags);
 };
