@@ -13,9 +13,17 @@ export const toolsConfig = defineToolsConfig({
     name: 'create-conversation-app',
     tags: ['all', 'conversation', 'notification', 'create-conversation-app'],
   },
-  configureConversationAppChannel: {
-    name: 'configure-conversation-app-channel',
-    tags: ['all', 'conversation', 'notification', 'configure-conversation-app-channel'],
+  addSmsChannelToApp: {
+    name: 'add-sms-channel-to-app',
+    tags: ['all', 'conversation', 'notification', 'add-sms-channel-to-app'],
+  },
+  addRcsChannelToApp: {
+    name: 'add-rcs-channel-to-app',
+    tags: ['all', 'conversation', 'notification', 'add-rcs-channel-to-app'],
+  },
+  addWhatsAppChannelToApp: {
+    name: 'add-whatsapp-channel-to-app',
+    tags: ['all', 'conversation', 'notification', 'add-whatsapp-channel-to-app'],
   },
   listMessagingTemplates: {
     name: 'list-messaging-templates',

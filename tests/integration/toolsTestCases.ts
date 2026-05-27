@@ -73,6 +73,23 @@ export const toolTestCases: ToolTestCase[] = [
     expectedArguments: undefined,
   },
   {
+    prompt: "Create a Conversation app named Customer Support in the us region.",
+    expectedToolName: "create-conversation-app",
+    expectedArguments: {
+      displayName: "Customer Support",
+      region: "us",
+    },
+  },
+  {
+    prompt: "Add SMS to Conversation app app-abc123 with service plan plan-456 and API token my-token.",
+    expectedToolName: "add-sms-channel-to-app",
+    expectedArguments: {
+      appId: "app-abc123",
+      servicePlanId: "plan-456",
+      apiToken: "my-token",
+    },
+  },
+  {
     prompt: "Show me all message templates in my account.",
     expectedToolName: "list-messaging-templates",
     expectedArguments: undefined,

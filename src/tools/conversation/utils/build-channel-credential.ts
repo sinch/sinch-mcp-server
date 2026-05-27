@@ -1,75 +1,47 @@
 import { Conversation } from '@sinch/conversation';
-import { z } from 'zod';
-import { ChannelEnum } from '../prompt-schemas';
 
-export type ChannelCredentialInput = {
-  channel: z.infer<typeof ChannelEnum>;
-  smsServicePlanId?: string;
-  smsApiToken?: string;
-  bearerToken?: string;
-  bearerClaimedIdentity?: string;
-  pageAccessToken?: string;
+type ChannelCredentialBase = {
   callbackSecret?: string;
 };
 
-export const buildChannelCredential = (
-  input: ChannelCredentialInput
-): Conversation.ConversationChannelCredentialRequest => {
-  const base = input.callbackSecret
-    ? { callback_secret: input.callbackSecret }
-    : {};
+export const buildSmsChannelCredential = (
+  servicePlanId: string,
+  apiToken: string,
+  options: ChannelCredentialBase = {}
+): Conversation.ConversationChannelCredentialRequest => ({
+  channel: 'SMS',
+  ...(options.callbackSecret && { callback_secret: options.callbackSecret }),
+  static_bearer: {
+    claimed_identity: servicePlanId,
+    token: apiToken,
+  },
+});
 
-  switch (input.channel) {
-    case 'SMS': {
-      if (!input.smsServicePlanId || !input.smsApiToken) {
-        throw new Error(
-          'SMS channel requires "smsServicePlanId" (service plan ID) and "smsApiToken" (API token).'
-        );
-      }
-      return {
-        channel: 'SMS',
-        ...base,
-        static_bearer: {
-          claimed_identity: input.smsServicePlanId,
-          token: input.smsApiToken,
-        },
-      };
-    }
-    case 'WHATSAPP':
-    case 'RCS':
-    case 'VIBERBM': {
-      if (!input.bearerToken || !input.bearerClaimedIdentity) {
-        throw new Error(
-          `"${input.channel}" channel requires "bearerToken" and "bearerClaimedIdentity".`
-        );
-      }
-      return {
-        channel: input.channel,
-        ...base,
-        static_bearer: {
-          claimed_identity: input.bearerClaimedIdentity,
-          token: input.bearerToken,
-        },
-      };
-    }
-    case 'MESSENGER': {
-      if (!input.pageAccessToken) {
-        throw new Error('MESSENGER channel requires "pageAccessToken".');
-      }
-      return {
-        channel: 'MESSENGER',
-        ...base,
-        static_token: {
-          token: input.pageAccessToken,
-        },
-      };
-    }
-    default:
-      throw new Error(
-        `Channel "${input.channel}" is not supported by this tool. Supported channels: SMS, WHATSAPP, RCS, MESSENGER, VIBERBM.`
-      );
-  }
-};
+export const buildRcsChannelCredential = (
+  senderId: string,
+  bearerToken: string,
+  options: ChannelCredentialBase = {}
+): Conversation.ConversationChannelCredentialRequest => ({
+  channel: 'RCS',
+  ...(options.callbackSecret && { callback_secret: options.callbackSecret }),
+  static_bearer: {
+    claimed_identity: senderId,
+    token: bearerToken,
+  },
+});
+
+export const buildWhatsAppChannelCredential = (
+  senderId: string,
+  bearerToken: string,
+  options: ChannelCredentialBase = {}
+): Conversation.ConversationChannelCredentialRequest => ({
+  channel: 'WHATSAPP',
+  ...(options.callbackSecret && { callback_secret: options.callbackSecret }),
+  static_bearer: {
+    claimed_identity: senderId,
+    token: bearerToken,
+  },
+});
 
 export const mergeChannelCredentials = (
   existing: Conversation.ConversationChannelCredentialResponse[] | undefined,

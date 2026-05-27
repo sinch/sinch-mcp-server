@@ -1,5 +1,7 @@
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
-import { registerConfigureConversationAppChannel } from './configure-conversation-app-channel';
+import { registerAddRcsChannelToApp } from './add-rcs-channel-to-app';
+import { registerAddSmsChannelToApp } from './add-sms-channel-to-app';
+import { registerAddWhatsAppChannelToApp } from './add-whatsapp-channel-to-app';
 import { registerCreateConversationApp } from './create-conversation-app';
 import { registerListAllApps } from './list-all-apps';
 import { registerListAllTemplates } from './list-messaging-templates';
@@ -20,6 +22,8 @@ export const registerConversationTools = (server: McpServer, tags: Tags[]) => {
   registerSendWhatsAppTemplateMessage(server, tags);
   registerListAllApps(server, tags);
   registerCreateConversationApp(server, tags);
-  registerConfigureConversationAppChannel(server, tags);
+  registerAddSmsChannelToApp(server, tags);
+  registerAddRcsChannelToApp(server, tags);
+  registerAddWhatsAppChannelToApp(server, tags);
   registerListAllTemplates(server, tags);
 };
