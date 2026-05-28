@@ -3,7 +3,7 @@ import {
   getConversationService,
   setConversationRegion,
 } from './utils/conversation-service-helper';
-import { formatWebhookResponse } from './utils/format-webhook-response';
+import { formatWebhook } from './utils/format-webhook-response';
 import { appendRegionHint } from './utils/webhook-tools-helper';
 import { ConversationToolKey, getToolName, toolsConfig } from './utils/conversation-tools-helper';
 import { ConversationRegionOverride, WebhookId } from './prompt-schemas';
@@ -47,7 +47,7 @@ export const getWebhookHandler = async ({
     });
     return new PromptResponse(JSON.stringify({
       success: true,
-      webhook: formatWebhookResponse(response),
+      webhook: formatWebhook(response),
     })).promptResponse;
   } catch (error) {
     return new PromptResponse(JSON.stringify({

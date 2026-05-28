@@ -59,7 +59,7 @@ const webhookTriggerValues = [
 ] as const;
 
 export const WebhookTriggers = z.array(z.enum(webhookTriggerValues)).optional()
-  .describe('(Optional) Event triggers that activate this webhook. If omitted, the webhook is created without triggers and stays dormant until triggers are configured in the Sinch Dashboard.')
+  .describe('(Optional) Event triggers that activate this webhook. Omit to leave without triggers, or pass an empty array [] to clear all triggers on update. Use update-webhook to add triggers later.')
 
 export const WebhookTargetOptional = WebhookTarget.optional()
   .describe('(Optional) The HTTPS URL where Conversation API events should be delivered.')

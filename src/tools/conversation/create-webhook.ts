@@ -5,10 +5,10 @@ import {
   getConversationService,
   setConversationRegion,
 } from './utils/conversation-service-helper';
-import { formatWebhookResponse } from './utils/format-webhook-response';
+import { formatWebhook } from './utils/format-webhook-response';
 import {
   appendRegionHint,
-  dormantTriggersWarning,
+  buildDormantTriggersWarning,
   hasNoTriggers,
 } from './utils/webhook-tools-helper';
 import { ConversationToolKey, getToolName, toolsConfig } from './utils/conversation-tools-helper';
@@ -75,10 +75,13 @@ export const createWebhookHandler = async ({
     const response = await conversationService.webhooks.create({
       webhookCreateRequestBody,
     });
+    const formatted = formatWebhook(response);
     return new PromptResponse(JSON.stringify({
       success: true,
-      webhook: formatWebhookResponse(response),
-      ...(hasNoTriggers(triggers) && { warning: dormantTriggersWarning }),
+      webhook: formatted,
+      ...(hasNoTriggers(triggers) && formatted.id && {
+        warning: buildDormantTriggersWarning(formatted.id),
+      }),
     })).promptResponse;
   } catch (error) {
     return new PromptResponse(JSON.stringify({

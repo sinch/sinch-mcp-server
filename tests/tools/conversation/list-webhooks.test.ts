@@ -30,6 +30,7 @@ test('listWebhooksHandler returns formatted webhooks without secrets', async () 
   mockList.mockResolvedValue({
     webhooks: [{
       id: 'wh-1',
+      app_id: 'app-123',
       target: 'https://example.com/hook',
       triggers: ['MESSAGE_INBOUND'],
       secret: 'must-not-appear',
@@ -43,7 +44,7 @@ test('listWebhooksHandler returns formatted webhooks without secrets', async () 
     success: true,
     webhooks: [{
       id: 'wh-1',
-      app_id: undefined,
+      app_id: 'app-123',
       target: 'https://example.com/hook',
       target_type: undefined,
       triggers: ['MESSAGE_INBOUND'],
@@ -59,6 +60,7 @@ test('listWebhooksHandler includes region hint on failure', async () => {
 
   const body = JSON.parse(result.content[0].text);
   expect(body.success).toBe(false);
-  expect(body.error).toContain('Current region: us');
+  expect(body.error).toContain('Current region: us.');
   expect(body.error).toContain('region parameter may be incorrect');
+  expect(body.error).toContain('Other regions to try:');
 });

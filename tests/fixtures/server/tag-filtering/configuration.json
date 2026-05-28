@@ -2,9 +2,14 @@
   "tag": "configuration",
   "expectedTools": [
     "create-conversation-app",
-    "set-sms-channel-on-app",
+    "create-webhook",
+    "delete-webhook",
+    "get-webhook",
+    "list-webhooks",
     "set-rcs-channel-on-app",
-    "set-whatsapp-channel-on-app"
+    "set-sms-channel-on-app",
+    "set-whatsapp-channel-on-app",
+    "update-webhook"
   ],
   "expectedPrompts": []
 }

@@ -1,6 +1,6 @@
 import { updateWebhookHandler } from '../../../src/tools/conversation/update-webhook';
 import { getConversationService } from '../../../src/tools/conversation/utils/conversation-service-helper';
-import { dormantTriggersWarning } from '../../../src/tools/conversation/utils/webhook-tools-helper';
+import { buildDormantTriggersWarning } from '../../../src/tools/conversation/utils/webhook-tools-helper';
 
 jest.mock('@sinch/sdk-core/package.json', () => ({
   version: '1.0.0',
@@ -47,9 +47,8 @@ test('updateWebhookHandler sends update_mask and warns on empty triggers', async
   expect(mockUpdate).toHaveBeenCalledWith({
     webhook_id: 'wh-1',
     webhookUpdateRequestBody: { triggers: [] },
-    update_mask: ['triggers'],
   });
 
   const body = JSON.parse(result.content[0].text);
-  expect(body.warning).toBe(dormantTriggersWarning);
+  expect(body.warning).toBe(buildDormantTriggersWarning('wh-1'));
 });

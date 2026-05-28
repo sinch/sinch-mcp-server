@@ -4,11 +4,10 @@ import {
   getConversationService,
   setConversationRegion,
 } from './utils/conversation-service-helper';
-import { formatWebhookResponse } from './utils/format-webhook-response';
+import { formatWebhook } from './utils/format-webhook-response';
 import {
   appendRegionHint,
-  buildUpdateMask,
-  dormantTriggersWarning,
+  buildDormantTriggersWarning,
   hasNoTriggers,
 } from './utils/webhook-tools-helper';
 import { ConversationToolKey, getToolName, toolsConfig } from './utils/conversation-tools-helper';
@@ -69,19 +68,16 @@ export const updateWebhookHandler = async ({
     ...(target !== undefined && { target }),
     ...(triggers !== undefined && { triggers }),
   } as Conversation.UpdateWebhookRequestBody;
-  const update_mask = buildUpdateMask(webhookUpdateRequestBody);
-
   try {
     const response = await conversationService.webhooks.update({
       webhook_id: webhookId,
       webhookUpdateRequestBody,
-      update_mask,
     });
     return new PromptResponse(JSON.stringify({
       success: true,
-      webhook: formatWebhookResponse(response),
+      webhook: formatWebhook(response),
       ...(triggers !== undefined && hasNoTriggers(triggers) && {
-        warning: dormantTriggersWarning,
+        warning: buildDormantTriggersWarning(webhookId),
       }),
     })).promptResponse;
   } catch (error) {

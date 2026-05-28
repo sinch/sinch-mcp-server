@@ -108,6 +108,14 @@ export const toolTestCases: ToolTestCase[] = [
     },
   },
   {
+    prompt: "Remove all triggers from webhook wh-abc123.",
+    expectedToolName: "update-webhook",
+    expectedArguments: {
+      webhookId: "wh-abc123",
+      triggers: [],
+    },
+  },
+  {
     prompt: "Lookup for the following phone number capabilities: +33612345678",
     expectedToolName: "number-lookup",
     expectedArguments: { phoneNumber: "+33612345678" },

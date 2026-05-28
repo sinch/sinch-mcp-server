@@ -1,23 +1,22 @@
 import {
   appendRegionHint,
-  buildUpdateMask,
+  buildDormantTriggersWarning,
   hasNoTriggers,
 } from '../../../../src/tools/conversation/utils/webhook-tools-helper';
 
 describe('appendRegionHint', () => {
-  it('appends region guidance to error messages', () => {
-    expect(appendRegionHint(new Error('Not found'), 'eu')).toBe(
-      'Not found If the resource cannot be found, the region parameter may be incorrect. Current region: eu.',
+  it('appends region guidance and other regions to error messages', () => {
+    const hint = appendRegionHint(new Error('Not found'), 'eu');
+    expect(hint).toBe(
+      'Not found. If the resource cannot be found, the region parameter may be incorrect. Current region: eu. Other regions to try: us, br.',
     );
   });
 });
 
-describe('buildUpdateMask', () => {
-  it('includes only fields present in the update body', () => {
-    expect(buildUpdateMask({
-      target: 'https://example.com/new',
-      triggers: ['MESSAGE_DELIVERY'],
-    })).toEqual(['target', 'triggers']);
+describe('buildDormantTriggersWarning', () => {
+  it('mentions update-webhook with the webhook id', () => {
+    expect(buildDormantTriggersWarning('wh-1')).toContain('update-webhook');
+    expect(buildDormantTriggersWarning('wh-1')).toContain('webhookId="wh-1"');
   });
 });
 

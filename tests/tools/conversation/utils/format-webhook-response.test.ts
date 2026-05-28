@@ -1,11 +1,11 @@
 import {
   formatListWebhooksResponse,
-  formatWebhookResponse,
+  formatWebhook,
 } from '../../../../src/tools/conversation/utils/format-webhook-response';
 
-describe('formatWebhookResponse', () => {
+describe('formatWebhook', () => {
   it('omits secret and client_credentials from webhook payloads', () => {
-    const formatted = formatWebhookResponse({
+    const formatted = formatWebhook({
       id: 'wh-1',
       app_id: 'app-1',
       target: 'https://example.com/hook',
@@ -41,6 +41,7 @@ describe('formatListWebhooksResponse', () => {
       webhooks: [
         {
           id: 'wh-1',
+          app_id: 'app-123',
           target: 'https://example.com/a',
           secret: 'hidden',
         },
@@ -50,7 +51,7 @@ describe('formatListWebhooksResponse', () => {
     expect(formatted.webhooks).toEqual([
       {
         id: 'wh-1',
-        app_id: undefined,
+        app_id: 'app-123',
         target: 'https://example.com/a',
         target_type: undefined,
         triggers: undefined,

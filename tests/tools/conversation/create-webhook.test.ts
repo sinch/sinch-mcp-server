@@ -3,7 +3,7 @@ import {
   getConversationAppId,
   getConversationService,
 } from '../../../src/tools/conversation/utils/conversation-service-helper';
-import { dormantTriggersWarning } from '../../../src/tools/conversation/utils/webhook-tools-helper';
+import { buildDormantTriggersWarning } from '../../../src/tools/conversation/utils/webhook-tools-helper';
 
 jest.mock('@sinch/sdk-core/package.json', () => ({
   version: '1.0.0',
@@ -60,6 +60,7 @@ test('createWebhookHandler creates HTTP webhook and omits secret from response',
 test('createWebhookHandler warns when no triggers are provided', async () => {
   mockCreate.mockResolvedValue({
     id: 'wh-new',
+    app_id: 'app-123',
     target: 'https://example.com/hook',
     target_type: 'HTTP',
   });
@@ -69,5 +70,5 @@ test('createWebhookHandler warns when no triggers are provided', async () => {
   });
 
   const body = JSON.parse(result.content[0].text);
-  expect(body.warning).toBe(dormantTriggersWarning);
+  expect(body.warning).toBe(buildDormantTriggersWarning('wh-new'));
 });
