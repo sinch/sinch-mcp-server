@@ -81,8 +81,8 @@ export const toolTestCases: ToolTestCase[] = [
     },
   },
   {
-    prompt: "Add SMS to Conversation app app-abc123 with service plan plan-456 and API token my-token.",
-    expectedToolName: "add-sms-channel-to-app",
+    prompt: "Set SMS on Conversation app app-abc123 with service plan plan-456 and API token my-token.",
+    expectedToolName: "set-sms-channel-on-app",
     expectedArguments: {
       appId: "app-abc123",
       servicePlanId: "plan-456",

@@ -7,7 +7,7 @@ import {
 } from './utils/conversation-service-helper';
 import { ConversationToolKey, getToolName, toolsConfig } from './utils/conversation-tools-helper';
 import { formatAppResponse } from './utils/format-app-response';
-import { appendRegionHint } from './utils/app-tools-helper';
+import { appendRegionHint } from './utils/region-hint';
 import { IPromptResponse, PromptResponse, Tags } from '../../types';
 import { ConversationRegionOverride } from './prompt-schemas';
 
@@ -19,10 +19,10 @@ export const registerCreateConversationApp = (server: McpServer, tags: Tags[]) =
 
   server.tool(
     TOOL_NAME,
-    'Create a new Conversation API app in the project. No channels are configured at creation; use add-sms-channel-to-app, add-rcs-channel-to-app, or add-whatsapp-channel-to-app to add channels later.',
+    'Create a new Conversation API app in the project. No channels are configured at creation; use set-sms-channel-on-app, set-rcs-channel-on-app, or set-whatsapp-channel-on-app to configure channels later. Read the conversation-app-setup resource for the full flow.',
     {
       displayName: z.string()
-        .describe('(Required) Display name for the Conversation API app.'),
+        .describe('Display name for the Conversation API app.'),
       region: ConversationRegionOverride,
     },
     createConversationAppHandler,
@@ -53,7 +53,6 @@ export const createConversationAppHandler = async ({
 
     return new PromptResponse(JSON.stringify({
       success: true,
-      region: usedRegion,
       app: formatAppResponse(response),
     })).promptResponse;
   } catch (error) {

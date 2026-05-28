@@ -13,10 +13,6 @@
     "send-template-message",
     "send-whatsapp-template-message",
     "list-conversation-apps",
-    "create-conversation-app",
-    "add-sms-channel-to-app",
-    "add-rcs-channel-to-app",
-    "add-whatsapp-channel-to-app",
     "list-messaging-templates"
   ],
   "expectedPrompts": [

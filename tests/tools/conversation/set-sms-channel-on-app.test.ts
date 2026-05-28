@@ -1,4 +1,4 @@
-import { addSmsChannelToAppHandler } from '../../../src/tools/conversation/add-sms-channel-to-app';
+import { setSmsChannelOnAppHandler } from '../../../src/tools/conversation/set-sms-channel-on-app';
 import { getConversationService } from '../../../src/tools/conversation/utils/conversation-service-helper';
 
 jest.mock('@sinch/sdk-core/package.json', () => ({
@@ -25,17 +25,22 @@ beforeEach(() => {
   jest.clearAllMocks();
 });
 
-test('addSmsChannelToAppHandler merges SMS credentials into the app', async () => {
+test('setSmsChannelOnAppHandler merges SMS credentials into the app', async () => {
   mockGet.mockResolvedValue({
     id: 'app-123',
-    channel_credentials: [],
+    channel_credentials: [{
+      channel: 'MESSENGER',
+      static_token: { token: 'fb-token' },
+      state: { status: 'ACTIVE' },
+      channel_known_id: 'page-1',
+    }],
   });
   mockUpdate.mockResolvedValue({
     id: 'app-123',
     channel_credentials: [{ channel: 'SMS', state: { status: 'PENDING' } }],
   });
 
-  const result = await addSmsChannelToAppHandler({
+  const result = await setSmsChannelOnAppHandler({
     appId: 'app-123',
     servicePlanId: 'plan-123',
     apiToken: 'token-abc',
@@ -43,15 +48,20 @@ test('addSmsChannelToAppHandler merges SMS credentials into the app', async () =
 
   expect(mockUpdate).toHaveBeenCalledWith({
     app_id: 'app-123',
-    update_mask: ['channel_credentials'],
     appUpdateRequestBody: {
-      channel_credentials: [{
-        channel: 'SMS',
-        static_bearer: {
-          claimed_identity: 'plan-123',
-          token: 'token-abc',
+      channel_credentials: [
+        {
+          channel: 'MESSENGER',
+          static_token: { token: 'fb-token' },
         },
-      }],
+        {
+          channel: 'SMS',
+          static_bearer: {
+            claimed_identity: 'plan-123',
+            token: 'token-abc',
+          },
+        },
+      ],
     },
   });
   expect(result.content[0].text).toContain('"success":true');

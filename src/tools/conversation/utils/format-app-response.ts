@@ -12,6 +12,9 @@ export const formatAppResponse = (app: Conversation.AppResponse | undefined) => 
       channel: cred.channel,
       status: cred.state?.status,
       channel_known_id: cred.channel_known_id,
+      ...('static_bearer' in cred && cred.static_bearer?.claimed_identity !== undefined
+        ? { claimed_identity: cred.static_bearer.claimed_identity }
+        : {}),
     })),
   };
 };

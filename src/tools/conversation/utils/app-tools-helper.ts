@@ -1,13 +1,9 @@
 import { Conversation } from '@sinch/conversation';
 import { ConversationService } from '@sinch/conversation';
 import { IPromptResponse, PromptResponse } from '../../../types';
+import { appendRegionHint } from './region-hint';
 import { formatAppResponse } from './format-app-response';
 import { mergeChannelCredentials } from './build-channel-credential';
-
-export const appendRegionHint = (error: unknown, region: string): string => {
-  const message = error instanceof Error ? error.message : String(error);
-  return `${message} If the resource cannot be found, the region parameter may be incorrect. Current region: ${region}.`;
-};
 
 export const addChannelToApp = async (
   conversationService: ConversationService,
@@ -24,7 +20,6 @@ export const addChannelToApp = async (
 
     const response = await conversationService.app.update({
       app_id: appId,
-      update_mask: ['channel_credentials'],
       appUpdateRequestBody: {
         channel_credentials: channelCredentials,
       },
@@ -32,7 +27,6 @@ export const addChannelToApp = async (
 
     return new PromptResponse(JSON.stringify({
       success: true,
-      region: usedRegion,
       app: formatAppResponse(response),
     })).promptResponse;
   } catch (error) {

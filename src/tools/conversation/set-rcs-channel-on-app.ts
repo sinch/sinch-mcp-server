@@ -6,7 +6,7 @@ import {
   setConversationRegion,
 } from './utils/conversation-service-helper';
 import { ConversationToolKey, getToolName, toolsConfig } from './utils/conversation-tools-helper';
-import { buildWhatsAppChannelCredential } from './utils/build-channel-credential';
+import { buildRcsChannelCredential } from './utils/build-channel-credential';
 import { addChannelToApp } from './utils/app-tools-helper';
 import { IPromptResponse, Tags } from '../../types';
 import {
@@ -14,41 +14,37 @@ import {
   ConversationRegionOverride,
 } from './prompt-schemas';
 
-const TOOL_KEY: ConversationToolKey = 'addWhatsAppChannelToApp';
+const TOOL_KEY: ConversationToolKey = 'setRcsChannelOnApp';
 const TOOL_NAME = getToolName(TOOL_KEY);
 
-export const registerAddWhatsAppChannelToApp = (server: McpServer, tags: Tags[]) => {
+export const registerSetRcsChannelOnApp = (server: McpServer, tags: Tags[]) => {
   if (!matchesAnyTag(tags, toolsConfig[TOOL_KEY].tags)) return;
 
   server.tool(
     TOOL_NAME,
-    'Add or update the WhatsApp channel on a Conversation API app. Requires the WhatsApp sender ID and bearer token for the static bearer credential.',
+    'Set (create or replace) the RCS channel on a Conversation API app. Requires the RCS sender ID and bearer token. For vague requests such as "add messaging", ask whether the user means SMS, RCS, or WhatsApp and collect the required credentials before calling a tool.',
     {
       appId: ConversationAppId,
       senderId: z.string()
-        .describe('(Required) WhatsApp sender ID (static bearer claimed_identity).'),
+        .describe('RCS sender ID.'),
       bearerToken: z.string()
-        .describe('(Required) Bearer token for the WhatsApp channel integration (static bearer token).'),
+        .describe('Bearer token for the RCS channel.'),
       region: ConversationRegionOverride,
-      callbackSecret: z.string().optional()
-        .describe('(Optional) Secret used to verify channel callbacks when supported.'),
     },
-    addWhatsAppChannelToAppHandler,
+    setRcsChannelOnAppHandler,
   );
 };
 
-export const addWhatsAppChannelToAppHandler = async ({
+export const setRcsChannelOnAppHandler = async ({
   appId,
   senderId,
   bearerToken,
   region,
-  callbackSecret,
 }: {
   appId: string;
   senderId: string;
   bearerToken: string;
   region?: string;
-  callbackSecret?: string;
 }): Promise<IPromptResponse> => {
   const maybeService = getConversationService(TOOL_NAME);
   if (isPromptResponse(maybeService)) {
@@ -57,6 +53,6 @@ export const addWhatsAppChannelToAppHandler = async ({
   const conversationService = maybeService;
   const usedRegion = setConversationRegion(region, conversationService);
 
-  const credential = buildWhatsAppChannelCredential(senderId, bearerToken, { callbackSecret });
+  const credential = buildRcsChannelCredential(senderId, bearerToken);
   return addChannelToApp(conversationService, usedRegion, appId, credential);
 };
