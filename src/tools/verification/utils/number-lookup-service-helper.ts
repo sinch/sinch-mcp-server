@@ -6,15 +6,16 @@ import {
   Oauth2TokenRequest,
 } from '@sinch/sdk-client';
 import { PromptResponse } from '../../../types';
+import { env } from '../../../env';
 import { formatUserAgent } from '../../../utils';
 import { NumberLookupService } from '@sinch/number-lookup';
 
 export function getNumberLookupService(
   toolName: string
 ): NumberLookupService | PromptResponse {
-  const projectId = process.env.PROJECT_ID;
-  const keyId     = process.env.KEY_ID;
-  const keySecret = process.env.KEY_SECRET;
+  const projectId = env.PROJECT_ID;
+  const keyId     = env.KEY_ID;
+  const keySecret = env.KEY_SECRET;
 
   if (!projectId || !keyId || !keySecret) {
     return new PromptResponse(JSON.stringify({

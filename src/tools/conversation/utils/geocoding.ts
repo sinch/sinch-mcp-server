@@ -1,4 +1,5 @@
 import axios from 'axios';
+import { env } from '../../../env';
 
 interface GeocodingAddress {
   latitude: number;
@@ -16,7 +17,7 @@ export const getLatitudeLongitudeFromAddress = async (address: string): Promise<
     const url = 'https://maps.googleapis.com/maps/api/geocode/json';
     const queryParams = {
       address,
-      key: process.env.GEOCODING_API_KEY
+      key: env.GEOCODING_API_KEY
     };
 
     const response = await axios.get(url, {

@@ -231,7 +231,7 @@ npm run build
 
 ### Step 2: Set up the MCP server configuration
 
-Copy the file `.template.env` and rename it `.env`. Then replace the placeholders with your own credentials and delete any key you don't need. The `.env` file should look like this ():
+Copy the file `.template.env` and rename it `.env`. Then replace the placeholders with your own credentials and delete any key you don't need. Environment variables are parsed and typed at server startup via [T3 Env](https://env.t3.gg/); missing credentials only cause errors when you invoke a tool that requires them. The `.env` file should look like this ():
 ```dotenv
 # Conversation / Numbers tools related environment variables
 PROJECT_ID=

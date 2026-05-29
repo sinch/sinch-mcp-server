@@ -2,6 +2,7 @@ import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { Voice } from '@sinch/voice';
 import { z } from 'zod';
 import { getVoiceService } from './utils/voice-service-helper';
+import { env } from '../../env';
 import { getToolName, VoiceToolKey, voiceToolsConfig } from './utils/voice-tools-helper';
 import { isPromptResponse, matchesAnyTag } from '../../utils';
 import { IPromptResponse, PromptResponse, Tags } from '../../types';
@@ -39,7 +40,7 @@ export const ttsCalloutHandler = async ({
   }
   const voiceService = maybeService;
 
-  const cli = process.env.CALLING_LINE_IDENTIFICATION;
+  const cli = env.CALLING_LINE_IDENTIFICATION;
 
   const request: Voice.TtsCalloutRequestData = {
     ttsCalloutRequestBody: {

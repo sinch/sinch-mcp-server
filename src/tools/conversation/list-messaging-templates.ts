@@ -5,7 +5,7 @@ import { getConversationService, setTemplateRegion } from './utils/conversation-
 import { ConversationToolKey, getToolName, toolsConfig } from './utils/conversation-tools-helper';
 import { IPromptResponse, PromptResponse, Tags } from '../../types';
 import { SupportedConversationRegion } from '@sinch/sdk-client';
-import process from 'process';
+import { env } from '../../env';
 
 const TOOL_KEY: ConversationToolKey = 'listMessagingTemplates';
 const TOOL_NAME = getToolName(TOOL_KEY);
@@ -80,12 +80,12 @@ interface WhatsAppTemplatesResponse {
 
 const fetchWhatsAppSpecificTemplates = async () => {
   const resp = await fetch(
-    `https://provisioning.api.sinch.com/v1/projects/${process.env.PROJECT_ID}/whatsapp/templates`,
+    `https://provisioning.api.sinch.com/v1/projects/${env.PROJECT_ID}/whatsapp/templates`,
     {
       method: 'GET',
       headers: {
         'Content-Type': 'application/json',
-        Authorization: 'Basic ' + Buffer.from(`${process.env.KEY_ID}:${process.env.KEY_SECRET}`).toString('base64')
+        Authorization: 'Basic ' + Buffer.from(`${env.KEY_ID}:${env.KEY_SECRET}`).toString('base64')
       }
     }
   );
