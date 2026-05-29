@@ -20,10 +20,6 @@ export const conversationAppSetupGuide = `# Conversation API app setup
 
 Conversation API is regional. The app, SMS service plan, and channel configuration must use the **same region**. Pass \`region\` on each tool call, or rely on the server default only if you understand which region applies.
 
-## Multi-tenant usage
-
-Provide \`appId\` and all channel credentials in the tool call. Do not rely on environment variables for customer-specific secrets.
-
 ## Ambiguous prompts
 
 If the user asks to "add messaging" without naming a channel, **ask which channel** (SMS, RCS, or WhatsApp) and for the credentials in the table above before calling a tool.
