@@ -82,7 +82,8 @@
     "test": "jest --testPathIgnorePatterns='/tests/(integration|eval)/'",
     "test:integration": "NODE_OPTIONS=--experimental-vm-modules jest --config jest.integration.config.ts --runInBand",
     "test:eval": "NODE_OPTIONS=--experimental-vm-modules jest --config jest.eval.config.ts --runInBand",
-    "prepare": "husky"
+    "prepare": "husky",
+    "start:http:server": "tsc --project tsconfig.build.json && node dist/http.js"
   },
   "engines": {
     "node": ">=20.18.1 < 23"
