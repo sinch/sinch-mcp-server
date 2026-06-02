@@ -1,0 +1,10 @@
+{
+  "tag": "configuration",
+  "expectedTools": [
+    "create-conversation-app",
+    "set-sms-channel-on-app",
+    "set-rcs-channel-on-app",
+    "set-whatsapp-channel-on-app"
+  ],
+  "expectedPrompts": []
+}

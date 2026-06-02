@@ -16,6 +16,9 @@ export const ConversationChannel = z.array(ChannelEnum).nonempty()
 export const ConversationAppIdOverride = z.string().optional()
   .describe('(Optional) The ID of the app to use for the Sinch conversation API. If set, it will override the value from the environment variable "CONVERSATION_APP_ID".')
 
+export const ConversationAppId = z.string()
+  .describe('The Conversation API app ID. Use list-conversation-apps to find existing app IDs.')
+
 export const MessageSenderNumberOverride = z.string().optional()
   .describe('(Optional) The phone number of the message\'s sender (E.164 format). If set, it will override the value from the environment variable "DEFAULT_SMS_ORIGINATOR".')
 

@@ -2,6 +2,10 @@
   "tag": "conversation",
   "expectedTools": [
     "list-conversation-apps",
+    "create-conversation-app",
+    "set-sms-channel-on-app",
+    "set-rcs-channel-on-app",
+    "set-whatsapp-channel-on-app",
     "list-messaging-templates",
     "send-choice-message",
     "send-location-message",

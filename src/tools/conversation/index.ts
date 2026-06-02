@@ -1,4 +1,8 @@
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
+import { registerCreateConversationApp } from './create-conversation-app';
+import { registerSetRcsChannelOnApp } from './set-rcs-channel-on-app';
+import { registerSetSmsChannelOnApp } from './set-sms-channel-on-app';
+import { registerSetWhatsAppChannelOnApp } from './set-whatsapp-channel-on-app';
 import { registerListAllApps } from './list-all-apps';
 import { registerListAllTemplates } from './list-messaging-templates';
 import { registerSendCardOrChoiceMessage } from './send-card-or-choice-message';
@@ -7,6 +11,7 @@ import { registerSendMediaMessage } from './send-media-message';
 import { registerSendTemplateMessage } from './send-template-message';
 import { registerSendWhatsAppTemplateMessage } from './send-whatsapp-template-message';
 import { registerSendTextMessage } from './send-text-message';
+import { registerConversationResources } from './resources/register-conversation-resources';
 import { Tags } from '../../types';
 
 export const registerConversationTools = (server: McpServer, tags: Tags[]) => {
@@ -17,5 +22,10 @@ export const registerConversationTools = (server: McpServer, tags: Tags[]) => {
   registerSendTemplateMessage(server, tags);
   registerSendWhatsAppTemplateMessage(server, tags);
   registerListAllApps(server, tags);
+  registerCreateConversationApp(server, tags);
+  registerSetSmsChannelOnApp(server, tags);
+  registerSetRcsChannelOnApp(server, tags);
+  registerSetWhatsAppChannelOnApp(server, tags);
   registerListAllTemplates(server, tags);
+  registerConversationResources(server, tags);
 };
