@@ -10,11 +10,11 @@ export const conversationAppSetupGuide = `# Conversation API app setup
 
 ## Channels supported by MCP tools
 
-| Channel | Tool | Required parameters |
-|---------|------|---------------------|
-| SMS | set-sms-channel-on-app | \`appId\`, \`servicePlanId\`, \`apiToken\` |
-| RCS | set-rcs-channel-on-app | \`appId\`, \`senderId\`, \`bearerToken\` |
-| WhatsApp | set-whatsapp-channel-on-app | \`appId\`, \`senderId\`, \`bearerToken\` |
+Use only the MCP tools below (not the raw Conversation API). Required parameters per channel:
+
+- **SMS** — \`set-sms-channel-on-app\`: \`appId\`, \`servicePlanId\`, \`apiToken\`
+- **RCS** — \`set-rcs-channel-on-app\`: \`appId\`, \`senderId\`, \`bearerToken\`
+- **WhatsApp** — \`set-whatsapp-channel-on-app\`: \`appId\`, \`senderId\`, \`bearerToken\`
 
 ## Region
 
@@ -22,10 +22,9 @@ Conversation API is regional. The app, SMS service plan, and channel configurati
 
 ## Ambiguous prompts
 
-If the user asks to "add messaging" without naming a channel, **ask which channel** (SMS, RCS, or WhatsApp) and for the credentials in the table above before calling a tool.
+If the user asks to "add messaging" without naming a channel, **ask which channel** they mean (SMS, RCS, or WhatsApp), then collect the required parameters before calling the matching tool:
 
-## API reference
-
-- [Create app](https://developers.sinch.com/docs/conversation/api-reference/conversation/app/app_createapp)
-- [Update app](https://developers.sinch.com/docs/conversation/api-reference/conversation/app/app_updateapp)
+- SMS: \`appId\`, \`servicePlanId\`, \`apiToken\`
+- RCS: \`appId\`, \`senderId\`, \`bearerToken\`
+- WhatsApp: \`appId\`, \`senderId\`, \`bearerToken\`
 `;
