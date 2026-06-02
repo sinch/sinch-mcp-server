@@ -3,32 +3,25 @@ import {
   ApiFetchClient,
   buildHeader,
   NUMBER_LOOKUP_HOSTNAME,
-  Oauth2TokenRequest,
 } from '@sinch/sdk-client';
-import { PromptResponse } from '../../../types';
-import { env } from '../../../env';
-import { formatUserAgent } from '../../../utils';
 import { NumberLookupService } from '@sinch/number-lookup';
+import { getSharedOauth2TokenRequest } from '../../../auth/oauth-token-cache';
+import { resolveSinchOAuthCredentials } from '../../../auth/sinch-oauth-credentials';
+import { PromptResponse } from '../../../types';
+import { formatUserAgent } from '../../../utils';
 
 export function getNumberLookupService(toolName: string): NumberLookupService | PromptResponse {
-  const projectId = env.PROJECT_ID;
-  const keyId = env.KEY_ID;
-  const keySecret = env.KEY_SECRET;
-
-  if (!projectId || !keyId || !keySecret) {
-    return new PromptResponse(
-      JSON.stringify({
-        success: false,
-        error: 'Missing env vars: PROJECT_ID, KEY_ID, KEY_SECRET.',
-      }),
-    );
+  const maybeCredentials = resolveSinchOAuthCredentials();
+  if (maybeCredentials instanceof PromptResponse) {
+    return maybeCredentials;
   }
+  const { projectId } = maybeCredentials;
 
   const numberLookupService = new NumberLookupService({});
   const fetcher = new ApiFetchClient({
     projectId,
     requestPlugins: [
-      new Oauth2TokenRequest(keyId, keySecret),
+      getSharedOauth2TokenRequest(maybeCredentials),
       new AdditionalHeadersRequest({
         headers: buildHeader('User-Agent', formatUserAgent(toolName, projectId)),
       }),

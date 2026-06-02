@@ -6,25 +6,24 @@ import {
   CONVERSATION_TEMPLATES_HOSTNAME,
   ConversationRegion,
   formatRegionalizedHostname,
-  Oauth2TokenRequest,
   REGION_PATTERN,
 } from '@sinch/sdk-client';
 import { ConversationService } from '@sinch/conversation';
+import { getSharedOauth2TokenRequest } from '../../../auth/oauth-token-cache';
+import { resolveSinchOAuthCredentials } from '../../../auth/sinch-oauth-credentials';
 import { env } from '../../../env';
 import { PromptResponse } from '../../../types';
 import { formatUserAgent } from '../../../utils';
 
 export const getConversationService = (toolName: string): ConversationService | PromptResponse => {
-  const projectId = env.PROJECT_ID;
-  const keyId = env.KEY_ID;
-  const keySecret = env.KEY_SECRET;
-
-  if (!projectId || !keyId || !keySecret) {
-    return new PromptResponse('Missing env vars: PROJECT_ID, KEY_ID, KEY_SECRET.');
+  const maybeCredentials = resolveSinchOAuthCredentials();
+  if (maybeCredentials instanceof PromptResponse) {
+    return maybeCredentials;
   }
+  const { projectId } = maybeCredentials;
 
   const conversationService = new ConversationService({});
-  const authenticationPlugin = new Oauth2TokenRequest(keyId, keySecret);
+  const authenticationPlugin = getSharedOauth2TokenRequest(maybeCredentials);
   const additionalHeadersPlugin = new AdditionalHeadersRequest({
     headers: buildHeader('User-Agent', formatUserAgent(toolName, projectId)),
   });

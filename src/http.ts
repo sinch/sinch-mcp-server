@@ -4,6 +4,7 @@ import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/
 import { isInitializeRequest } from '@modelcontextprotocol/sdk/types.js';
 import dotenv from 'dotenv';
 import { createMcpApiKeyMiddleware, loadMcpApiKeys } from './auth/mcp-api-key';
+import { runWithHttpCredentialHeaders } from './auth/credential-context';
 import {
   instantiateMcpServer,
   parseArgs,
@@ -100,7 +101,9 @@ const handleMcpRequest = async (req: Request, res: Response): Promise<void> => {
       return;
     }
 
-    await entry.transport.handleRequest(req, res, req.body);
+    await runWithHttpCredentialHeaders(req.headers, () =>
+      entry.transport.handleRequest(req, res, req.body),
+    );
     return;
   }
 
@@ -117,7 +120,9 @@ const handleMcpRequest = async (req: Request, res: Response): Promise<void> => {
   }
 
   const entry = await createSession();
-  await entry.transport.handleRequest(req, res, req.body);
+  await runWithHttpCredentialHeaders(req.headers, () =>
+    entry.transport.handleRequest(req, res, req.body),
+  );
 };
 
 export const createHttpApp = () => {

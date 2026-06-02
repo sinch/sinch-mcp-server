@@ -76,11 +76,7 @@ describe('releaseRentedNumberHandler', () => {
       phoneNumber: '+12015555555',
     });
 
-    const expectedResponse = JSON.stringify({
-      success: false,
-      error: 'Missing env vars: PROJECT_ID, KEY_ID, KEY_SECRET.',
-    });
-    expect(result).toEqual(new PromptResponse(expectedResponse).promptResponse);
+    expect(result.content[0].text).toContain('Missing Sinch credentials');
     expect(mockNumbersService.release).not.toHaveBeenCalled();
   });
 });
