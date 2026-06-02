@@ -1,3 +1,4 @@
+/* eslint-disable jest-extended/prefer-to-be-true, jest-extended/prefer-to-be-false */
 import type { Request, Response } from 'express';
 import {
   createMcpApiKeyMiddleware,
@@ -45,13 +46,13 @@ describe('mcp-api-key', () => {
 
   describe('isValidMcpApiKey', () => {
     it('accepts a matching configured key', () => {
-      expect(isValidMcpApiKey('secret', ['secret', 'other'])).toBeTrue();
+      expect(isValidMcpApiKey('secret', ['secret', 'other'])).toBe(true);
     });
 
     it('rejects missing or mismatched keys', () => {
-      expect(isValidMcpApiKey(undefined, ['secret'])).toBeFalse();
-      expect(isValidMcpApiKey('wrong', ['secret'])).toBeFalse();
-      expect(isValidMcpApiKey('secret', [])).toBeFalse();
+      expect(isValidMcpApiKey(undefined, ['secret'])).toBe(false);
+      expect(isValidMcpApiKey('wrong', ['secret'])).toBe(false);
+      expect(isValidMcpApiKey('secret', [])).toBe(false);
     });
   });
 
