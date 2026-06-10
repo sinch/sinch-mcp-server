@@ -6,24 +6,30 @@ import { getToolName, NumbersToolKey, toolsConfig } from './utils/numbers-tools-
 import { getNumbersService } from './utils/numbers-service-helper';
 import { Numbers } from '@sinch/numbers';
 
+const RentNumbersInput = {
+  numbers: z.array(z.string()).describe('Array of phone numbers to rent. Each number should be in E.164 format with leading `+`'),
+};
+
+type RentNumbersInputSchema = z.infer<z.ZodObject<typeof RentNumbersInput>>;
+
 const TOOL_KEY: NumbersToolKey = 'rentNumbers';
 const TOOL_NAME = getToolName(TOOL_KEY);
 
 export const registerRentNumbers = (server: McpServer, tags: Tags[]) => {
   if (!matchesAnyTag(tags, toolsConfig[TOOL_KEY].tags)) return;
 
-  server.tool(
+  server.registerTool(
     TOOL_NAME,
-    'Activates a phone number that matches the search criteria provided in the request. Currently the rentAny operation works only for US LOCAL numbers',
     {
-      numbers: z.array(z.string()).describe('Array of phone numbers to rent. Each number should be in E.164 format with leading `+`'),
+      description: 'Activates a phone number that matches the search criteria provided in the request. Currently the rentAny operation works only for US LOCAL numbers',
+      inputSchema: RentNumbersInput,
     },
     rentNumbersHandler
   );
 }
 
 export const rentNumbersHandler = async (
-  { numbers }: { numbers: string[]; }
+  { numbers }: RentNumbersInputSchema
 ) => {
 
   const maybeService = getNumbersService(TOOL_NAME);

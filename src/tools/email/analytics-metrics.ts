@@ -75,10 +75,12 @@ const TOOL_NAME = getToolName(TOOL_KEY);
 export const registerAnalyticsMetrics = (server: McpServer, tags: Tags[]) => {
   if (!matchesAnyTag(tags, toolsConfig[TOOL_KEY].tags)) return;
 
-  server.tool(
+  server.registerTool(
     TOOL_NAME,
-    'Get email analytics metrics from Mailgun for an account. All parameters are optional. You can filter by domain, metrics type and specify a time range. By default, it will return all metrics for all your domains for the last 7 days.',
-    AnalyticsMetricsInput,
+    {
+      description: 'Get email analytics metrics from Mailgun for an account. All parameters are optional. You can filter by domain, metrics type and specify a time range. By default, it will return all metrics for all your domains for the last 7 days.',
+      inputSchema: AnalyticsMetricsInput,
+    },
     analyticsMetricsHandler
   );
 };

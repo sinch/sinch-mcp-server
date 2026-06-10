@@ -19,7 +19,7 @@ const RESOURCE_TAGS: Tags[] = [
 export const registerConversationResources = (server: McpServer, tags: Tags[]) => {
   if (!matchesAnyTag(tags, RESOURCE_TAGS)) return;
 
-  server.resource(
+  server.registerResource(
     'conversation-app-setup',
     CONVERSATION_APP_SETUP_URI,
     {

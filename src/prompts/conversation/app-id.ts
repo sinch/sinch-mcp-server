@@ -8,10 +8,14 @@ export const registerAppId = (server: McpServer, tags: Tags[]) => {
     return;
   }
 
-  server.prompt(
+  server.registerPrompt(
     'conversation-app-id',
     {
-      appId: z.string().describe('The ID of the app to use for the Sinch conversation API')
+      argsSchema: {
+        appId: z
+          .string()
+          .describe('The ID of the app to use for the Sinch conversation API'),
+      },
     },
     ({ appId }) => ({
       messages: [
@@ -19,10 +23,10 @@ export const registerAppId = (server: McpServer, tags: Tags[]) => {
           role: 'user',
           content: {
             type: 'text',
-            text: `Please include the app ID ${appId} when the request will require to use a tool related to the Sinch Conversation API.`
-          }
-        }
-      ]
-    })
+            text: `Please include the app ID ${appId} when the request will require to use a tool related to the Sinch Conversation API.`,
+          },
+        },
+      ],
+    }),
   );
 };

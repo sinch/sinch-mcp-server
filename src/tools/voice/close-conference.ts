@@ -5,24 +5,30 @@ import { IPromptResponse, PromptResponse, Tags } from '../../types';
 import { getVoiceService } from './utils/voice-service-helper';
 import { getToolName, VoiceToolKey, voiceToolsConfig } from './utils/voice-tools-helper';
 
+const CloseConferenceInput = {
+  conferenceId: z.string().describe('The conference ID to close'),
+};
+
+type CloseConferenceInputSchema = z.infer<z.ZodObject<typeof CloseConferenceInput>>;
+
 const TOOL_KEY: VoiceToolKey = 'closeConference';
 const TOOL_NAME = getToolName(TOOL_KEY);
 
 export const registerCloseConference = (server: McpServer, tags: Tags[]) => {
   if (!matchesAnyTag(tags, voiceToolsConfig[TOOL_KEY].tags)) return;
 
-  server.tool(
+  server.registerTool(
     TOOL_NAME,
-    'Close a conference callout',
     {
-      conferenceId: z.string().describe('The conference ID to close')
+      description: 'Close a conference callout',
+      inputSchema: CloseConferenceInput,
     },
     closeConferenceHandler
   );
 };
 
 export const closeConferenceHandler = async (
-  { conferenceId }: { conferenceId: string }
+  { conferenceId }: CloseConferenceInputSchema
 ): Promise<IPromptResponse> => {
   const maybeService = getVoiceService(TOOL_NAME);
   if (isPromptResponse(maybeService)) {

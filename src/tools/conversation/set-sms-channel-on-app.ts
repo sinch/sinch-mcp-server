@@ -14,22 +14,28 @@ import {
   ConversationRegionOverride,
 } from './prompt-schemas';
 
+const SetSmsChannelOnAppInput = {
+  appId: ConversationAppId,
+  servicePlanId: z.string()
+    .describe('Sinch SMS service plan ID.'),
+  apiToken: z.string()
+    .describe('Sinch API token for the SMS service plan.'),
+  region: ConversationRegionOverride,
+};
+
+type SetSmsChannelOnAppInputSchema = z.infer<z.ZodObject<typeof SetSmsChannelOnAppInput>>;
+
 const TOOL_KEY: ConversationToolKey = 'setSmsChannelOnApp';
 const TOOL_NAME = getToolName(TOOL_KEY);
 
 export const registerSetSmsChannelOnApp = (server: McpServer, tags: Tags[]) => {
   if (!matchesAnyTag(tags, toolsConfig[TOOL_KEY].tags)) return;
 
-  server.tool(
+  server.registerTool(
     TOOL_NAME,
-    'Set (create or replace) the SMS channel on a Conversation API app. Requires the SMS service plan ID and API token. The app must be in the same region as the SMS service plan. For vague requests such as "add messaging", ask whether the user means SMS, RCS, or WhatsApp and collect the required credentials before calling a tool.',
     {
-      appId: ConversationAppId,
-      servicePlanId: z.string()
-        .describe('Sinch SMS service plan ID.'),
-      apiToken: z.string()
-        .describe('Sinch API token for the SMS service plan.'),
-      region: ConversationRegionOverride,
+      description: 'Set (create or replace) the SMS channel on a Conversation API app. Requires the SMS service plan ID and API token. The app must be in the same region as the SMS service plan. For vague requests such as "add messaging", ask whether the user means SMS, RCS, or WhatsApp and collect the required credentials before calling a tool.',
+      inputSchema: SetSmsChannelOnAppInput,
     },
     setSmsChannelOnAppHandler,
   );
@@ -40,12 +46,7 @@ export const setSmsChannelOnAppHandler = async ({
   servicePlanId,
   apiToken,
   region,
-}: {
-  appId: string;
-  servicePlanId: string;
-  apiToken: string;
-  region?: string;
-}): Promise<IPromptResponse> => {
+}: SetSmsChannelOnAppInputSchema): Promise<IPromptResponse> => {
   const maybeService = getConversationService(TOOL_NAME);
   if (isPromptResponse(maybeService)) {
     return maybeService.promptResponse;

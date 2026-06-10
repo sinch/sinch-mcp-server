@@ -5,17 +5,23 @@ import { getMailgunCredentials } from './utils/mailgun-service-helper';
 import { EmailToolKey, getToolName, sha256, toolsConfig } from './utils/mailgun-tools-helper';
 import { formatUserAgent, isPromptResponse, matchesAnyTag } from '../../utils';
 
+const ListEmailTemplatesInput = {
+  domain: z.string().optional().describe('The domain to use for sending the email. It would override the domain provided in the environment variables.'),
+};
+
+type ListEmailTemplatesInputSchema = z.infer<z.ZodObject<typeof ListEmailTemplatesInput>>;
+
 const TOOL_KEY: EmailToolKey = 'listEmailTemplates';
 const TOOL_NAME = getToolName(TOOL_KEY);
 
 export const registerListEmailTemplates = (server: McpServer, tags: Tags[]) => {
   if (!matchesAnyTag(tags, toolsConfig[TOOL_KEY].tags)) return;
 
-  server.tool(
+  server.registerTool(
     TOOL_NAME,
-    'Get a list of Email templates from Mailgun for a specific domain. Note that the Messaging templates (omni-channel or channel-specific such as WhatsApp) are NOT included in this list - they can be found with another tool: list-messaging-templates. Do not try to use this tool to list Messaging templates, it will not work.',
     {
-      domain: z.string().optional().describe('The domain to use for sending the email. It would override the domain provided in the environment variables.')
+      description: 'Get a list of Email templates from Mailgun for a specific domain. Note that the Messaging templates (omni-channel or channel-specific such as WhatsApp) are NOT included in this list - they can be found with another tool: list-messaging-templates. Do not try to use this tool to list Messaging templates, it will not work.',
+      inputSchema: ListEmailTemplatesInput,
     },
     listEmailTemplatesHandler
   );
@@ -23,9 +29,7 @@ export const registerListEmailTemplates = (server: McpServer, tags: Tags[]) => {
 
 export const listEmailTemplatesHandler = async ({
   domain
-}: {
-  domain?: string;
-}): Promise<IPromptResponse> => {
+}: ListEmailTemplatesInputSchema): Promise<IPromptResponse> => {
   const maybeCredentials = await getMailgunCredentials(domain);
   if (isPromptResponse(maybeCredentials)) {
     return maybeCredentials.promptResponse;

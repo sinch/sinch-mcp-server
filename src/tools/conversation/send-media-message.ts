@@ -12,22 +12,28 @@ import { isPromptResponse, matchesAnyTag } from '../../utils';
 import { buildMessageBase } from './utils/send-message-builder';
 import { IPromptResponse, PromptResponse, Tags } from '../../types';
 
+const SendMediaMessageInput = {
+  recipient: Recipient,
+  url: z.string().describe('The URL of the media that will be the content of the message.'),
+  channel: ConversationChannel,
+  appId: ConversationAppIdOverride,
+  sender: MessageSenderNumberOverride,
+  region: ConversationRegionOverride,
+};
+
+type SendMediaMessageInputSchema = z.infer<z.ZodObject<typeof SendMediaMessageInput>>;
+
 const TOOL_KEY: ConversationToolKey = 'sendMediaMessage';
 const TOOL_NAME = getToolName(TOOL_KEY);
 
 export const registerSendMediaMessage = (server: McpServer, tags: Tags[]) => {
   if (!matchesAnyTag(tags, toolsConfig[TOOL_KEY].tags)) return;
 
-  server.tool(
+  server.registerTool(
     TOOL_NAME,
-    'Send a media message from URL given in parameter to a contact on the specified channel. The contact can be a phone number in E.164 format, or the identifier for the specified channel. The media must be specified with its URL.',
     {
-      recipient: Recipient,
-      url: z.string().describe('The URL of the media that will be the content of the message.'),
-      channel: ConversationChannel,
-      appId: ConversationAppIdOverride,
-      sender: MessageSenderNumberOverride,
-      region: ConversationRegionOverride
+      description: 'Send a media message from URL given in parameter to a contact on the specified channel. The contact can be a phone number in E.164 format, or the identifier for the specified channel. The media must be specified with its URL.',
+      inputSchema: SendMediaMessageInput,
     },
     sendMediaMessageHandler
   );
@@ -40,14 +46,7 @@ export const sendMediaMessageHandler = async({
   appId,
   sender,
   region
-}: {
-  recipient: string;
-  channel: string[];
-  url: string;
-  appId?: string;
-  sender?: string;
-  region?: string;
-}): Promise<IPromptResponse> => {
+}: SendMediaMessageInputSchema): Promise<IPromptResponse> => {
   const maybeAppId = getConversationAppId(appId);
   if (isPromptResponse(maybeAppId)) {
     return maybeAppId.promptResponse;

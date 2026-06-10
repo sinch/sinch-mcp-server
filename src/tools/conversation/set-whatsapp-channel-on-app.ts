@@ -14,22 +14,28 @@ import {
   ConversationRegionOverride,
 } from './prompt-schemas';
 
+const SetWhatsAppChannelOnAppInput = {
+  appId: ConversationAppId,
+  senderId: z.string()
+    .describe('WhatsApp sender ID.'),
+  bearerToken: z.string()
+    .describe('Bearer token for the WhatsApp channel.'),
+  region: ConversationRegionOverride,
+};
+
+type SetWhatsAppChannelOnAppInputSchema = z.infer<z.ZodObject<typeof SetWhatsAppChannelOnAppInput>>;
+
 const TOOL_KEY: ConversationToolKey = 'setWhatsAppChannelOnApp';
 const TOOL_NAME = getToolName(TOOL_KEY);
 
 export const registerSetWhatsAppChannelOnApp = (server: McpServer, tags: Tags[]) => {
   if (!matchesAnyTag(tags, toolsConfig[TOOL_KEY].tags)) return;
 
-  server.tool(
+  server.registerTool(
     TOOL_NAME,
-    'Set (create or replace) the WhatsApp channel on a Conversation API app. Requires the WhatsApp sender ID and bearer token. For vague requests such as "add messaging", ask whether the user means SMS, RCS, or WhatsApp and collect the required credentials before calling a tool.',
     {
-      appId: ConversationAppId,
-      senderId: z.string()
-        .describe('WhatsApp sender ID.'),
-      bearerToken: z.string()
-        .describe('Bearer token for the WhatsApp channel.'),
-      region: ConversationRegionOverride,
+      description: 'Set (create or replace) the WhatsApp channel on a Conversation API app. Requires the WhatsApp sender ID and bearer token. For vague requests such as "add messaging", ask whether the user means SMS, RCS, or WhatsApp and collect the required credentials before calling a tool.',
+      inputSchema: SetWhatsAppChannelOnAppInput,
     },
     setWhatsAppChannelOnAppHandler,
   );
@@ -40,12 +46,7 @@ export const setWhatsAppChannelOnAppHandler = async ({
   senderId,
   bearerToken,
   region,
-}: {
-  appId: string;
-  senderId: string;
-  bearerToken: string;
-  region?: string;
-}): Promise<IPromptResponse> => {
+}: SetWhatsAppChannelOnAppInputSchema): Promise<IPromptResponse> => {
   const maybeService = getConversationService(TOOL_NAME);
   if (isPromptResponse(maybeService)) {
     return maybeService.promptResponse;

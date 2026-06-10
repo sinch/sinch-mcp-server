@@ -28,10 +28,12 @@ const TOOL_NAME = getToolName(TOOL_KEY);
 export const registerListEmailEvents = (server: McpServer, tags: Tags[]) => {
   if (!matchesAnyTag(tags, toolsConfig[TOOL_KEY].tags)) return;
 
-  server.tool(
+  server.registerTool(
     TOOL_NAME,
-    'Get a list of email events from Mailgun for a specific domain. You can filter by event type and limit the number of results.',
-    ListEmailEventsInput,
+    {
+      description: 'Get a list of email events from Mailgun for a specific domain. You can filter by event type and limit the number of results.',
+      inputSchema: ListEmailEventsInput,
+    },
     listEmailEventsHandler
   );
 };
