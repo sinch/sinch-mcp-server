@@ -1,4 +1,5 @@
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
+import { registerTracedTool } from '../../telemetry/register-traced-tool';
 import { z } from 'zod';
 import { PromptResponse, Tags } from '../../types';
 import { isPromptResponse, matchesAnyTag } from '../../utils';
@@ -22,7 +23,7 @@ const TOOL_NAME = getToolName(TOOL_KEY);
 export const registerSearchAvailableNumbers = (server: McpServer, tags: Tags[]) => {
   if (!matchesAnyTag(tags, toolsConfig[TOOL_KEY].tags)) return;
 
-  server.registerTool(
+  registerTracedTool(server,
     TOOL_NAME,
     {
       description: 'Search for available phone numbers that are available for you to activate. You can filter by any property on the available number resource.',

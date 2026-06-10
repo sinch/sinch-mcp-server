@@ -1,4 +1,5 @@
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
+import { registerTracedTool } from '../../telemetry/register-traced-tool';
 import { Conversation } from '@sinch/conversation';
 import { z } from 'zod';
 import { IPromptResponse, PromptResponse, Tags } from '../../types';
@@ -39,7 +40,7 @@ const TOOL_NAME = getToolName(TOOL_KEY);
 export const registerSendWhatsAppTemplateMessage = (server: McpServer, tags: Tags[]) => {
   if (!matchesAnyTag(tags, toolsConfig[TOOL_KEY].tags)) return;
 
-  server.registerTool(
+  registerTracedTool(server,
     TOOL_NAME,
     {
       description: 'Send a template message to a contact (phone number in E.164 format) on the WhatsApp channel.',

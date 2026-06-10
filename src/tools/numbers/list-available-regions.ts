@@ -1,4 +1,5 @@
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
+import { registerTracedTool } from '../../telemetry/register-traced-tool';
 import { z } from 'zod';
 import { PromptResponse, Tags } from '../../types';
 import { isPromptResponse, matchesAnyTag } from '../../utils';
@@ -17,7 +18,7 @@ const TOOL_NAME = getToolName(TOOL_KEY);
 export const registerListAvailableRegions = (server: McpServer, tags: Tags[]) => {
   if (!matchesAnyTag(tags, toolsConfig[TOOL_KEY].tags)) return;
 
-  server.registerTool(
+  registerTracedTool(server,
     TOOL_NAME,
     {
       description: 'Lists all regions for numbers provided for the project ID.',
