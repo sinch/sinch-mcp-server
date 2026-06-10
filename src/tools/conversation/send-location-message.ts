@@ -30,7 +30,7 @@ const location = z.object({
   address: z.string().optional(),
 });
 
-const LocationMessageInput = {
+const LocationMessageSchema = {
   recipient: Recipient,
   address: location.describe(
     'It can either be the plain text address that will be converted into latitude /longitude or directly the latitude / longitude coordinates if the user wants to send a specific location.',
@@ -41,7 +41,7 @@ const LocationMessageInput = {
   region: ConversationRegionOverride,
 };
 
-type LocationMessageInputSchema = z.infer<z.ZodObject<typeof LocationMessageInput>>;
+type LocationMessage = z.infer<z.ZodObject<typeof LocationMessageSchema>>;
 
 const TOOL_KEY: ConversationToolKey = 'sendLocationMessage';
 const TOOL_NAME = getToolName(TOOL_KEY);
@@ -55,8 +55,8 @@ export const registerSendLocationMessage = (
   server.registerTool(
     TOOL_NAME,
     {
-      description:'Send a location message from an address given in parameter to a contact on the specified channel. The contact can be a phone number in E.164 format, or the identifier for the specified channel.',
-      inputSchema: LocationMessageInput,
+      description: 'Send a location message from an address given in parameter to a contact on the specified channel. The contact can be a phone number in E.164 format, or the identifier for the specified channel.',
+      inputSchema: LocationMessageSchema,
     },
     sendLocationMessageHandler,
   );
@@ -69,7 +69,7 @@ export const sendLocationMessageHandler = async ({
   appId,
   sender,
   region,
-}: LocationMessageInputSchema): Promise<IPromptResponse> => {
+}: LocationMessage): Promise<IPromptResponse> => {
   const maybeAppId = getConversationAppId(appId);
   if (isPromptResponse(maybeAppId)) {
     return maybeAppId.promptResponse;

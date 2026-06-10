@@ -12,7 +12,7 @@ const eventTypes = [
 
 type EventType = (typeof eventTypes)[number];
 
-const ListEmailEventsInput = {
+const ListEmailEventsSchema = {
   domain: z.string().optional().describe('(Optional) The Mailgun domain to fetch events for.'),
   event: z.enum(eventTypes).optional().describe('(Optional) Filter by event type (e.g., delivered, opened, failed).'),
   limit: z.number().int().min(1).max(300).optional().describe('(Optional) Number of events to return (max: 300).'),
@@ -20,7 +20,7 @@ const ListEmailEventsInput = {
   endSearchPeriod: z.string().datetime().optional().describe('(Optional) The end of the search time range in ISO 8601 format (e.g., 2025-01-01T00:00:00Z).'),
 };
 
-type ListEmailEventsInputSchema = z.infer<z.ZodObject<typeof ListEmailEventsInput>>;
+type ListEmailEvents = z.infer<z.ZodObject<typeof ListEmailEventsSchema>>;
 
 const TOOL_KEY: EmailToolKey = 'listEmailEvents';
 const TOOL_NAME = getToolName(TOOL_KEY);
@@ -32,7 +32,7 @@ export const registerListEmailEvents = (server: McpServer, tags: Tags[]) => {
     TOOL_NAME,
     {
       description: 'Get a list of email events from Mailgun for a specific domain. You can filter by event type and limit the number of results.',
-      inputSchema: ListEmailEventsInput,
+      inputSchema: ListEmailEventsSchema,
     },
     listEmailEventsHandler
   );
@@ -44,7 +44,7 @@ export const listEmailEventsHandler = async ({
   limit,
   beginSearchPeriod,
   endSearchPeriod
-}: ListEmailEventsInputSchema): Promise<IPromptResponse> => {
+}: ListEmailEvents): Promise<IPromptResponse> => {
   const maybeCredentials = getMailgunCredentials(domain);
   if (isPromptResponse(maybeCredentials)) {
     return maybeCredentials.promptResponse;

@@ -14,7 +14,7 @@ import {
   ConversationRegionOverride,
 } from './prompt-schemas';
 
-const SetRcsChannelOnAppInput = {
+const SetRcsChannelOnAppSchema = {
   appId: ConversationAppId,
   senderId: z.string()
     .describe('RCS sender ID.'),
@@ -23,7 +23,7 @@ const SetRcsChannelOnAppInput = {
   region: ConversationRegionOverride,
 };
 
-type SetRcsChannelOnAppInputSchema = z.infer<z.ZodObject<typeof SetRcsChannelOnAppInput>>;
+type SetRcsChannelOnApp = z.infer<z.ZodObject<typeof SetRcsChannelOnAppSchema>>;
 
 const TOOL_KEY: ConversationToolKey = 'setRcsChannelOnApp';
 const TOOL_NAME = getToolName(TOOL_KEY);
@@ -35,7 +35,7 @@ export const registerSetRcsChannelOnApp = (server: McpServer, tags: Tags[]) => {
     TOOL_NAME,
     {
       description: 'Set (create or replace) the RCS channel on a Conversation API app. Requires the RCS sender ID and bearer token. For vague requests such as "add messaging", ask whether the user means SMS, RCS, or WhatsApp and collect the required credentials before calling a tool.',
-      inputSchema: SetRcsChannelOnAppInput,
+      inputSchema: SetRcsChannelOnAppSchema,
     },
     setRcsChannelOnAppHandler,
   );
@@ -46,7 +46,7 @@ export const setRcsChannelOnAppHandler = async ({
   senderId,
   bearerToken,
   region,
-}: SetRcsChannelOnAppInputSchema): Promise<IPromptResponse> => {
+}: SetRcsChannelOnApp): Promise<IPromptResponse> => {
   const maybeService = getConversationService(TOOL_NAME);
   if (isPromptResponse(maybeService)) {
     return maybeService.promptResponse;

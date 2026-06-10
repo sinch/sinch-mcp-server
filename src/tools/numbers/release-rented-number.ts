@@ -5,13 +5,13 @@ import { isPromptResponse, matchesAnyTag } from '../../utils';
 import { getToolName, NumbersToolKey, toolsConfig } from './utils/numbers-tools-helper';
 import { getNumbersService } from './utils/numbers-service-helper';
 
-const ReleaseRentedNumberInput = {
+const ReleaseRentedNumberSchema = {
   phoneNumber: z
     .string()
     .describe('The phone number in E.164 format with leading `+`'),
 };
 
-type ReleaseRentedNumberInputSchema = z.infer<z.ZodObject<typeof ReleaseRentedNumberInput>>;
+type ReleaseRentedNumber = z.infer<z.ZodObject<typeof ReleaseRentedNumberSchema>>;
 
 const TOOL_KEY: NumbersToolKey = 'releaseRentedNumber';
 const TOOL_NAME = getToolName(TOOL_KEY);
@@ -23,7 +23,7 @@ export const registerReleaseRentedNumber = (server: McpServer, tags: Tags[]) => 
     TOOL_NAME,
     {
       description: 'Releases a rented phone number from your project.',
-      inputSchema: ReleaseRentedNumberInput,
+      inputSchema: ReleaseRentedNumberSchema,
     },
     releaseRentedNumberHandler
   );
@@ -31,7 +31,7 @@ export const registerReleaseRentedNumber = (server: McpServer, tags: Tags[]) => 
 
 export const releaseRentedNumberHandler = async ({
   phoneNumber,
-}: ReleaseRentedNumberInputSchema) => {
+}: ReleaseRentedNumber) => {
   const maybeService = getNumbersService(TOOL_NAME);
   if (isPromptResponse(maybeService)) {
     return maybeService.promptResponse;

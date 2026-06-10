@@ -14,7 +14,7 @@ import {
   ConversationRegionOverride,
 } from './prompt-schemas';
 
-const SetWhatsAppChannelOnAppInput = {
+const SetWhatsAppChannelOnAppSchema = {
   appId: ConversationAppId,
   senderId: z.string()
     .describe('WhatsApp sender ID.'),
@@ -23,7 +23,7 @@ const SetWhatsAppChannelOnAppInput = {
   region: ConversationRegionOverride,
 };
 
-type SetWhatsAppChannelOnAppInputSchema = z.infer<z.ZodObject<typeof SetWhatsAppChannelOnAppInput>>;
+type SetWhatsAppChannelOnApp = z.infer<z.ZodObject<typeof SetWhatsAppChannelOnAppSchema>>;
 
 const TOOL_KEY: ConversationToolKey = 'setWhatsAppChannelOnApp';
 const TOOL_NAME = getToolName(TOOL_KEY);
@@ -35,7 +35,7 @@ export const registerSetWhatsAppChannelOnApp = (server: McpServer, tags: Tags[])
     TOOL_NAME,
     {
       description: 'Set (create or replace) the WhatsApp channel on a Conversation API app. Requires the WhatsApp sender ID and bearer token. For vague requests such as "add messaging", ask whether the user means SMS, RCS, or WhatsApp and collect the required credentials before calling a tool.',
-      inputSchema: SetWhatsAppChannelOnAppInput,
+      inputSchema: SetWhatsAppChannelOnAppSchema,
     },
     setWhatsAppChannelOnAppHandler,
   );
@@ -46,7 +46,7 @@ export const setWhatsAppChannelOnAppHandler = async ({
   senderId,
   bearerToken,
   region,
-}: SetWhatsAppChannelOnAppInputSchema): Promise<IPromptResponse> => {
+}: SetWhatsAppChannelOnApp): Promise<IPromptResponse> => {
   const maybeService = getConversationService(TOOL_NAME);
   if (isPromptResponse(maybeService)) {
     return maybeService.promptResponse;

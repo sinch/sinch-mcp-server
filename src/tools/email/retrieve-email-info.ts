@@ -18,12 +18,12 @@ interface Event {
   };
 }
 
-const RetrieveEmailInfoInput = {
+const RetrieveEmailInfoSchema = {
   emailId: z.string().describe('The email ID.'),
   domain: z.string().optional().describe('The domain to use for retrieving the email. If defined, it will override the domain provided in the environment variable "MAILGUN_DOMAIN".'),
 };
 
-type RetrieveEmailInfoInputSchema = z.infer<z.ZodObject<typeof RetrieveEmailInfoInput>>;
+type RetrieveEmailInfo = z.infer<z.ZodObject<typeof RetrieveEmailInfoSchema>>;
 
 const TOOL_KEY: EmailToolKey = 'retrieveEmailInfo';
 const TOOL_NAME = getToolName(TOOL_KEY);
@@ -35,7 +35,7 @@ export const registerRetrieveEmailInfo = (server: McpServer, tags: Tags[]) => {
     TOOL_NAME,
     {
       description: 'Retrieve the content of an email and the events that happened thanks to its ID',
-      inputSchema: RetrieveEmailInfoInput,
+      inputSchema: RetrieveEmailInfoSchema,
     },
     retrieveEmailInfoHandler
   );
@@ -44,7 +44,7 @@ export const registerRetrieveEmailInfo = (server: McpServer, tags: Tags[]) => {
 export const retrieveEmailInfoHandler = async({
   emailId,
   domain
-}: RetrieveEmailInfoInputSchema): Promise<IPromptResponse> => {
+}: RetrieveEmailInfo): Promise<IPromptResponse> => {
   const maybeCredentials = getMailgunCredentials(domain);
   if (isPromptResponse(maybeCredentials)) {
     return maybeCredentials.promptResponse;

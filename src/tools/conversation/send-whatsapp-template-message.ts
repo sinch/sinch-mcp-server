@@ -17,7 +17,7 @@ import {
   ConversationRegionOverride,
 } from './prompt-schemas';
 
-const SendWhatsAppTemplateMessageInput = {
+const SendWhatsAppTemplateMessageSchema = {
   recipient: Recipient,
   templateName: z.string()
     .describe('The name of the template to use for sending the message on WhatsApp specifically.'),
@@ -31,7 +31,7 @@ const SendWhatsAppTemplateMessageInput = {
   metadata: z.string().optional().describe('Custom data to send along with the message (e.g. correlation IDs, appointment IDs, etc.)'),
 };
 
-type SendWhatsAppTemplateMessageInputSchema = z.infer<z.ZodObject<typeof SendWhatsAppTemplateMessageInput>>;
+type SendWhatsAppTemplateMessage = z.infer<z.ZodObject<typeof SendWhatsAppTemplateMessageSchema>>;
 
 const TOOL_KEY: ConversationToolKey = 'sendWhatsAppTemplateMessage';
 const TOOL_NAME = getToolName(TOOL_KEY);
@@ -43,7 +43,7 @@ export const registerSendWhatsAppTemplateMessage = (server: McpServer, tags: Tag
     TOOL_NAME,
     {
       description: 'Send a template message to a contact (phone number in E.164 format) on the WhatsApp channel.',
-      inputSchema: SendWhatsAppTemplateMessageInput,
+      inputSchema: SendWhatsAppTemplateMessageSchema,
     },
     sendTemplateMessageHandler
   );
@@ -58,7 +58,7 @@ export const sendTemplateMessageHandler = async ({
   sender,
   region,
   metadata,
-}: SendWhatsAppTemplateMessageInputSchema): Promise<IPromptResponse> => {
+}: SendWhatsAppTemplateMessage): Promise<IPromptResponse> => {
   const maybeAppId = getConversationAppId(appId);
   if (isPromptResponse(maybeAppId)) {
     return maybeAppId.promptResponse;

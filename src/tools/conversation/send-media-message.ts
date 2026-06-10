@@ -12,7 +12,7 @@ import { isPromptResponse, matchesAnyTag } from '../../utils';
 import { buildMessageBase } from './utils/send-message-builder';
 import { IPromptResponse, PromptResponse, Tags } from '../../types';
 
-const SendMediaMessageInput = {
+const SendMediaMessageSchema = {
   recipient: Recipient,
   url: z.string().describe('The URL of the media that will be the content of the message.'),
   channel: ConversationChannel,
@@ -21,7 +21,7 @@ const SendMediaMessageInput = {
   region: ConversationRegionOverride,
 };
 
-type SendMediaMessageInputSchema = z.infer<z.ZodObject<typeof SendMediaMessageInput>>;
+type SendMediaMessage = z.infer<z.ZodObject<typeof SendMediaMessageSchema>>;
 
 const TOOL_KEY: ConversationToolKey = 'sendMediaMessage';
 const TOOL_NAME = getToolName(TOOL_KEY);
@@ -33,7 +33,7 @@ export const registerSendMediaMessage = (server: McpServer, tags: Tags[]) => {
     TOOL_NAME,
     {
       description: 'Send a media message from URL given in parameter to a contact on the specified channel. The contact can be a phone number in E.164 format, or the identifier for the specified channel. The media must be specified with its URL.',
-      inputSchema: SendMediaMessageInput,
+      inputSchema: SendMediaMessageSchema,
     },
     sendMediaMessageHandler
   );
@@ -46,7 +46,7 @@ export const sendMediaMessageHandler = async({
   appId,
   sender,
   region
-}: SendMediaMessageInputSchema): Promise<IPromptResponse> => {
+}: SendMediaMessage): Promise<IPromptResponse> => {
   const maybeAppId = getConversationAppId(appId);
   if (isPromptResponse(maybeAppId)) {
     return maybeAppId.promptResponse;

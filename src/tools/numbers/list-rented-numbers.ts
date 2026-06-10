@@ -5,7 +5,7 @@ import { formatUserAgent, matchesAnyTag } from '../../utils';
 import { getToolName, NumbersToolKey, toolsConfig } from './utils/numbers-tools-helper';
 import { Numbers } from '@sinch/numbers';
 
-const ListRentedNumbersInput = {
+const ListRentedNumbersSchema = {
   regionCode: z.string().optional().describe('Region code to filter by. ISO 3166-1 alpha-2 country code of the phone number. Example: US, GB or SE.'),
   type: z.enum(['MOBILE', 'LOCAL', 'TOLL_FREE']).optional().describe('Number type to filter by. Options include, MOBILE, LOCAL or TOLL_FREE.'),
   searchPattern: z.string().optional().describe('Sequence of digits to search for. If you prefer or need certain digits in sequential order, you can enter the sequence of numbers here. For example, `2020`.'),
@@ -14,7 +14,7 @@ const ListRentedNumbersInput = {
   size: z.number().optional().describe('Maximum number of phone numbers to return.'),
 };
 
-type ListRentedNumbersInputSchema = z.infer<z.ZodObject<typeof ListRentedNumbersInput>>;
+type ListRentedNumbers = z.infer<z.ZodObject<typeof ListRentedNumbersSchema>>;
 
 const TOOL_KEY: NumbersToolKey = 'listRentedNumbers';
 const TOOL_NAME = getToolName(TOOL_KEY);
@@ -26,14 +26,14 @@ export const registerListRentedNumbers = (server: McpServer, tags: Tags[]) => {
     TOOL_NAME,
     {
       description: 'Lists all active numbers for a project.',
-      inputSchema: ListRentedNumbersInput,
+      inputSchema: ListRentedNumbersSchema,
     },
     listRentedNumbersHandler
   );
 }
 
 export const listRentedNumbersHandler = async (
-  { regionCode, type, searchPattern, patternPosition, capability, size }: ListRentedNumbersInputSchema
+  { regionCode, type, searchPattern, patternPosition, capability, size }: ListRentedNumbers
 ) => {
   const projectId = process.env.PROJECT_ID;
   const keyId     = process.env.KEY_ID;

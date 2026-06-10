@@ -5,11 +5,11 @@ import { IPromptResponse, PromptResponse, Tags } from '../../types';
 import { getToolName, VerificationToolKey, verificationToolsConfig } from './utils/verification-tools-helper';
 import { getNumberLookupService } from './utils/number-lookup-service-helper';
 
-const NumberLookupInput = {
+const NumberLookupSchema = {
   phoneNumber: z.string().describe('Phone number in E.164 format to look up'),
 };
 
-type NumberLookupInputSchema = z.infer<z.ZodObject<typeof NumberLookupInput>>;
+type NumberLookup = z.infer<z.ZodObject<typeof NumberLookupSchema>>;
 
 const TOOL_KEY: VerificationToolKey = 'numberLookup';
 const TOOL_NAME = getToolName(TOOL_KEY);
@@ -21,14 +21,14 @@ export const registerNumberLookup = (server: McpServer, tags: Tags[]) => {
     TOOL_NAME,
     {
       description: 'With quick and easy access to Number Lookup, you can enhance your communications and keep your database as clean as a whistle. Number Lookup checks against first-party numbering sources and provides real-time feedback. Test numbers to ensure your recipients are ready and waiting to receive your messages!',
-      inputSchema: NumberLookupInput,
+      inputSchema: NumberLookupSchema,
     },
     numberLookupHandler
   );
 };
 
 export const numberLookupHandler = async (
-  { phoneNumber }: NumberLookupInputSchema
+  { phoneNumber }: NumberLookup
 ): Promise<IPromptResponse> => {
 
   const maybeService = getNumberLookupService(TOOL_NAME);

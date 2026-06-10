@@ -7,12 +7,12 @@ import { getToolName, VoiceToolKey, voiceToolsConfig } from './utils/voice-tools
 import { isPromptResponse, matchesAnyTag } from '../../utils';
 import { IPromptResponse, PromptResponse, Tags } from '../../types';
 
-const ConferenceCalloutInput = {
+const ConferenceCalloutSchema = {
   phoneNumbers: z.array(z.string()).describe('The phone numbers to call and connect to the conference room'),
   conferenceId: z.string().optional().describe('The conference room ID. If not provided, a new one will be generated.'),
 };
 
-type ConferenceCalloutInputSchema = z.infer<z.ZodObject<typeof ConferenceCalloutInput>>;
+type ConferenceCallout = z.infer<z.ZodObject<typeof ConferenceCalloutSchema>>;
 
 const TOOL_KEY: VoiceToolKey = 'conferenceCallout';
 const TOOL_NAME = getToolName(TOOL_KEY);
@@ -24,7 +24,7 @@ export const registerConferenceCallout = (server: McpServer, tags: Tags[]) => {
     TOOL_NAME,
     {
       description: 'Call a phone number and connects it to a conference room when answered',
-      inputSchema: ConferenceCalloutInput,
+      inputSchema: ConferenceCalloutSchema,
     },
     conferenceCalloutHandler
   );
@@ -33,7 +33,7 @@ export const registerConferenceCallout = (server: McpServer, tags: Tags[]) => {
 export const conferenceCalloutHandler = async ({
   phoneNumbers,
   conferenceId
-}: ConferenceCalloutInputSchema): Promise<IPromptResponse> => {
+}: ConferenceCallout): Promise<IPromptResponse> => {
   const maybeService = getVoiceService(TOOL_NAME);
   if (isPromptResponse(maybeService)) {
     return maybeService.promptResponse;

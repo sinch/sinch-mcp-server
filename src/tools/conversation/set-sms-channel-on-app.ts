@@ -14,7 +14,7 @@ import {
   ConversationRegionOverride,
 } from './prompt-schemas';
 
-const SetSmsChannelOnAppInput = {
+const SetSmsChannelOnAppSchema = {
   appId: ConversationAppId,
   servicePlanId: z.string()
     .describe('Sinch SMS service plan ID.'),
@@ -23,7 +23,7 @@ const SetSmsChannelOnAppInput = {
   region: ConversationRegionOverride,
 };
 
-type SetSmsChannelOnAppInputSchema = z.infer<z.ZodObject<typeof SetSmsChannelOnAppInput>>;
+type SetSmsChannelOnApp = z.infer<z.ZodObject<typeof SetSmsChannelOnAppSchema>>;
 
 const TOOL_KEY: ConversationToolKey = 'setSmsChannelOnApp';
 const TOOL_NAME = getToolName(TOOL_KEY);
@@ -35,7 +35,7 @@ export const registerSetSmsChannelOnApp = (server: McpServer, tags: Tags[]) => {
     TOOL_NAME,
     {
       description: 'Set (create or replace) the SMS channel on a Conversation API app. Requires the SMS service plan ID and API token. The app must be in the same region as the SMS service plan. For vague requests such as "add messaging", ask whether the user means SMS, RCS, or WhatsApp and collect the required credentials before calling a tool.',
-      inputSchema: SetSmsChannelOnAppInput,
+      inputSchema: SetSmsChannelOnAppSchema,
     },
     setSmsChannelOnAppHandler,
   );
@@ -46,7 +46,7 @@ export const setSmsChannelOnAppHandler = async ({
   servicePlanId,
   apiToken,
   region,
-}: SetSmsChannelOnAppInputSchema): Promise<IPromptResponse> => {
+}: SetSmsChannelOnApp): Promise<IPromptResponse> => {
   const maybeService = getConversationService(TOOL_NAME);
   if (isPromptResponse(maybeService)) {
     return maybeService.promptResponse;

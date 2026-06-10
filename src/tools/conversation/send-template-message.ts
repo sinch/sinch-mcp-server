@@ -12,7 +12,7 @@ import { ConversationToolKey, getToolName, toolsConfig } from './utils/conversat
 import { buildMessageBase } from './utils/send-message-builder';
 import { Recipient, ConversationAppIdOverride, ConversationChannel, ConversationRegionOverride, MessageSenderNumberOverride } from './prompt-schemas';
 
-const SendTemplateMessageInput = {
+const SendTemplateMessageSchema = {
   recipient: Recipient,
   templateId: z.string()
     .describe('The ID (ULID format) of the omni-template template to use for sending the message.'),
@@ -26,7 +26,7 @@ const SendTemplateMessageInput = {
   region: ConversationRegionOverride,
 };
 
-type SendTemplateMessageInputSchema = z.infer<z.ZodObject<typeof SendTemplateMessageInput>>;
+type SendTemplateMessage = z.infer<z.ZodObject<typeof SendTemplateMessageSchema>>;
 
 const TOOL_KEY: ConversationToolKey = 'sendTemplateMessage';
 const TOOL_NAME = getToolName(TOOL_KEY);
@@ -38,7 +38,7 @@ export const registerSendTemplateMessage = (server: McpServer, tags: Tags[]) => 
     TOOL_NAME,
     {
       description: 'Send a template message to a contact on the specified channel. The contact can be a phone number in E.164 format, or the identifier for the specified channel.',
-      inputSchema: SendTemplateMessageInput,
+      inputSchema: SendTemplateMessageSchema,
     },
     sendTemplateMessageHandler
   );
@@ -53,7 +53,7 @@ export const sendTemplateMessageHandler = async ({
   appId,
   sender,
   region
-}: SendTemplateMessageInputSchema): Promise<IPromptResponse> => {
+}: SendTemplateMessage): Promise<IPromptResponse> => {
   const maybeAppId = getConversationAppId(appId);
   if (isPromptResponse(maybeAppId)) {
     return maybeAppId.promptResponse;

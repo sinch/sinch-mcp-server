@@ -6,7 +6,7 @@ import { IPromptResponse, PromptResponse, Tags } from '../../types';
 import { getMailgunCredentials } from './utils/mailgun-service-helper';
 import { EmailToolKey, getToolName, sha256, toolsConfig } from './utils/mailgun-tools-helper';
 
-const SendEmailInput = {
+const SendEmailSchema = {
   recipient: z.string().describe('The recipient of the email.'),
   subject: z.string().describe('The subject of the email.'),
   sender: z.string().optional().describe('The sender of the email.'),
@@ -16,7 +16,7 @@ const SendEmailInput = {
   domain: z.string().optional().describe('The domain to use for sending the email. It would override the domain provided in the environment variables.'),
 };
 
-type SendEmailInputSchema = z.infer<z.ZodObject<typeof SendEmailInput>>;
+type SendEmail = z.infer<z.ZodObject<typeof SendEmailSchema>>;
 
 const TOOL_KEY: EmailToolKey = 'sendEmail';
 const TOOL_NAME = getToolName(TOOL_KEY);
@@ -28,7 +28,7 @@ export const registerSendEmail = (server: McpServer, tags: Tags[]) => {
     TOOL_NAME,
     {
       description: 'Send an email to a recipient with a subject and body.',
-      inputSchema: SendEmailInput,
+      inputSchema: SendEmailSchema,
     },
     sendEmailHandler
   );
@@ -42,7 +42,7 @@ export const sendEmailHandler = async ({
   template,
   templateVariables,
   domain
-}: SendEmailInputSchema): Promise<IPromptResponse> => {
+}: SendEmail): Promise<IPromptResponse> => {
   const maybeCredentials = getMailgunCredentials(domain);
   if (isPromptResponse(maybeCredentials)) {
     return maybeCredentials.promptResponse;

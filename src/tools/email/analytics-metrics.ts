@@ -60,14 +60,14 @@ const metricsTypes = [
 
 type MetricsType = (typeof metricsTypes)[number];
 
-const AnalyticsMetricsInput = {
+const AnalyticsMetricsSchema = {
   domain: z.string().optional().describe('(Optional) The Mailgun domain to fetch metrics for.'),
   metrics: z.array(z.enum(metricsTypes)).optional().describe('(Optional) The specific metrics to receive the stats for. If not provided, all metrics will be returned.'),
   beginSearchPeriod: z.string().optional().describe('(Optional) The beginning of the search time range in RFC-2822 format (e.g., Mon, 02 Jun 2025 00:00:00 +0100).'),
   endSearchPeriod: z.string().optional().describe('(Optional) The end of the search time range in RFC-2822 format (e.g., Mon, 09 Jun 2025 00:00:00 +0100).'),
 }
 
-type AnalyticsMetricsInputSchema = z.infer<z.ZodObject<typeof AnalyticsMetricsInput>>;
+type AnalyticsMetrics = z.infer<z.ZodObject<typeof AnalyticsMetricsSchema>>;
 
 const TOOL_KEY: EmailToolKey = 'analyticsMetrics';
 const TOOL_NAME = getToolName(TOOL_KEY);
@@ -79,7 +79,7 @@ export const registerAnalyticsMetrics = (server: McpServer, tags: Tags[]) => {
     TOOL_NAME,
     {
       description: 'Get email analytics metrics from Mailgun for an account. All parameters are optional. You can filter by domain, metrics type and specify a time range. By default, it will return all metrics for all your domains for the last 7 days.',
-      inputSchema: AnalyticsMetricsInput,
+      inputSchema: AnalyticsMetricsSchema,
     },
     analyticsMetricsHandler
   );
@@ -90,7 +90,7 @@ export const analyticsMetricsHandler = async ({
   metrics,
   beginSearchPeriod,
   endSearchPeriod
-}: AnalyticsMetricsInputSchema): Promise<IPromptResponse> => {
+}: AnalyticsMetrics): Promise<IPromptResponse> => {
   const maybeApiKey = getMailgunApiKey();
   if (typeof maybeApiKey !== 'string') {
     return maybeApiKey.promptResponse;

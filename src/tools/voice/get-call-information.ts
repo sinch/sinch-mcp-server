@@ -5,11 +5,11 @@ import { IPromptResponse, PromptResponse, Tags } from '../../types';
 import { getVoiceService } from './utils/voice-service-helper';
 import { isPromptResponse, matchesAnyTag } from '../../utils';
 
-const GetCallInformationInput = {
+const GetCallInformationSchema = {
   callId: z.string().describe('The call ID to get information about'),
 };
 
-type GetCallInformationInputSchema = z.infer<z.ZodObject<typeof GetCallInformationInput>>;
+type GetCallInformation = z.infer<z.ZodObject<typeof GetCallInformationSchema>>;
 
 const TOOL_KEY: VoiceToolKey = 'getCallInformation';
 const TOOL_NAME = getToolName(TOOL_KEY);
@@ -21,13 +21,13 @@ export const registerGetCallInformation = (server: McpServer, tags: Tags[]) => {
     TOOL_NAME,
     {
       description: 'Get information about a call using its ID',
-      inputSchema: GetCallInformationInput,
+      inputSchema: GetCallInformationSchema,
     },
     getCallInformationHandler
   );
 };
 
-export const getCallInformationHandler = async ({ callId }: GetCallInformationInputSchema): Promise<IPromptResponse> => {
+export const getCallInformationHandler = async ({ callId }: GetCallInformation): Promise<IPromptResponse> => {
   const maybeService = getVoiceService(TOOL_NAME);
   if (isPromptResponse(maybeService)) {
     return maybeService.promptResponse;

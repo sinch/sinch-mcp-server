@@ -19,7 +19,7 @@ import {
 } from './prompt-schemas';
 import { IPromptResponse, PromptResponse, Tags } from '../../types';
 
-const SendTextMessageInput = {
+const SendTextMessageSchema = {
   recipient: Recipient,
   message: TextMessage,
   channel: ConversationChannel,
@@ -28,7 +28,7 @@ const SendTextMessageInput = {
   region: ConversationRegionOverride,
 };
 
-type SendTextMessageInputSchema = z.infer<z.ZodObject<typeof SendTextMessageInput>>;
+type SendTextMessage = z.infer<z.ZodObject<typeof SendTextMessageSchema>>;
 
 const TOOL_KEY: ConversationToolKey = 'sendTextMessage';
 const TOOL_NAME = getToolName(TOOL_KEY);
@@ -40,7 +40,7 @@ export const registerSendTextMessage = (server: McpServer, tags: Tags[]) => {
     TOOL_NAME,
     {
       description: 'Send a text message to a contact on the specified channel. The contact can be a phone number in E.164 format, or the identifier for the specified channel.',
-      inputSchema: SendTextMessageInput,
+      inputSchema: SendTextMessageSchema,
     },
     sendTextMessageHandler
   );
@@ -53,7 +53,7 @@ export const sendTextMessageHandler = async({
   appId,
   sender,
   region,
-}: SendTextMessageInputSchema): Promise<IPromptResponse> => {
+}: SendTextMessage): Promise<IPromptResponse> => {
   const maybeAppId = getConversationAppId(appId);
   if (isPromptResponse(maybeAppId)) {
     return maybeAppId.promptResponse;

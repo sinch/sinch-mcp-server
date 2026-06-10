@@ -5,11 +5,11 @@ import { getToolName, VerificationToolKey, verificationToolsConfig } from './uti
 import { isPromptResponse, matchesAnyTag } from '../../utils';
 import { IPromptResponse, PromptResponse, Tags } from '../../types';
 
-const StartSmsVerificationInput = {
+const StartSmsVerificationSchema = {
   phoneNumber: z.string().describe('Phone number in E.164 format to send the SMS to'),
 };
 
-type StartSmsVerificationInputSchema = z.infer<z.ZodObject<typeof StartSmsVerificationInput>>;
+type StartSmsVerification = z.infer<z.ZodObject<typeof StartSmsVerificationSchema>>;
 
 const TOOL_KEY: VerificationToolKey = 'startSmsVerification';
 const TOOL_NAME = getToolName(TOOL_KEY);
@@ -21,14 +21,14 @@ export const registerStartVerificationWithSms = (server: McpServer, tags: Tags[]
     TOOL_NAME,
     {
       description: 'Start new phone number verification requests. If the request is successful, you should ask the user to enter the OTP they received on the phone number we are verifying.',
-      inputSchema: StartSmsVerificationInput,
+      inputSchema: StartSmsVerificationSchema,
     },
     startSmsVerificationHandler
   );
 };
 
 export const startSmsVerificationHandler = async (
-  { phoneNumber }: StartSmsVerificationInputSchema
+  { phoneNumber }: StartSmsVerification
 ): Promise<IPromptResponse> => {
   try {
     const maybeService = getVerificationService(TOOL_NAME);
