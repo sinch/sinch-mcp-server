@@ -1,4 +1,5 @@
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
+import { registerTracedTool } from '../../telemetry/register-traced-tool';
 import { Conversation } from '@sinch/conversation';
 import { z } from 'zod';
 import {
@@ -38,7 +39,7 @@ export const registerSendTextMessage = (server: McpServer, tags: Tags[]) => {
     return;
   }
 
-  server.registerTool(
+  registerTracedTool(server,
     TOOL_NAME,
     {
       description:

@@ -1,4 +1,5 @@
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
+import { registerTracedTool } from '../../telemetry/register-traced-tool';
 import { z } from 'zod';
 import { getToolName, VoiceToolKey, voiceToolsConfig } from './utils/voice-tools-helper';
 import { IPromptResponse, PromptResponse, Tags } from '../../types';
@@ -19,7 +20,7 @@ export const registerGetCallInformation = (server: McpServer, tags: Tags[]) => {
     return;
   }
 
-  server.registerTool(
+  registerTracedTool(server,
     TOOL_NAME,
     {
       description: 'Get information about a call using its ID',

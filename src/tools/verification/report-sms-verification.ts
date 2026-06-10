@@ -1,4 +1,5 @@
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
+import { registerTracedTool } from '../../telemetry/register-traced-tool';
 import { z } from 'zod';
 import { getVerificationService } from './utils/verification-service-helper';
 import { getToolName, VerificationToolKey, verificationToolsConfig } from './utils/verification-tools-helper';
@@ -20,7 +21,7 @@ export const registerReportSmsVerification = (server: McpServer, tags: Tags[]) =
     return;
   }
 
-  server.registerTool(
+  registerTracedTool(server,
     TOOL_NAME,
     {
       description: 'Report the received verification code to verify it, using the phone number of the user',
