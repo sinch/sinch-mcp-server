@@ -296,54 +296,6 @@ You can then configure the MCP server in the Claude configuration file as follow
 (Replace the `http://localhost:8000/sse` with the URL of your MCP server if it is not running locally)
 
 
-## Contributing: GitHub Actions security
+## Contributing
 
-GitHub Action version tags such as `@v4` are **mutable**: a maintainer (or an attacker with write access to the action repository) can repoint the tag to a different commit without any change in this repository. On the next workflow run, your CI would execute different code — potentially malicious — with access to secrets, runner memory, and the ability to modify build artifacts.
-
-Pinning actions to a **full-length commit SHA** is the only way to use them as an immutable release, as [documented by GitHub](https://docs.github.com/en/actions/security-for-github-actions/security-guides/security-hardening-for-github-actions#using-third-party-actions). This repository enforces that policy: every `uses:` reference in `.github/workflows/` must include a 40-character SHA and a version comment (for example, `actions/checkout@<sha> # v4.3.1`). The [pinact](https://github.com/suzuki-shunsuke/pinact) workflow (`.github/workflows/pinact.yml`) validates this on every pull request.
-
-### Why this matters: March 2025 supply chain attacks
-
-In March 2025, a chain of GitHub Actions supply chain attacks exposed CI/CD secrets across tens of thousands of repositories:
-
-1. **[reviewdog/action-setup@v1](https://github.com/reviewdog/reviewdog/issues/2079)** (CVE-2025-30154): attackers overwrote the `v1` tag with a malicious commit that dumped runner secrets into workflow logs.
-2. **[tj-actions/changed-files](https://github.com/tj-actions/changed-files/security/advisories/GHSA-mw4p-6x4p-x5m5)** (CVE-2025-30066): the same technique at massive scale — **over 23,000 repositories** affected. Multiple version tags were retroactively repointed to a single malicious commit (`0e58ed8671d6b60d0890c21b07f8835ace038e67`). A Python script scanned the `Runner.Worker` process memory, double-base64-encoded secrets, and printed them in publicly accessible build logs.
-
-Repositories that pinned actions by SHA instead of tag were **not affected**. Further analysis: [Wiz Research](https://www.wiz.io/blog/new-github-action-supply-chain-attack-reviewdog-action-setup), [StepSecurity](https://www.stepsecurity.io/blog/harden-runner-detection-tj-actions-changed-files-action-is-compromised), [Palo Alto Unit 42](https://unit42.paloaltonetworks.com/github-actions-supply-chain-attack/), [Snyk](https://snyk.io/blog/reconstructing-tj-actions-changed-files-github-actions-compromise/).
-
-### Adding or updating actions
-
-When you add a new third-party action to a workflow, pin it before opening a pull request:
-
-```bash
-# Install pinact: https://github.com/suzuki-shunsuke/pinact#installation
-pinact run .github/workflows/<your-workflow>.yml
-```
-
-Alternatively, look up the release SHA on GitHub and add it manually with a version comment.
-
-
-## Contributing: Defining new tools
-
-### Updating dependencies
-
-Dependencies are pinned to **exact versions** in `package.json` (no `^` ranges). To upgrade a package:
-
-1. Set the new version in `package.json` for the package you want to bump.
-2. Run `npm install` and commit both `package.json` and `package-lock.json`.
-3. Run `npm run lint`, `npm run build`, and `npm test` locally (or rely on CI after opening a PR).
-4. Prefer `npm ci` in CI and clean environments so installs match the lockfile.
-
-When bumping `@modelcontextprotocol/sdk` or `zod`, test the server startup and your transport path (stdio, SSE, or Streamable HTTP) — some version combinations have been problematic in the past.
-
-Tools are registered in the `src/index.ts` file.
-- Conversation tools: send various types of messages, list conversation apps, templates
-- Verification tools: lookup for a number, perform a verification flow
-- Voice tools: make a TTS call, create a conference call, manage participants
-- Email tools: send emails, retrieve email information
-
-Tools are defined under `src/tools/` and are registered in the `index.ts` file of their respective domain folder.
-- Conversation tools: `src/tools/conversation/index.ts`
-- Verification tools: `src/tools/verification/index.ts`
-- Voice tools: `src/tools/voice/index.ts`
-- Email tools: `src/tools/email/index.ts`
+See [CONTRIBUTING.md](CONTRIBUTING.md) for contributor guidelines, including how to add new tools and pin GitHub Actions.
