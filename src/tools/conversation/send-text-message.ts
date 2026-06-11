@@ -1,4 +1,5 @@
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
+import { registerTracedTool } from '../../telemetry/register-traced-tool';
 import { Conversation } from '@sinch/conversation';
 import { z } from 'zod';
 import {
@@ -36,7 +37,7 @@ const TOOL_NAME = getToolName(TOOL_KEY);
 export const registerSendTextMessage = (server: McpServer, tags: Tags[]) => {
   if (!matchesAnyTag(tags, toolsConfig[TOOL_KEY].tags)) return;
 
-  server.registerTool(
+  registerTracedTool(server,
     TOOL_NAME,
     {
       description: 'Send a text message to a contact on the specified channel. The contact can be a phone number in E.164 format, or the identifier for the specified channel.',

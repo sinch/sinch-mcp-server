@@ -1,4 +1,5 @@
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
+import { registerTracedTool } from '../../telemetry/register-traced-tool';
 import { isPromptResponse, matchesAnyTag } from '../../utils';
 import { formatListAllAppsResponse } from './utils/format-list-all-apps-response';
 import { getConversationService, setConversationRegion } from './utils/conversation-service-helper';
@@ -12,7 +13,7 @@ const TOOL_NAME = getToolName(TOOL_KEY);
 export const registerListAllApps = (server: McpServer, tags: Tags[]) => {
   if (!matchesAnyTag(tags, toolsConfig[TOOL_KEY].tags)) return;
 
-  server.registerTool(
+  registerTracedTool(server,
     TOOL_NAME,
     {
       description: 'Get a list of all Conversation apps in the account. Apps are created and configured in the Sinch Dashboard or with the Conversation API. The App is the entity that holds the credentials related to the various channels',

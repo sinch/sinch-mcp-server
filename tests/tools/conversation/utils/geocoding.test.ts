@@ -3,7 +3,21 @@ import { getLatitudeLongitudeFromAddress } from '../../../../src/tools/conversat
 import { mockEnv, resetMockEnv } from '../../../helpers/mock-env';
 
 jest.mock('axios');
+jest.mock('../../../../src/telemetry/logger', () => ({
+  logger: {
+    error: jest.fn(),
+    info: jest.fn(),
+    warn: jest.fn(),
+    debug: jest.fn(),
+  },
+}));
+
 const mockedAxios = axios as jest.Mocked<typeof axios>;
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+const { logger } = require('../../../../src/telemetry/logger') as {
+  logger: { error: jest.Mock };
+};
+const mockedLogger = logger;
 
 const mockAddress = 'Phare d\'Eckmühl';
 
@@ -46,7 +60,6 @@ test('returns coordinates when API responds with OK', async () => {
 
 test('returns fallback when API status is not OK', async () => {
   mockedAxios.get.mockResolvedValueOnce({ data: { results: [], status: 'ZERO_RESULTS' } });
-  const consoleSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
 
   const result = await getLatitudeLongitudeFromAddress('nowhere');
 
@@ -56,13 +69,14 @@ test('returns fallback when API status is not OK', async () => {
     formattedAddress: 'Unknown'
   });
 
-  expect(consoleSpy).toHaveBeenCalledWith('Geocoding failed:', 'ZERO_RESULTS');
-  consoleSpy.mockRestore();
+  expect(mockedLogger.error).toHaveBeenCalledWith(
+    { status: 'ZERO_RESULTS' },
+    'Geocoding failed',
+  );
 });
 
 test('returns fallback when axios throws', async () => {
   mockedAxios.get.mockRejectedValueOnce(new Error('Network error'));
-  const consoleSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
 
   const result = await getLatitudeLongitudeFromAddress('some address');
 
@@ -72,8 +86,10 @@ test('returns fallback when axios throws', async () => {
     formattedAddress: 'Unknown'
   });
 
-  expect(consoleSpy).toHaveBeenCalledWith('Request failed:', new Error('Network error'));
-  consoleSpy.mockRestore();
+  expect(mockedLogger.error).toHaveBeenCalledWith(
+    { err: expect.any(Error) },
+    'Geocoding request failed',
+  );
 });
 
 test('includes GEOCODING_API_KEY in query params', async () => {
@@ -90,7 +106,6 @@ test('includes GEOCODING_API_KEY in query params', async () => {
 
 test('returns fallback when GEOCODING_API_KEY is not set', async () => {
   mockEnv.GEOCODING_API_KEY = undefined;
-  const consoleSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
 
   const mockError = new Error('API key missing');
   mockedAxios.get.mockRejectedValueOnce(mockError);
@@ -109,6 +124,8 @@ test('returns fallback when GEOCODING_API_KEY is not set', async () => {
     })
   }));
 
-  expect(consoleSpy).toHaveBeenCalledWith('Request failed:', new Error('API key missing'));
-  consoleSpy.mockRestore();
+  expect(mockedLogger.error).toHaveBeenCalledWith(
+    { err: mockError },
+    'Geocoding request failed',
+  );
 });

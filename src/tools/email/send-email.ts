@@ -1,4 +1,5 @@
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
+import { registerTracedTool } from '../../telemetry/register-traced-tool';
 import { fetch, FormData } from 'undici';
 import { z } from 'zod';
 import { formatUserAgent, isPromptResponse, matchesAnyTag } from '../../utils';
@@ -25,7 +26,7 @@ const TOOL_NAME = getToolName(TOOL_KEY);
 export const registerSendEmail = (server: McpServer, tags: Tags[]) => {
   if (!matchesAnyTag(tags, toolsConfig[TOOL_KEY].tags)) return;
 
-  server.registerTool(
+  registerTracedTool(server,
     TOOL_NAME,
     {
       description: 'Send an email to a recipient with a subject and body.',

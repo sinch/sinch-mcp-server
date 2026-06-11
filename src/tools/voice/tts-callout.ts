@@ -1,4 +1,5 @@
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
+import { registerTracedTool } from '../../telemetry/register-traced-tool';
 import { Voice } from '@sinch/voice';
 import { z } from 'zod';
 import { getVoiceService } from './utils/voice-service-helper';
@@ -20,7 +21,7 @@ const TOOL_NAME = getToolName(TOOL_KEY);
 export const registerTtsCallout = (server: McpServer, tags: Tags[]) => {
   if (!matchesAnyTag(tags, voiceToolsConfig[TOOL_KEY].tags)) return;
 
-  server.registerTool(
+  registerTracedTool(server,
     TOOL_NAME,
     {
       description: 'Make a callout with a Text-To-Speech prompt',

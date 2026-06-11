@@ -1,4 +1,5 @@
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
+import { registerTracedTool } from '../../telemetry/register-traced-tool';
 import { Conversation } from '@sinch/conversation';
 import { z } from 'zod';
 import { Recipient, ConversationAppIdOverride, ConversationChannel, ConversationRegionOverride, MessageSenderNumberOverride } from './prompt-schemas';
@@ -29,7 +30,7 @@ const TOOL_NAME = getToolName(TOOL_KEY);
 export const registerSendMediaMessage = (server: McpServer, tags: Tags[]) => {
   if (!matchesAnyTag(tags, toolsConfig[TOOL_KEY].tags)) return;
 
-  server.registerTool(
+  registerTracedTool(server,
     TOOL_NAME,
     {
       description: 'Send a media message from URL given in parameter to a contact on the specified channel. The contact can be a phone number in E.164 format, or the identifier for the specified channel. The media must be specified with its URL.',

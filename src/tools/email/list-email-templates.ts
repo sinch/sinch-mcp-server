@@ -1,4 +1,5 @@
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
+import { registerTracedTool } from '../../telemetry/register-traced-tool';
 import { IPromptResponse, PromptResponse, Tags } from '../../types';
 import { z } from 'zod';
 import { getMailgunCredentials } from './utils/mailgun-service-helper';
@@ -17,7 +18,7 @@ const TOOL_NAME = getToolName(TOOL_KEY);
 export const registerListEmailTemplates = (server: McpServer, tags: Tags[]) => {
   if (!matchesAnyTag(tags, toolsConfig[TOOL_KEY].tags)) return;
 
-  server.registerTool(
+  registerTracedTool(server,
     TOOL_NAME,
     {
       description: 'Get a list of Email templates from Mailgun for a specific domain. Note that the Messaging templates (omni-channel or channel-specific such as WhatsApp) are NOT included in this list - they can be found with another tool: list-messaging-templates. Do not try to use this tool to list Messaging templates, it will not work.',

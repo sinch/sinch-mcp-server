@@ -1,10 +1,14 @@
-import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import './env';
+import './telemetry';
+
+import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import {
   instantiateMcpServer,
   parseArgs,
   registerCapabilities,
 } from './server';
+import { shutdownTelemetry } from './telemetry';
+import { logger } from './telemetry/logger';
 
 export const main = async () => {
   const transport = new StdioServerTransport();
@@ -13,9 +17,22 @@ export const main = async () => {
   await server.connect(transport);
 };
 
+const shutdown = async (signal: string) => {
+  logger.info(`Received ${signal}, shutting down`);
+  await shutdownTelemetry();
+  process.exit(0);
+};
+
 if (require.main === module) {
+  process.on('SIGTERM', () => {
+    void shutdown('SIGTERM');
+  });
+  process.on('SIGINT', () => {
+    void shutdown('SIGINT');
+  });
+
   main().catch((error) => {
-    console.error('Fatal error in main():', error);
+    logger.error({ err: error }, 'Fatal error in main()');
     process.exit(1);
   });
 }

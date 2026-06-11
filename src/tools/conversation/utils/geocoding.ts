@@ -1,5 +1,6 @@
 import axios from 'axios';
 import { env } from '../../../env';
+import { logger } from '../../../telemetry/logger';
 
 interface GeocodingAddress {
   latitude: number;
@@ -33,11 +34,11 @@ export const getLatitudeLongitudeFromAddress = async (address: string): Promise<
         formattedAddress: data.results[0].formatted_address
       };
     } else {
-      console.error('Geocoding failed:', data.status);
+      logger.error({ status: data.status }, 'Geocoding failed');
       return fallbackCoordinates;
     }
   } catch (error) {
-    console.error('Request failed:', error);
+    logger.error({ err: error }, 'Geocoding request failed');
     return fallbackCoordinates;
   }
 };

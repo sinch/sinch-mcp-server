@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
+import { registerTracedTool } from '../../telemetry/register-traced-tool';
 import { IPromptResponse, PromptResponse, Tags } from '../../types';
 import { getMailgunApiKey} from './utils/mailgun-service-helper';
 import { EmailToolKey, getToolName, sha256, toolsConfig } from './utils/mailgun-tools-helper';
@@ -75,7 +76,7 @@ const TOOL_NAME = getToolName(TOOL_KEY);
 export const registerAnalyticsMetrics = (server: McpServer, tags: Tags[]) => {
   if (!matchesAnyTag(tags, toolsConfig[TOOL_KEY].tags)) return;
 
-  server.registerTool(
+  registerTracedTool(server,
     TOOL_NAME,
     {
       description: 'Get email analytics metrics from Mailgun for an account. All parameters are optional. You can filter by domain, metrics type and specify a time range. By default, it will return all metrics for all your domains for the last 7 days.',

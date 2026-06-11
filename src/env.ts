@@ -19,6 +19,10 @@ export const env = createEnv({
     MAILGUN_DOMAIN: z.string().optional(),
     MAILGUN_API_KEY: z.string().optional(),
     MAILGUN_SENDER_ADDRESS: z.string().optional(),
+    OTEL_EXPORTER_OTLP_ENDPOINT: z.string().optional(),
+    OTEL_SERVICE_NAME: z.string().optional(),
+    OTEL_PROPAGATORS: z.string().optional(),
+    LOG_LEVEL: z.enum(['fatal', 'error', 'warn', 'info', 'debug', 'trace', 'silent']).optional(),
   },
   runtimeEnvStrict: {
     PROJECT_ID: process.env.PROJECT_ID,
@@ -34,6 +38,10 @@ export const env = createEnv({
     MAILGUN_DOMAIN: process.env.MAILGUN_DOMAIN,
     MAILGUN_API_KEY: process.env.MAILGUN_API_KEY,
     MAILGUN_SENDER_ADDRESS: process.env.MAILGUN_SENDER_ADDRESS,
+    OTEL_EXPORTER_OTLP_ENDPOINT: process.env.OTEL_EXPORTER_OTLP_ENDPOINT,
+    OTEL_SERVICE_NAME: process.env.OTEL_SERVICE_NAME,
+    OTEL_PROPAGATORS: process.env.OTEL_PROPAGATORS,
+    LOG_LEVEL: process.env.LOG_LEVEL,
   },
   emptyStringAsUndefined: true,
   onValidationError: (issues: readonly StandardSchemaV1.Issue[]) => {

@@ -1,4 +1,5 @@
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
+import { registerTracedTool } from '../../telemetry/register-traced-tool';
 import { z } from 'zod';
 import { getVerificationService } from './utils/verification-service-helper';
 import { getToolName, VerificationToolKey, verificationToolsConfig } from './utils/verification-tools-helper';
@@ -17,7 +18,7 @@ const TOOL_NAME = getToolName(TOOL_KEY);
 export const registerStartVerificationWithSms = (server: McpServer, tags: Tags[]) => {
   if(!matchesAnyTag(tags, verificationToolsConfig[TOOL_KEY].tags)) return;
 
-  server.registerTool(
+  registerTracedTool(server,
     TOOL_NAME,
     {
       description: 'Start new phone number verification requests. If the request is successful, you should ask the user to enter the OTP they received on the phone number we are verifying.',
