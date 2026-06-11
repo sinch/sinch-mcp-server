@@ -10,14 +10,14 @@ import {
   REGION_PATTERN,
 } from '@sinch/sdk-client';
 import { ConversationService } from '@sinch/conversation';
-import process from 'process';
+import { env } from '../../../env';
 import { PromptResponse } from '../../../types';
 import { formatUserAgent } from '../../../utils';
 
 export const getConversationService = (toolName: string): ConversationService | PromptResponse => {
-  const projectId = process.env.PROJECT_ID;
-  const keyId = process.env.KEY_ID;
-  const keySecret = process.env.KEY_SECRET;
+  const projectId = env.PROJECT_ID;
+  const keyId = env.KEY_ID;
+  const keySecret = env.KEY_SECRET;
 
   if (!projectId || !keyId || !keySecret) {
     return new PromptResponse('Missing env vars: PROJECT_ID, KEY_ID, KEY_SECRET.');
@@ -60,7 +60,7 @@ export const getConversationService = (toolName: string): ConversationService | 
 
 export const getConversationAppId = (appId: string | undefined): string | PromptResponse => {
   if (!appId) {
-    appId = process.env.CONVERSATION_APP_ID;
+    appId = env.CONVERSATION_APP_ID;
     if (!appId) {
       return new PromptResponse(
         'The "CONVERSATION_APP_ID" is not set in the environment variables and the "appId" property is not provided.',
@@ -71,7 +71,7 @@ export const getConversationAppId = (appId: string | undefined): string | Prompt
 };
 
 export const setConversationRegion = (promptRegion: string | undefined, conversationService: ConversationService) => {
-  const region = promptRegion ?? process.env.CONVERSATION_REGION ?? ConversationRegion.UNITED_STATES;
+  const region = promptRegion ?? env.CONVERSATION_REGION ?? ConversationRegion.UNITED_STATES;
   conversationService.lazyConversationClient.sharedConfig.conversationRegion = region;
   const formattedRegion = region !== '' ? `${region}.` : '';
   conversationService.lazyConversationClient.apiFetchClient!.apiClientOptions.hostname = formatRegionalizedHostname(
@@ -82,7 +82,7 @@ export const setConversationRegion = (promptRegion: string | undefined, conversa
 };
 
 export const setTemplateRegion = (promptRegion: string | undefined, conversationService: ConversationService) => {
-  const region = promptRegion ?? process.env.CONVERSATION_REGION ?? ConversationRegion.UNITED_STATES;
+  const region = promptRegion ?? env.CONVERSATION_REGION ?? ConversationRegion.UNITED_STATES;
   conversationService.lazyConversationTemplateClient.sharedConfig.conversationRegion = region;
   const formattedRegion = region !== '' ? `${region}.` : '';
   conversationService.lazyConversationTemplateClient.apiFetchClient!.apiClientOptions.hostname =

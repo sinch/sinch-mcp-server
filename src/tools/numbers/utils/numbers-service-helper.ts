@@ -6,13 +6,14 @@ import {
   Oauth2TokenRequest,
 } from '@sinch/sdk-client';
 import { NumbersService } from '@sinch/numbers';
+import { env } from '../../../env';
 import { PromptResponse } from '../../../types';
 import { formatUserAgent } from '../../../utils';
 
 export function getNumbersService(toolName: string): NumbersService | PromptResponse {
-  const projectId = process.env.PROJECT_ID;
-  const keyId = process.env.KEY_ID;
-  const keySecret = process.env.KEY_SECRET;
+  const projectId = env.PROJECT_ID;
+  const keyId = env.KEY_ID;
+  const keySecret = env.KEY_SECRET;
 
   if (!projectId || !keyId || !keySecret) {
     return new PromptResponse(

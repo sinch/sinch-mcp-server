@@ -1,4 +1,5 @@
 import { PromptResponse } from '../../../types';
+import { env } from '../../../env';
 import {
   AdditionalHeadersRequest,
   ApiFetchClient,
@@ -13,8 +14,8 @@ import { VoiceService } from '@sinch/voice';
 import { formatUserAgent } from '../../../utils';
 
 export const getVoiceService = (toolName: string): VoiceService | PromptResponse => {
-  const applicationKey = process.env.APPLICATION_KEY;
-  const applicationSecret = process.env.APPLICATION_SECRET;
+  const applicationKey = env.APPLICATION_KEY;
+  const applicationSecret = env.APPLICATION_SECRET;
 
   if (!applicationKey && !applicationSecret) {
     return new PromptResponse('Missing environment variables: "APPLICATION_KEY" and "APPLICATION_SECRET".');

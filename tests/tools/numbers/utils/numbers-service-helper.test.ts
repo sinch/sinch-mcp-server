@@ -3,6 +3,7 @@ import { ApiFetchClient, NUMBERS_HOSTNAME } from '@sinch/sdk-client';
 import { NumbersService } from '@sinch/numbers';
 import { formatUserAgent } from '../../../../src/utils';
 import { PromptResponse } from '../../../../src/types';
+import { mockEnv, resetMockEnv } from '../../../helpers/mock-env';
 
 jest.mock(
   '@sinch/sdk-core/package.json',
@@ -13,20 +14,14 @@ jest.mock(
 );
 
 describe('getNumbersService', () => {
-  const OLD_ENV = process.env;
   const PROJECT_ID = 'test-project';
   const TOOL_NAME = 'release-rented-number';
 
   beforeEach(() => {
-    jest.resetModules();
-    process.env = { ...OLD_ENV };
-    process.env.PROJECT_ID = PROJECT_ID;
-    process.env.KEY_ID = 'test-key-id';
-    process.env.KEY_SECRET = 'test-secret';
-  });
-
-  afterAll(() => {
-    process.env = OLD_ENV;
+    resetMockEnv();
+    mockEnv.PROJECT_ID = PROJECT_ID;
+    mockEnv.KEY_ID = 'test-key-id';
+    mockEnv.KEY_SECRET = 'test-secret';
   });
 
   it('returns a configured NumbersService with production hostname', async () => {
@@ -45,7 +40,7 @@ describe('getNumbersService', () => {
   });
 
   it('returns prompt response when credentials are missing', () => {
-    delete process.env.PROJECT_ID;
+    mockEnv.PROJECT_ID = undefined;
 
     const result = getNumbersService(TOOL_NAME);
 

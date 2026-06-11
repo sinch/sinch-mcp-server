@@ -1,6 +1,7 @@
 import { releaseRentedNumberHandler } from '../../../src/tools/numbers/release-rented-number';
 import { PromptResponse } from '../../../src/types';
 import * as numbersServiceHelper from '../../../src/tools/numbers/utils/numbers-service-helper';
+import { mockEnv, resetMockEnv } from '../../helpers/mock-env';
 
 jest.mock(
   '@sinch/sdk-core/package.json',
@@ -15,20 +16,14 @@ const mockNumbersService = {
 };
 
 describe('releaseRentedNumberHandler', () => {
-  const OLD_ENV = process.env;
-
   beforeEach(() => {
     jest.restoreAllMocks();
     jest.spyOn(numbersServiceHelper, 'getNumbersService').mockReturnValue(mockNumbersService as never);
     jest.clearAllMocks();
-    process.env = { ...OLD_ENV };
-    process.env.PROJECT_ID = 'test-project';
-    process.env.KEY_ID = 'test-key-id';
-    process.env.KEY_SECRET = 'test-secret';
-  });
-
-  afterAll(() => {
-    process.env = OLD_ENV;
+    resetMockEnv();
+    mockEnv.PROJECT_ID = 'test-project';
+    mockEnv.KEY_ID = 'test-key-id';
+    mockEnv.KEY_SECRET = 'test-secret';
   });
 
   it('returns a prompt response with released number data', async () => {
@@ -71,8 +66,11 @@ describe('releaseRentedNumberHandler', () => {
 
   it('returns prompt response when credentials are missing', async () => {
     jest.restoreAllMocks();
+    resetMockEnv();
 
-    delete process.env.PROJECT_ID;
+    mockEnv.PROJECT_ID = undefined;
+    mockEnv.KEY_ID = undefined;
+    mockEnv.KEY_SECRET = undefined;
 
     const result = await releaseRentedNumberHandler({
       phoneNumber: '+12015555555',

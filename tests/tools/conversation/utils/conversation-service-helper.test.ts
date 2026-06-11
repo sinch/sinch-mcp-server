@@ -8,6 +8,7 @@ import {
 } from '../../../../src/tools/conversation/utils/conversation-service-helper';
 import { PromptResponse } from '../../../../src/types';
 import { formatUserAgent } from '../../../../src/utils';
+import { mockEnv, resetMockEnv } from '../../../helpers/mock-env';
 
 jest.mock(
   '@sinch/sdk-core/package.json',
@@ -18,20 +19,14 @@ jest.mock(
 );
 
 describe('getConversationService / getConversationTemplateService', () => {
-  const OLD_ENV = process.env;
   const PROJECT_ID = 'test-project';
   const TOOL_NAME = 'dummy-tool';
 
   beforeEach(() => {
-    jest.resetModules();
-    process.env = { ...OLD_ENV };
-    process.env.PROJECT_ID = PROJECT_ID;
-    process.env.KEY_ID = 'test-key-id';
-    process.env.KEY_SECRET = 'test-secret';
-  });
-
-  afterAll(() => {
-    process.env = OLD_ENV;
+    resetMockEnv();
+    mockEnv.PROJECT_ID = PROJECT_ID;
+    mockEnv.KEY_ID = 'test-key-id';
+    mockEnv.KEY_SECRET = 'test-secret';
   });
 
   test('returns a configured ConversationService from getConversationService', async () => {
@@ -87,7 +82,7 @@ describe('getConversationService / getConversationTemplateService', () => {
   });
 
   test('returns PromptResponse when env vars are missing', () => {
-    delete process.env.PROJECT_ID;
+    mockEnv.PROJECT_ID = undefined;
     const result = getConversationService(TOOL_NAME);
     expect(result).toBeInstanceOf(PromptResponse);
     expect((result as PromptResponse).promptResponse).toStrictEqual({
@@ -103,19 +98,23 @@ describe('getConversationService / getConversationTemplateService', () => {
 });
 
 describe('getConversationAppId', () => {
+  beforeEach(() => {
+    resetMockEnv();
+  });
+
   test('returns appId when passed explicitly', () => {
     const result = getConversationAppId('explicit-id');
     expect(result).toBe('explicit-id');
   });
 
   test('returns appId from env when not passed', () => {
-    process.env.CONVERSATION_APP_ID = 'env-id';
+    mockEnv.CONVERSATION_APP_ID = 'env-id';
     const result = getConversationAppId(undefined);
     expect(result).toBe('env-id');
   });
 
   test('returns PromptResponse when no appId is provided or in env', () => {
-    delete process.env.CONVERSATION_APP_ID;
+    mockEnv.CONVERSATION_APP_ID = undefined;
     const result = getConversationAppId(undefined);
     expect(result).toBeInstanceOf(PromptResponse);
     expect((result as PromptResponse).promptResponse).toStrictEqual({

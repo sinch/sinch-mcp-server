@@ -1,4 +1,5 @@
 import { PromptResponse } from '../../../types';
+import { env } from '../../../env';
 import {
   AdditionalHeadersRequest,
   ApiFetchClient,
@@ -11,8 +12,8 @@ import { VerificationService } from '@sinch/verification';
 import { formatUserAgent } from '../../../utils';
 
 export const getVerificationService = (toolName: string): VerificationService | PromptResponse => {
-  const applicationKey = process.env.APPLICATION_KEY;
-  const applicationSecret = process.env.APPLICATION_SECRET;
+  const applicationKey = env.APPLICATION_KEY;
+  const applicationSecret = env.APPLICATION_SECRET;
 
   if (!applicationKey && !applicationSecret) {
     return new PromptResponse('Missing environment variables: "APPLICATION_KEY" and "APPLICATION_SECRET".');

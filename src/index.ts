@@ -1,7 +1,6 @@
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
-import dotenv from 'dotenv';
+import './env';
 import { instantiateMcpServer, parseArgs, registerCapabilities } from './server';
-dotenv.config();
 
 export const main = async () => {
   const transport = new StdioServerTransport();
