@@ -27,14 +27,16 @@ const TOOL_NAME = getToolName(TOOL_KEY);
 export const registerCreateWebhook = (server: McpServer, tags: Tags[]) => {
   if (!matchesAnyTag(tags, toolsConfig[TOOL_KEY].tags)) return;
 
-  server.tool(
+  server.registerTool(
     TOOL_NAME,
-    'Create a webhook for a Conversation app (up to 5 per app). Events are delivered to the target URL over HTTP when triggers fire. Configure the signing secret in the Sinch Dashboard; it is not set through this tool.',
     {
-      target: WebhookTarget,
-      appId: ConversationAppIdOverride,
-      triggers: WebhookTriggers,
-      region: ConversationRegionOverride,
+      description: 'Create a webhook for a Conversation app (up to 5 per app). Events are delivered to the target URL over HTTP when triggers fire. Configure the signing secret in the Sinch Dashboard; it is not set through this tool.',
+      inputSchema: {
+        target: WebhookTarget,
+        appId: ConversationAppIdOverride,
+        triggers: WebhookTriggers,
+        region: ConversationRegionOverride,
+      },
     },
     createWebhookHandler,
   );

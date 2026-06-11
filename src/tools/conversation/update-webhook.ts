@@ -26,14 +26,16 @@ const TOOL_NAME = getToolName(TOOL_KEY);
 export const registerUpdateWebhook = (server: McpServer, tags: Tags[]) => {
   if (!matchesAnyTag(tags, toolsConfig[TOOL_KEY].tags)) return;
 
-  server.tool(
+  server.registerTool(
     TOOL_NAME,
-    'Update an existing Conversation API webhook. Provide at least one of target or triggers. Signing secrets are configured in the Sinch Dashboard, not through this tool.',
     {
-      webhookId: WebhookId,
-      target: WebhookTargetOptional,
-      triggers: WebhookTriggers,
-      region: ConversationRegionOverride,
+      description: 'Update an existing Conversation API webhook. Provide at least one of target or triggers. Signing secrets are configured in the Sinch Dashboard, not through this tool.',
+      inputSchema: {
+        webhookId: WebhookId,
+        target: WebhookTargetOptional,
+        triggers: WebhookTriggers,
+        region: ConversationRegionOverride,
+      },
     },
     updateWebhookHandler,
   );

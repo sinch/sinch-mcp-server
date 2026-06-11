@@ -15,12 +15,14 @@ const TOOL_NAME = getToolName(TOOL_KEY);
 export const registerDeleteWebhook = (server: McpServer, tags: Tags[]) => {
   if (!matchesAnyTag(tags, toolsConfig[TOOL_KEY].tags)) return;
 
-  server.tool(
+  server.registerTool(
     TOOL_NAME,
-    'Delete a Conversation API webhook by its ID.',
     {
-      webhookId: WebhookId,
-      region: ConversationRegionOverride,
+      description: 'Delete a Conversation API webhook by its ID.',
+      inputSchema: {
+        webhookId: WebhookId,
+        region: ConversationRegionOverride,
+      },
     },
     deleteWebhookHandler,
   );

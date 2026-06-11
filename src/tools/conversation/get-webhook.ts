@@ -16,12 +16,14 @@ const TOOL_NAME = getToolName(TOOL_KEY);
 export const registerGetWebhook = (server: McpServer, tags: Tags[]) => {
   if (!matchesAnyTag(tags, toolsConfig[TOOL_KEY].tags)) return;
 
-  server.tool(
+  server.registerTool(
     TOOL_NAME,
-    'Get a Conversation API webhook by its ID. Signing secrets are not returned; configure them in the Sinch Dashboard.',
     {
-      webhookId: WebhookId,
-      region: ConversationRegionOverride,
+      description: 'Get a Conversation API webhook by its ID. Signing secrets are not returned; configure them in the Sinch Dashboard.',
+      inputSchema: {
+        webhookId: WebhookId,
+        region: ConversationRegionOverride,
+      },
     },
     getWebhookHandler,
   );

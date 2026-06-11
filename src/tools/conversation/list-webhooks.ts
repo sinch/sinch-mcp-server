@@ -17,12 +17,14 @@ const TOOL_NAME = getToolName(TOOL_KEY);
 export const registerListWebhooks = (server: McpServer, tags: Tags[]) => {
   if (!matchesAnyTag(tags, toolsConfig[TOOL_KEY].tags)) return;
 
-  server.tool(
+  server.registerTool(
     TOOL_NAME,
-    'List all webhooks configured for a Conversation app. Webhooks receive Conversation API callbacks at a target URL when selected triggers occur. Configure signing secrets in the Sinch Dashboard.',
     {
-      appId: ConversationAppIdOverride,
-      region: ConversationRegionOverride,
+      description: 'List all webhooks configured for a Conversation app. Webhooks receive Conversation API callbacks at a target URL when selected triggers occur. Configure signing secrets in the Sinch Dashboard.',
+      inputSchema: {
+        appId: ConversationAppIdOverride,
+        region: ConversationRegionOverride,
+      },
     },
     listWebhooksHandler,
   );
