@@ -1,4 +1,5 @@
 import { PromptResponse } from '../../../types';
+import { env } from '../../../env';
 
 export type MailgunCredentials = {
   domain: string;
@@ -10,8 +11,8 @@ export const getMailgunCredentials = (domain: string | undefined): MailgunCreden
 
   let credentials: MailgunCredentials | undefined = undefined;
 
-  const mailgunDomain = domain || process.env.MAILGUN_DOMAIN;
-  const apiKey = process.env.MAILGUN_API_KEY;
+  const mailgunDomain = domain || env.MAILGUN_DOMAIN;
+  const apiKey = env.MAILGUN_API_KEY;
 
   if (mailgunDomain && apiKey) {
     credentials = {
@@ -36,7 +37,7 @@ export const getMailgunCredentials = (domain: string | undefined): MailgunCreden
 };
 
 export const getMailgunApiKey = (): string | PromptResponse => {
-  const apiKey = process.env.MAILGUN_API_KEY;
+  const apiKey = env.MAILGUN_API_KEY;
 
   if (!apiKey) {
     return new PromptResponse(JSON.stringify({

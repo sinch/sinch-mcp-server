@@ -1,5 +1,6 @@
 import axios from 'axios';
 import { getLatitudeLongitudeFromAddress } from '../../../../src/tools/conversation/utils/geocoding';
+import { mockEnv, resetMockEnv } from '../../../helpers/mock-env';
 
 jest.mock('axios');
 const mockedAxios = axios as jest.Mocked<typeof axios>;
@@ -22,7 +23,8 @@ const mockSuccessResponse = {
 };
 
 beforeEach(() => {
-  process.env.GEOCODING_API_KEY = 'test-api-key';
+  resetMockEnv();
+  mockEnv.GEOCODING_API_KEY = 'test-api-key';
   jest.clearAllMocks();
 });
 
@@ -87,7 +89,7 @@ test('includes GEOCODING_API_KEY in query params', async () => {
 });
 
 test('returns fallback when GEOCODING_API_KEY is not set', async () => {
-  delete process.env.GEOCODING_API_KEY;
+  mockEnv.GEOCODING_API_KEY = undefined;
   const consoleSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
 
   const mockError = new Error('API key missing');

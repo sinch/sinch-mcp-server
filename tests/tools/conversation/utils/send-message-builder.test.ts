@@ -1,5 +1,6 @@
 import { buildMessageBase } from '../../../../src/tools/conversation/utils/send-message-builder';
 import { Conversation } from '@sinch/conversation';
+import { mockEnv, resetMockEnv } from '../../../helpers/mock-env';
 
 const mockGetApp = jest.fn();
 
@@ -18,7 +19,8 @@ const baseAppConfig = {
 
 beforeEach(() => {
   jest.clearAllMocks();
-  process.env.DEFAULT_SMS_ORIGINATOR = '+12014444333';
+  resetMockEnv();
+  mockEnv.DEFAULT_SMS_ORIGINATOR = '+12014444333';
 });
 
 test('buildMessageBase sets correct base structure and adds SMS fallback when needed', async () => {
@@ -63,7 +65,7 @@ test('No SMS fallback is added if already included', async () => {
 });
 
 test('Does not set channel_properties if sender is undefined and env var is missing', async () => {
-  delete process.env.DEFAULT_SMS_ORIGINATOR;
+  mockEnv.DEFAULT_SMS_ORIGINATOR = undefined;
   mockGetApp.mockResolvedValue(baseAppConfig);
 
   const result = await buildMessageBase(mockConversationService as any, 'my-app-id', '+1234567890', ['SMS']);

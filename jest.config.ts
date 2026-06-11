@@ -8,6 +8,7 @@ const config: Config = {
     }],
   },
   testEnvironment: 'node',
+  setupFiles: ['<rootDir>/tests/setup/env.mock.ts'],
   roots: ['<rootDir>/src', '<rootDir>/tests'],
   testMatch: ['**/tests/**/*.test.ts'],
   moduleFileExtensions: ['ts', 'js', 'json', 'node'],
