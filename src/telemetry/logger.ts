@@ -1,9 +1,10 @@
 import { context, trace } from '@opentelemetry/api';
 import pino from 'pino';
+import { env } from '../env';
 import { isTelemetryEnabled } from './config';
 
 const baseLogger = pino({
-  level: process.env.LOG_LEVEL ?? 'info',
+  level: env.LOG_LEVEL ?? 'info',
   ...(isTelemetryEnabled()
     ? {}
     : {

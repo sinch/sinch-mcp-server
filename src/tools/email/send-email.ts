@@ -5,6 +5,7 @@ import { z } from 'zod';
 import { formatUserAgent, isPromptResponse, matchesAnyTag } from '../../utils';
 import { IPromptResponse, PromptResponse, Tags } from '../../types';
 import { getMailgunCredentials } from './utils/mailgun-service-helper';
+import { env } from '../../env';
 import { EmailToolKey, getToolName, sha256, toolsConfig } from './utils/mailgun-tools-helper';
 
 const SendEmailSchema = {
@@ -51,7 +52,7 @@ export const sendEmailHandler = async ({
   const credentials = maybeCredentials;
 
   if (!sender) {
-    sender = process.env.MAILGUN_SENDER_ADDRESS;
+    sender = env.MAILGUN_SENDER_ADDRESS;
     if (!sender) {
       return new PromptResponse(JSON.stringify({
         success: false,

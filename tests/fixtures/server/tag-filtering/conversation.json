@@ -12,7 +12,12 @@
     "send-media-message",
     "send-template-message",
     "send-whatsapp-template-message",
-    "send-text-message"
+    "send-text-message",
+    "list-webhooks",
+    "get-webhook",
+    "create-webhook",
+    "update-webhook",
+    "delete-webhook"
   ],
   "expectedPrompts": [
     "conversation-app-id"

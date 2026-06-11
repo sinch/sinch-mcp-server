@@ -6,6 +6,7 @@ import { PeriodicExportingMetricReader } from '@opentelemetry/sdk-metrics';
 import { resourceFromAttributes } from '@opentelemetry/resources';
 import { ATTR_SERVICE_NAME } from '@opentelemetry/semantic-conventions';
 import { version as packageVersion } from '../../package.json';
+import { env } from '../env';
 import { isTelemetryEnabled } from './config';
 
 let sdk: NodeSDK | undefined;
@@ -15,7 +16,7 @@ export const initTelemetry = (): NodeSDK | undefined => {
     return undefined;
   }
 
-  const serviceName = process.env.OTEL_SERVICE_NAME ?? 'sinch-mcp-server';
+  const serviceName = env.OTEL_SERVICE_NAME ?? 'sinch-mcp-server';
 
   sdk = new NodeSDK({
     resource: resourceFromAttributes({

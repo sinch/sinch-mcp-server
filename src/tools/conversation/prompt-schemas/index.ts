@@ -28,3 +28,38 @@ export const ConversationRegionOverride = z.enum([...supportedRegions, '']).opti
 
 export const TextMessage = z.string()
   .describe('(Required) The text to send.')
+
+export const WebhookId = z.string()
+  .describe('(Required) The ID of the webhook. You can obtain it from list-webhooks or the Sinch Dashboard.')
+
+export const WebhookTarget = z.string()
+  .describe('(Required) The HTTPS URL where Conversation API events should be delivered. Maximum length is 742 characters.')
+
+const webhookTriggerValues = [
+  'MESSAGE_DELIVERY',
+  'MESSAGE_SUBMIT',
+  'MESSAGE_INBOUND',
+  'EVENT_DELIVERY',
+  'EVENT_INBOUND',
+  'SMART_CONVERSATIONS',
+  'MESSAGE_INBOUND_SMART_CONVERSATION_REDACTION',
+  'CONVERSATION_START',
+  'CONVERSATION_STOP',
+  'CONVERSATION_DELETE',
+  'CONTACT_CREATE',
+  'CONTACT_DELETE',
+  'CONTACT_MERGE',
+  'CONTACT_UPDATE',
+  'CONTACT_IDENTITIES_DUPLICATION',
+  'OPT_IN',
+  'OPT_OUT',
+  'CHANNEL_EVENT',
+  'CAPABILITY',
+  'RECORD_NOTIFICATION',
+] as const;
+
+export const WebhookTriggers = z.array(z.enum(webhookTriggerValues)).optional()
+  .describe('(Optional) Event triggers that activate this webhook. Omit to leave without triggers, or pass an empty array [] to clear all triggers on update. Use update-webhook to add triggers later.')
+
+export const WebhookTargetOptional = WebhookTarget.optional()
+  .describe('(Optional) The HTTPS URL where Conversation API events should be delivered.')

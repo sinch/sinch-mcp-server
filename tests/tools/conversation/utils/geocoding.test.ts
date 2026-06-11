@@ -1,6 +1,6 @@
 import axios from 'axios';
 import { getLatitudeLongitudeFromAddress } from '../../../../src/tools/conversation/utils/geocoding';
-import { logger } from '../../../../src/telemetry/logger';
+import { mockEnv, resetMockEnv } from '../../../helpers/mock-env';
 
 jest.mock('axios');
 jest.mock('../../../../src/telemetry/logger', () => ({
@@ -13,7 +13,11 @@ jest.mock('../../../../src/telemetry/logger', () => ({
 }));
 
 const mockedAxios = axios as jest.Mocked<typeof axios>;
-const mockedLogger = logger as jest.Mocked<typeof logger>;
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+const { logger } = require('../../../../src/telemetry/logger') as {
+  logger: { error: jest.Mock };
+};
+const mockedLogger = logger;
 
 const mockAddress = 'Phare d\'Eckmühl';
 
@@ -33,7 +37,8 @@ const mockSuccessResponse = {
 };
 
 beforeEach(() => {
-  process.env.GEOCODING_API_KEY = 'test-api-key';
+  resetMockEnv();
+  mockEnv.GEOCODING_API_KEY = 'test-api-key';
   jest.clearAllMocks();
 });
 
@@ -100,7 +105,7 @@ test('includes GEOCODING_API_KEY in query params', async () => {
 });
 
 test('returns fallback when GEOCODING_API_KEY is not set', async () => {
-  delete process.env.GEOCODING_API_KEY;
+  mockEnv.GEOCODING_API_KEY = undefined;
 
   const mockError = new Error('API key missing');
   mockedAxios.get.mockRejectedValueOnce(mockError);

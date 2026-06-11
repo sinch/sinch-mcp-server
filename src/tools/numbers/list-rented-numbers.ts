@@ -4,6 +4,7 @@ import { z } from 'zod';
 import { PromptResponse, Tags } from '../../types';
 import { formatUserAgent, matchesAnyTag } from '../../utils';
 import { getToolName, NumbersToolKey, toolsConfig } from './utils/numbers-tools-helper';
+import { env } from '../../env';
 import { Numbers } from '@sinch/numbers';
 
 const ListRentedNumbersSchema = {
@@ -36,9 +37,9 @@ export const registerListRentedNumbers = (server: McpServer, tags: Tags[]) => {
 export const listRentedNumbersHandler = async (
   { regionCode, type, searchPattern, patternPosition, capability, size }: ListRentedNumbers
 ) => {
-  const projectId = process.env.PROJECT_ID;
-  const keyId     = process.env.KEY_ID;
-  const keySecret = process.env.KEY_SECRET;
+  const projectId = env.PROJECT_ID;
+  const keyId     = env.KEY_ID;
+  const keySecret = env.KEY_SECRET;
 
   if (!projectId || !keyId || !keySecret) {
     return new PromptResponse(

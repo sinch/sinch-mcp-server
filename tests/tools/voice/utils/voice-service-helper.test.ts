@@ -2,25 +2,20 @@ import { getVoiceService } from '../../../../src/tools/voice/utils/voice-service
 import { ApiFetchClient } from '@sinch/sdk-client';
 import { VoiceService } from '@sinch/voice';
 import { formatUserAgent } from '../../../../src/utils';
+import { mockEnv, resetMockEnv } from '../../../helpers/mock-env';
 
 jest.mock('@sinch/sdk-core/package.json', () => ({
   version: '1.0.0',
 }), { virtual: true });
 
 describe('getVoiceService', () => {
-  const OLD_ENV = process.env;
   const APPLICATION_KEY = 'test-application-key';
   const TOOL_NAME = 'dummy-tool';
 
   beforeEach(() => {
-    jest.resetModules();
-    process.env = { ...OLD_ENV };
-    process.env.APPLICATION_KEY = APPLICATION_KEY;
-    process.env.APPLICATION_SECRET = 'test-application-secret';
-  });
-
-  afterAll(() => {
-    process.env = OLD_ENV;
+    resetMockEnv();
+    mockEnv.APPLICATION_KEY = APPLICATION_KEY;
+    mockEnv.APPLICATION_SECRET = 'test-application-secret';
   });
 
   test('returns a configured VoiceService from getVoiceService', async () => {

@@ -1,7 +1,7 @@
+import './env';
 import './telemetry';
 
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
-import dotenv from 'dotenv';
 import {
   instantiateMcpServer,
   parseArgs,
@@ -9,8 +9,6 @@ import {
 } from './server';
 import { shutdownTelemetry } from './telemetry';
 import { logger } from './telemetry/logger';
-
-dotenv.config();
 
 export const main = async () => {
   const transport = new StdioServerTransport();

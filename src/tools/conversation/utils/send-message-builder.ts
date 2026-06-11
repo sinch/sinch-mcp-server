@@ -1,4 +1,5 @@
 import { Conversation, ConversationService } from '@sinch/conversation';
+import { env } from '../../../env';
 
 export const buildMessageBase = async (
   conversationService: ConversationService,
@@ -30,7 +31,7 @@ export const buildMessageBase = async (
   addSMSFallback(appConfiguration, channel, recipient, channel_identities);
 
   if(!sender) {
-    sender = process.env.DEFAULT_SMS_ORIGINATOR;
+    sender = env.DEFAULT_SMS_ORIGINATOR;
   }
   if (sender) {
     messageBase.channel_properties = {
