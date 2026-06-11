@@ -52,7 +52,7 @@ test('createWebhookHandler creates HTTP webhook and omits secret from response',
   });
 
   const body = JSON.parse(result.content[0].text);
-  expect(body.success).toBe(true);
+  expect(body.success).toBeTrue();
   expect(body.webhook).not.toHaveProperty('secret');
   expect(body.warning).toBeUndefined();
 });

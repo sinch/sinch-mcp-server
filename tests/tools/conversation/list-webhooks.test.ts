@@ -59,7 +59,7 @@ test('listWebhooksHandler includes region hint on failure', async () => {
   const result = await listWebhooksHandler({ region: 'eu' });
 
   const body = JSON.parse(result.content[0].text);
-  expect(body.success).toBe(false);
+  expect(body.success).toBeFalse();
   expect(body.error).toContain('Current region: us.');
   expect(body.error).toContain('region parameter may be incorrect');
   expect(body.error).toContain('Other regions to try:');

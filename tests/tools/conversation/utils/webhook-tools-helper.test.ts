@@ -22,8 +22,8 @@ describe('buildDormantTriggersWarning', () => {
 
 describe('hasNoTriggers', () => {
   it('returns true when triggers are missing or empty', () => {
-    expect(hasNoTriggers(undefined)).toBe(true);
-    expect(hasNoTriggers([])).toBe(true);
-    expect(hasNoTriggers(['MESSAGE_INBOUND'])).toBe(false);
+    expect(hasNoTriggers(undefined)).toBeTrue();
+    expect(hasNoTriggers([])).toBeTrue();
+    expect(hasNoTriggers(['MESSAGE_INBOUND'])).toBeFalse();
   });
 });
