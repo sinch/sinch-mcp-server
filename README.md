@@ -301,27 +301,6 @@ You can then configure the MCP server in the Claude configuration file as follow
 (Replace the `http://localhost:8000/sse` with the URL of your MCP server if it is not running locally)
 
 
-## Contributing: Defining new tools
+## Contributing
 
-### Updating dependencies
-
-Dependencies are pinned to **exact versions** in `package.json` (no `^` ranges). To upgrade a package:
-
-1. Set the new version in `package.json` for the package you want to bump.
-2. Run `npm install` and commit both `package.json` and `package-lock.json`.
-3. Run `npm run lint`, `npm run build`, and `npm test` locally (or rely on CI after opening a PR).
-4. Prefer `npm ci` in CI and clean environments so installs match the lockfile.
-
-When bumping `@modelcontextprotocol/sdk` or `zod`, test the server startup and your transport path (stdio, SSE, or Streamable HTTP) — some version combinations have been problematic in the past.
-
-Tools are registered in the `src/index.ts` file.
-- Conversation tools: send various types of messages, list conversation apps, templates
-- Verification tools: lookup for a number, perform a verification flow
-- Voice tools: make a TTS call, create a conference call, manage participants
-- Email tools: send emails, retrieve email information
-
-Tools are defined under `src/tools/` and are registered in the `index.ts` file of their respective domain folder.
-- Conversation tools: `src/tools/conversation/index.ts`
-- Verification tools: `src/tools/verification/index.ts`
-- Voice tools: `src/tools/voice/index.ts`
-- Email tools: `src/tools/email/index.ts`
+See [CONTRIBUTING.md](CONTRIBUTING.md) for contributor guidelines, including how to add new tools and pin GitHub Actions.
