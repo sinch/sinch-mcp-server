@@ -10,17 +10,17 @@ export const getLatitudeLongitudeFromAddress = async (address: string): Promise<
   const fallbackCoordinates: GeocodingAddress = {
     latitude: 0,
     longitude: 0,
-    formattedAddress: 'Unknown'
+    formattedAddress: 'Unknown',
   };
   try {
     const url = 'https://maps.googleapis.com/maps/api/geocode/json';
     const queryParams = {
       address,
-      key: process.env.GEOCODING_API_KEY
+      key: process.env.GEOCODING_API_KEY,
     };
 
     const response = await axios.get(url, {
-      params: queryParams
+      params: queryParams,
     });
     const data = response.data;
 
@@ -29,7 +29,7 @@ export const getLatitudeLongitudeFromAddress = async (address: string): Promise<
       return {
         latitude: location.lat,
         longitude: location.lng,
-        formattedAddress: data.results[0].formatted_address
+        formattedAddress: data.results[0].formatted_address,
       };
     } else {
       console.error('Geocoding failed:', data.status);

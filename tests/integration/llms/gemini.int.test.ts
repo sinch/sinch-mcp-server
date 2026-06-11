@@ -10,15 +10,14 @@ const transformToGeminiFormat = (tools: any[]): Tool[] => {
         name: t.name,
         description: t.description,
         parametersJsonSchema: t.inputSchema,
-      }
-    ]
+      },
+    ],
   }));
-}
+};
 
 const targetModel = process.env.TARGET_MODEL || 'gemini-2.0-flash';
 
 describe(`Tool invocation tests - Gemini - ${targetModel}`, () => {
-
   let tools: any[];
   let gemini: GoogleGenAI;
 
@@ -35,7 +34,7 @@ describe(`Tool invocation tests - Gemini - ${targetModel}`, () => {
       const response = await gemini.models.generateContent({
         model: targetModel,
         contents: {
-          text: prompt
+          text: prompt,
         },
         config: {
           maxOutputTokens: MAX_TOKENS,
@@ -43,17 +42,17 @@ describe(`Tool invocation tests - Gemini - ${targetModel}`, () => {
           tools: tools,
           toolConfig: {
             functionCallingConfig: {
-              mode: FunctionCallingConfigMode.AUTO
-            }
-          }
+              mode: FunctionCallingConfigMode.AUTO,
+            },
+          },
         },
       });
 
       expect(response.candidates).toBeDefined();
 
       const toolCall = response.candidates
-        ?.map(c => c.content?.parts?.find(p => p.functionCall)?.functionCall)
-        .find(fc => fc !== undefined);
+        ?.map((c) => c.content?.parts?.find((p) => p.functionCall)?.functionCall)
+        .find((fc) => fc !== undefined);
 
       if (!expectedToolName) {
         expect(toolCall).toBeUndefined();
@@ -67,7 +66,6 @@ describe(`Tool invocation tests - Gemini - ${targetModel}`, () => {
         expect(toolCall!.args).toEqual(expectedArguments);
       }
     },
-    TIMEOUT
+    TIMEOUT,
   );
-
 });

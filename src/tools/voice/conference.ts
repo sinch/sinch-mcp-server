@@ -18,7 +18,9 @@ const TOOL_KEY: VoiceToolKey = 'conferenceCallout';
 const TOOL_NAME = getToolName(TOOL_KEY);
 
 export const registerConferenceCallout = (server: McpServer, tags: Tags[]) => {
-  if (!matchesAnyTag(tags, voiceToolsConfig[TOOL_KEY].tags)) return;
+  if (!matchesAnyTag(tags, voiceToolsConfig[TOOL_KEY].tags)) {
+    return;
+  }
 
   server.registerTool(
     TOOL_NAME,
@@ -26,13 +28,13 @@ export const registerConferenceCallout = (server: McpServer, tags: Tags[]) => {
       description: 'Call a phone number and connects it to a conference room when answered',
       inputSchema: ConferenceCalloutSchema,
     },
-    conferenceCalloutHandler
+    conferenceCalloutHandler,
   );
 };
 
 export const conferenceCalloutHandler = async ({
   phoneNumbers,
-  conferenceId
+  conferenceId,
 }: ConferenceCallout): Promise<IPromptResponse> => {
   const maybeService = getVoiceService(TOOL_NAME);
   if (isPromptResponse(maybeService)) {
@@ -46,8 +48,8 @@ export const conferenceCalloutHandler = async ({
     conferenceId = crypto.randomUUID();
   }
 
-  const errors: { phoneNumber: string, error: string }[] = [];
-  const successfulCalls: { phoneNumber: string, callId: string }[] = [];
+  const errors: { phoneNumber: string; error: string }[] = [];
+  const successfulCalls: { phoneNumber: string; callId: string }[] = [];
 
   for (const phoneNumber of phoneNumbers) {
     const request: Voice.ConferenceCalloutRequestData = {
@@ -56,13 +58,13 @@ export const conferenceCalloutHandler = async ({
         conferenceCallout: {
           destination: {
             type: 'number',
-            endpoint: phoneNumber
+            endpoint: phoneNumber,
           },
-          conferenceId
-        }
-      }
+          conferenceId,
+        },
+      },
     };
-    if(cli) {
+    if (cli) {
       request.conferenceCalloutRequestBody.conferenceCallout.cli = cli;
     }
 
@@ -71,27 +73,29 @@ export const conferenceCalloutHandler = async ({
       if (response.callId) {
         successfulCalls.push({
           phoneNumber: request.conferenceCalloutRequestBody.conferenceCallout.destination.endpoint,
-          callId: response.callId
+          callId: response.callId,
         });
       }
     } catch (error) {
       errors.push({
         phoneNumber: request.conferenceCalloutRequestBody.conferenceCallout.destination.endpoint,
-        error: (error as Error).message
+        error: (error as Error).message,
       });
     }
   }
 
-  return new PromptResponse(JSON.stringify({
-    success: true,
-    conference_id: conferenceId,
-    successful_calls: successfulCalls.map(call => ({
-      phone_number: call.phoneNumber,
-      call_id: call.callId
-    })),
-    failed_calls: errors.map(err => ({
-      phone_number: err.phoneNumber,
-      error: err.error
-    }))
-  })).promptResponse;
+  return new PromptResponse(
+    JSON.stringify({
+      success: true,
+      conference_id: conferenceId,
+      successful_calls: successfulCalls.map((call) => ({
+        phone_number: call.phoneNumber,
+        call_id: call.callId,
+      })),
+      failed_calls: errors.map((err) => ({
+        phone_number: err.phoneNumber,
+        error: err.error,
+      })),
+    }),
+  ).promptResponse;
 };

@@ -6,11 +6,7 @@ import {
   setConversationRegion,
 } from './utils/conversation-service-helper';
 import { formatWebhook } from './utils/format-webhook-response';
-import {
-  appendRegionHint,
-  buildDormantTriggersWarning,
-  hasNoTriggers,
-} from './utils/webhook-tools-helper';
+import { appendRegionHint, buildDormantTriggersWarning, hasNoTriggers } from './utils/webhook-tools-helper';
 import { ConversationToolKey, getToolName, toolsConfig } from './utils/conversation-tools-helper';
 import {
   ConversationAppIdOverride,
@@ -25,12 +21,15 @@ const TOOL_KEY: ConversationToolKey = 'createWebhook';
 const TOOL_NAME = getToolName(TOOL_KEY);
 
 export const registerCreateWebhook = (server: McpServer, tags: Tags[]) => {
-  if (!matchesAnyTag(tags, toolsConfig[TOOL_KEY].tags)) return;
+  if (!matchesAnyTag(tags, toolsConfig[TOOL_KEY].tags)) {
+    return;
+  }
 
   server.registerTool(
     TOOL_NAME,
     {
-      description: 'Create a webhook for a Conversation app (up to 5 per app). Events are delivered to the target URL over HTTP when triggers fire. Configure the signing secret in the Sinch Dashboard; it is not set through this tool.',
+      description:
+        'Create a webhook for a Conversation app (up to 5 per app). Events are delivered to the target URL over HTTP when triggers fire. Configure the signing secret in the Sinch Dashboard; it is not set through this tool.',
       inputSchema: {
         target: WebhookTarget,
         appId: ConversationAppIdOverride,
@@ -78,17 +77,22 @@ export const createWebhookHandler = async ({
       webhookCreateRequestBody,
     });
     const formatted = formatWebhook(response);
-    return new PromptResponse(JSON.stringify({
-      success: true,
-      webhook: formatted,
-      ...(hasNoTriggers(triggers) && formatted.id && {
-        warning: buildDormantTriggersWarning(formatted.id),
+    return new PromptResponse(
+      JSON.stringify({
+        success: true,
+        webhook: formatted,
+        ...(hasNoTriggers(triggers) &&
+          formatted.id && {
+            warning: buildDormantTriggersWarning(formatted.id),
+          }),
       }),
-    })).promptResponse;
+    ).promptResponse;
   } catch (error) {
-    return new PromptResponse(JSON.stringify({
-      success: false,
-      error: appendRegionHint(error, usedRegion),
-    })).promptResponse;
+    return new PromptResponse(
+      JSON.stringify({
+        success: false,
+        error: appendRegionHint(error, usedRegion),
+      }),
+    ).promptResponse;
   }
 };

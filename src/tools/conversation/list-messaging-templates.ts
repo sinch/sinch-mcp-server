@@ -11,14 +11,17 @@ const TOOL_KEY: ConversationToolKey = 'listMessagingTemplates';
 const TOOL_NAME = getToolName(TOOL_KEY);
 
 export const registerListAllTemplates = (server: McpServer, tags: Tags[]) => {
-  if (!matchesAnyTag(tags, toolsConfig[TOOL_KEY].tags)) return;
+  if (!matchesAnyTag(tags, toolsConfig[TOOL_KEY].tags)) {
+    return;
+  }
 
   server.registerTool(
     TOOL_NAME,
     {
-      description: 'Get a list of all messaging-related templates (omni-channel or channel specific) belonging to an account. Note that the Email templates are NOT included in this list - they can be found with another tool: list-email-templates. Do not try to use this tool to list Email templates, it will not work.',
+      description:
+        'Get a list of all messaging-related templates (omni-channel or channel specific) belonging to an account. Note that the Email templates are NOT included in this list - they can be found with another tool: list-email-templates. Do not try to use this tool to list Email templates, it will not work.',
     },
-    listAllTemplatesHandler
+    listAllTemplatesHandler,
   );
 };
 
@@ -39,31 +42,35 @@ export const listAllTemplatesHandler = async (): Promise<IPromptResponse> => {
         setTemplateRegion(region, conversationService);
         const response = await conversationService.templatesV2.list({});
         const formatted = formatListAllTemplatesResponse(response);
-        omniChannelTemplates.push(...formatted.map(t => ({ ...t, region })));
+        omniChannelTemplates.push(...formatted.map((t) => ({ ...t, region })));
       } catch (error) {
         errors.push({
           region,
-          error: error instanceof Error ? error.message : 'Unknown error'
+          error: error instanceof Error ? error.message : 'Unknown error',
         });
       }
     }
 
     const whatsAppTemplates = await fetchWhatsAppSpecificTemplates();
 
-    return new PromptResponse(JSON.stringify({
-      success: errors.length === 0,
-      templates: {
-        omni_channel: omniChannelTemplates,
-        whatsapp: whatsAppTemplates,
-        ...(errors.length > 0 && { errors })
-      },
-      total_count: omniChannelTemplates.length + whatsAppTemplates.length
-    })).promptResponse;
+    return new PromptResponse(
+      JSON.stringify({
+        success: errors.length === 0,
+        templates: {
+          omni_channel: omniChannelTemplates,
+          whatsapp: whatsAppTemplates,
+          ...(errors.length > 0 && { errors }),
+        },
+        total_count: omniChannelTemplates.length + whatsAppTemplates.length,
+      }),
+    ).promptResponse;
   } catch (error) {
-    return new PromptResponse(JSON.stringify({
-      success: false,
-      error: error instanceof Error ? error.message : String(error)
-    })).promptResponse;
+    return new PromptResponse(
+      JSON.stringify({
+        success: false,
+        error: error instanceof Error ? error.message : String(error),
+      }),
+    ).promptResponse;
   }
 };
 
@@ -85,9 +92,9 @@ const fetchWhatsAppSpecificTemplates = async () => {
       method: 'GET',
       headers: {
         'Content-Type': 'application/json',
-        Authorization: 'Basic ' + Buffer.from(`${process.env.KEY_ID}:${process.env.KEY_SECRET}`).toString('base64')
-      }
-    }
+        Authorization: 'Basic ' + Buffer.from(`${process.env.KEY_ID}:${process.env.KEY_SECRET}`).toString('base64'),
+      },
+    },
   );
 
   if (!resp.ok) {

@@ -3,9 +3,13 @@ import { VerificationService } from '@sinch/verification';
 import { getVerificationService } from '../../../../src/tools/verification/utils/verification-service-helper';
 import { formatUserAgent } from '../../../../src/utils';
 
-jest.mock('@sinch/sdk-core/package.json', () => ({
-  version: '1.0.0',
-}), { virtual: true });
+jest.mock(
+  '@sinch/sdk-core/package.json',
+  () => ({
+    version: '1.0.0',
+  }),
+  { virtual: true },
+);
 
 describe('getVerificationService', () => {
   const OLD_ENV = process.env;
@@ -33,10 +37,11 @@ describe('getVerificationService', () => {
     expect(verificationFetchClient!.apiClientOptions.hostname).toBe(expectedHostname);
     expect(verificationFetchClient!.apiClientOptions.requestPlugins?.length).toBe(3);
 
-    const userAgentPlugin = verificationFetchClient!.apiClientOptions.requestPlugins?.find((plugin) => plugin.getName() === 'AdditionalHeadersRequest');
+    const userAgentPlugin = verificationFetchClient!.apiClientOptions.requestPlugins?.find(
+      (plugin) => plugin.getName() === 'AdditionalHeadersRequest',
+    );
     expect(userAgentPlugin).toBeDefined();
     const expectedUserAgent = formatUserAgent(TOOL_NAME, APPLICATION_KEY);
     expect((await (userAgentPlugin as any).additionalHeaders.headers)['User-Agent']).toBe(expectedUserAgent);
   });
-
 });

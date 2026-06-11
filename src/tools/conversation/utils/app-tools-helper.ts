@@ -13,10 +13,7 @@ export const addChannelToApp = async (
 ): Promise<IPromptResponse> => {
   try {
     const existingApp = await conversationService.app.get({ app_id: appId });
-    const channelCredentials = mergeChannelCredentials(
-      existingApp.channel_credentials,
-      credential,
-    );
+    const channelCredentials = mergeChannelCredentials(existingApp.channel_credentials, credential);
 
     const response = await conversationService.app.update({
       app_id: appId,
@@ -25,14 +22,18 @@ export const addChannelToApp = async (
       },
     });
 
-    return new PromptResponse(JSON.stringify({
-      success: true,
-      app: formatAppResponse(response),
-    })).promptResponse;
+    return new PromptResponse(
+      JSON.stringify({
+        success: true,
+        app: formatAppResponse(response),
+      }),
+    ).promptResponse;
   } catch (error) {
-    return new PromptResponse(JSON.stringify({
-      success: false,
-      error: appendRegionHint(error, usedRegion),
-    })).promptResponse;
+    return new PromptResponse(
+      JSON.stringify({
+        success: false,
+        error: appendRegionHint(error, usedRegion),
+      }),
+    ).promptResponse;
   }
 };

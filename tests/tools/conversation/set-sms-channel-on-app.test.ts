@@ -1,9 +1,13 @@
 import { setSmsChannelOnAppHandler } from '../../../src/tools/conversation/set-sms-channel-on-app';
 import { getConversationService } from '../../../src/tools/conversation/utils/conversation-service-helper';
 
-jest.mock('@sinch/sdk-core/package.json', () => ({
-  version: '1.0.0',
-}), { virtual: true });
+jest.mock(
+  '@sinch/sdk-core/package.json',
+  () => ({
+    version: '1.0.0',
+  }),
+  { virtual: true },
+);
 
 jest.mock('../../../src/tools/conversation/utils/conversation-service-helper', () => ({
   getConversationService: jest.fn(),
@@ -28,12 +32,14 @@ beforeEach(() => {
 test('setSmsChannelOnAppHandler merges SMS credentials into the app', async () => {
   mockGet.mockResolvedValue({
     id: 'app-123',
-    channel_credentials: [{
-      channel: 'MESSENGER',
-      static_token: { token: 'fb-token' },
-      state: { status: 'ACTIVE' },
-      channel_known_id: 'page-1',
-    }],
+    channel_credentials: [
+      {
+        channel: 'MESSENGER',
+        static_token: { token: 'fb-token' },
+        state: { status: 'ACTIVE' },
+        channel_known_id: 'page-1',
+      },
+    ],
   });
   mockUpdate.mockResolvedValue({
     id: 'app-123',

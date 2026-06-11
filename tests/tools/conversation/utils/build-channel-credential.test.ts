@@ -44,12 +44,14 @@ describe('buildWhatsAppChannelCredential', () => {
 
 describe('toChannelCredentialRequest', () => {
   test('omits response-only fields from PATCH payload', () => {
-    expect(toChannelCredentialRequest({
-      channel: 'SMS',
-      static_bearer: { claimed_identity: 'plan', token: 'secret' },
-      state: { status: 'ACTIVE' },
-      channel_known_id: 'known-id',
-    })).toEqual({
+    expect(
+      toChannelCredentialRequest({
+        channel: 'SMS',
+        static_bearer: { claimed_identity: 'plan', token: 'secret' },
+        state: { status: 'ACTIVE' },
+        channel_known_id: 'known-id',
+      }),
+    ).toEqual({
       channel: 'SMS',
       static_bearer: {
         claimed_identity: 'plan',

@@ -5,14 +5,14 @@ export const formatListAllAppsResponse = (response: Conversation.ListAppsRespons
     return { apps: [] };
   }
   return {
-    apps: response.apps?.map(app => ({
+    apps: response.apps?.map((app) => ({
       id: app.id,
       display_name: app.display_name,
       channel_credentials: app.channel_credentials
-        ?.filter(cred => cred.state?.status === 'ACTIVE')
-        .map(cred => ({
-        channel: cred.channel
-      }))
-    }))
+        ?.filter((cred) => cred.state?.status === 'ACTIVE')
+        .map((cred) => ({
+          channel: cred.channel,
+        })),
+    })),
   };
 };

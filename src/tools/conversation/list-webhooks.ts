@@ -15,12 +15,15 @@ const TOOL_KEY: ConversationToolKey = 'listWebhooks';
 const TOOL_NAME = getToolName(TOOL_KEY);
 
 export const registerListWebhooks = (server: McpServer, tags: Tags[]) => {
-  if (!matchesAnyTag(tags, toolsConfig[TOOL_KEY].tags)) return;
+  if (!matchesAnyTag(tags, toolsConfig[TOOL_KEY].tags)) {
+    return;
+  }
 
   server.registerTool(
     TOOL_NAME,
     {
-      description: 'List all webhooks configured for a Conversation app. Webhooks receive Conversation API callbacks at a target URL when selected triggers occur. Configure signing secrets in the Sinch Dashboard.',
+      description:
+        'List all webhooks configured for a Conversation app. Webhooks receive Conversation API callbacks at a target URL when selected triggers occur. Configure signing secrets in the Sinch Dashboard.',
       inputSchema: {
         appId: ConversationAppIdOverride,
         region: ConversationRegionOverride,
@@ -55,15 +58,19 @@ export const listWebhooksHandler = async ({
       app_id: conversationAppId,
     });
     const formatted = formatListWebhooksResponse(response);
-    return new PromptResponse(JSON.stringify({
-      success: true,
-      ...formatted,
-      total_count: formatted.webhooks.length,
-    })).promptResponse;
+    return new PromptResponse(
+      JSON.stringify({
+        success: true,
+        ...formatted,
+        total_count: formatted.webhooks.length,
+      }),
+    ).promptResponse;
   } catch (error) {
-    return new PromptResponse(JSON.stringify({
-      success: false,
-      error: appendRegionHint(error, usedRegion),
-    })).promptResponse;
+    return new PromptResponse(
+      JSON.stringify({
+        success: false,
+        error: appendRegionHint(error, usedRegion),
+      }),
+    ).promptResponse;
   }
 };

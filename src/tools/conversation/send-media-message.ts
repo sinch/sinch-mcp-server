@@ -1,7 +1,13 @@
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { Conversation } from '@sinch/conversation';
 import { z } from 'zod';
-import { Recipient, ConversationAppIdOverride, ConversationChannel, ConversationRegionOverride, MessageSenderNumberOverride } from './prompt-schemas';
+import {
+  Recipient,
+  ConversationAppIdOverride,
+  ConversationChannel,
+  ConversationRegionOverride,
+  MessageSenderNumberOverride,
+} from './prompt-schemas';
 import {
   getConversationAppId,
   getConversationService,
@@ -27,25 +33,28 @@ const TOOL_KEY: ConversationToolKey = 'sendMediaMessage';
 const TOOL_NAME = getToolName(TOOL_KEY);
 
 export const registerSendMediaMessage = (server: McpServer, tags: Tags[]) => {
-  if (!matchesAnyTag(tags, toolsConfig[TOOL_KEY].tags)) return;
+  if (!matchesAnyTag(tags, toolsConfig[TOOL_KEY].tags)) {
+    return;
+  }
 
   server.registerTool(
     TOOL_NAME,
     {
-      description: 'Send a media message from URL given in parameter to a contact on the specified channel. The contact can be a phone number in E.164 format, or the identifier for the specified channel. The media must be specified with its URL.',
+      description:
+        'Send a media message from URL given in parameter to a contact on the specified channel. The contact can be a phone number in E.164 format, or the identifier for the specified channel. The media must be specified with its URL.',
       inputSchema: SendMediaMessageSchema,
     },
-    sendMediaMessageHandler
+    sendMediaMessageHandler,
   );
 };
 
-export const sendMediaMessageHandler = async({
+export const sendMediaMessageHandler = async ({
   recipient,
   channel,
   url,
   appId,
   sender,
-  region
+  region,
 }: SendMediaMessage): Promise<IPromptResponse> => {
   const maybeAppId = getConversationAppId(appId);
   if (isPromptResponse(maybeAppId)) {
@@ -66,22 +75,28 @@ export const sendMediaMessageHandler = async({
       ...requestBase,
       message: {
         media_message: {
-          url: url
-        }
-      }
-    }
+          url: url,
+        },
+      },
+    },
   };
 
   try {
     const response = await conversationService.messages.sendMediaMessage(request);
-    return new PromptResponse(JSON.stringify({
-      success: true,
-      message_id: response.message_id
-    })).promptResponse;
+    return new PromptResponse(
+      JSON.stringify({
+        success: true,
+        message_id: response.message_id,
+      }),
+    ).promptResponse;
   } catch (error) {
-    return new PromptResponse(JSON.stringify({
-      success: false,
-      error: (error instanceof Error ? error.message : String(error)) + `. Are you sure you are using the right region to send your message? The current region is ${usedRegion}.`
-    })).promptResponse;
+    return new PromptResponse(
+      JSON.stringify({
+        success: false,
+        error:
+          (error instanceof Error ? error.message : String(error)) +
+          `. Are you sure you are using the right region to send your message? The current region is ${usedRegion}.`,
+      }),
+    ).promptResponse;
   }
 };

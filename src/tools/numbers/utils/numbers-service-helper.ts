@@ -9,18 +9,18 @@ import { NumbersService } from '@sinch/numbers';
 import { PromptResponse } from '../../../types';
 import { formatUserAgent } from '../../../utils';
 
-export function getNumbersService(
-  toolName: string
-): NumbersService | PromptResponse {
+export function getNumbersService(toolName: string): NumbersService | PromptResponse {
   const projectId = process.env.PROJECT_ID;
-  const keyId     = process.env.KEY_ID;
+  const keyId = process.env.KEY_ID;
   const keySecret = process.env.KEY_SECRET;
 
   if (!projectId || !keyId || !keySecret) {
-    return new PromptResponse(JSON.stringify({
+    return new PromptResponse(
+      JSON.stringify({
         success: false,
-        error: 'Missing env vars: PROJECT_ID, KEY_ID, KEY_SECRET.'
-      }));
+        error: 'Missing env vars: PROJECT_ID, KEY_ID, KEY_SECRET.',
+      }),
+    );
   }
 
   const numbersService = new NumbersService({});
@@ -29,10 +29,7 @@ export function getNumbersService(
     requestPlugins: [
       new Oauth2TokenRequest(keyId, keySecret),
       new AdditionalHeadersRequest({
-        headers: buildHeader(
-          'User-Agent',
-          formatUserAgent(toolName, projectId),
-        ),
+        headers: buildHeader('User-Agent', formatUserAgent(toolName, projectId)),
       }),
     ],
   });

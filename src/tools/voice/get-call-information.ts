@@ -15,7 +15,9 @@ const TOOL_KEY: VoiceToolKey = 'getCallInformation';
 const TOOL_NAME = getToolName(TOOL_KEY);
 
 export const registerGetCallInformation = (server: McpServer, tags: Tags[]) => {
-  if (!matchesAnyTag(tags, voiceToolsConfig[TOOL_KEY].tags)) return;
+  if (!matchesAnyTag(tags, voiceToolsConfig[TOOL_KEY].tags)) {
+    return;
+  }
 
   server.registerTool(
     TOOL_NAME,
@@ -23,7 +25,7 @@ export const registerGetCallInformation = (server: McpServer, tags: Tags[]) => {
       description: 'Get information about a call using its ID',
       inputSchema: GetCallInformationSchema,
     },
-    getCallInformationHandler
+    getCallInformationHandler,
   );
 };
 
@@ -37,14 +39,18 @@ export const getCallInformationHandler = async ({ callId }: GetCallInformation):
   try {
     const response = await voiceService.calls.get({ callId });
 
-    return new PromptResponse(JSON.stringify({
-      success: true,
-      call_information: response
-    })).promptResponse;
+    return new PromptResponse(
+      JSON.stringify({
+        success: true,
+        call_information: response,
+      }),
+    ).promptResponse;
   } catch (error) {
-    return new PromptResponse(JSON.stringify({
-      success: false,
-      error: error instanceof Error ? error.message : String(error)
-    })).promptResponse;
+    return new PromptResponse(
+      JSON.stringify({
+        success: false,
+        error: error instanceof Error ? error.message : String(error),
+      }),
+    ).promptResponse;
   }
-}
+};

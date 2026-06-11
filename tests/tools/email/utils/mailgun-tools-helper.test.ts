@@ -1,7 +1,6 @@
 import { sha256 } from '../../../../src/tools/email/utils/mailgun-tools-helper';
 
 describe('hashing function', () => {
-
   it('should return a valid hash for a given input', () => {
     const input = 'test input';
     const expectedHash = '9dfe6f15d1ab73af898739394fd22fd72a03db01834582f24bb2e1c66c7aaeae';

@@ -20,7 +20,12 @@ interface Event {
 
 const RetrieveEmailInfoSchema = {
   emailId: z.string().describe('The email ID.'),
-  domain: z.string().optional().describe('The domain to use for retrieving the email. If defined, it will override the domain provided in the environment variable "MAILGUN_DOMAIN".'),
+  domain: z
+    .string()
+    .optional()
+    .describe(
+      'The domain to use for retrieving the email. If defined, it will override the domain provided in the environment variable "MAILGUN_DOMAIN".',
+    ),
 };
 
 type RetrieveEmailInfo = z.infer<z.ZodObject<typeof RetrieveEmailInfoSchema>>;
@@ -29,7 +34,9 @@ const TOOL_KEY: EmailToolKey = 'retrieveEmailInfo';
 const TOOL_NAME = getToolName(TOOL_KEY);
 
 export const registerRetrieveEmailInfo = (server: McpServer, tags: Tags[]) => {
-  if (!matchesAnyTag(tags, toolsConfig[TOOL_KEY].tags)) return;
+  if (!matchesAnyTag(tags, toolsConfig[TOOL_KEY].tags)) {
+    return;
+  }
 
   server.registerTool(
     TOOL_NAME,
@@ -37,39 +44,35 @@ export const registerRetrieveEmailInfo = (server: McpServer, tags: Tags[]) => {
       description: 'Retrieve the content of an email and the events that happened thanks to its ID',
       inputSchema: RetrieveEmailInfoSchema,
     },
-    retrieveEmailInfoHandler
+    retrieveEmailInfoHandler,
   );
 };
 
-export const retrieveEmailInfoHandler = async({
-  emailId,
-  domain
-}: RetrieveEmailInfo): Promise<IPromptResponse> => {
+export const retrieveEmailInfoHandler = async ({ emailId, domain }: RetrieveEmailInfo): Promise<IPromptResponse> => {
   const maybeCredentials = getMailgunCredentials(domain);
   if (isPromptResponse(maybeCredentials)) {
     return maybeCredentials.promptResponse;
   }
   const credentials = maybeCredentials;
 
-  const resp = await fetch(
-    `https://api.mailgun.net/v3/${credentials.domain}/events?message-id=${emailId}`,
-    {
-      method: 'GET',
-      headers: {
-        Authorization: 'Basic ' + Buffer.from(`api:${credentials.apiKey}`).toString('base64'),
-        'User-Agent': formatUserAgent(TOOL_NAME, sha256(credentials.apiKey)),
-      }
-    }
-  );
+  const resp = await fetch(`https://api.mailgun.net/v3/${credentials.domain}/events?message-id=${emailId}`, {
+    method: 'GET',
+    headers: {
+      Authorization: 'Basic ' + Buffer.from(`api:${credentials.apiKey}`).toString('base64'),
+      'User-Agent': formatUserAgent(TOOL_NAME, sha256(credentials.apiKey)),
+    },
+  });
 
   if (resp.status !== 200) {
-    return new PromptResponse(JSON.stringify({
-      success: false,
-      error: `An error occurred when trying to retrieve the events related to the email ID ${emailId}. The status code is ${resp.status}.`
-    })).promptResponse;
+    return new PromptResponse(
+      JSON.stringify({
+        success: false,
+        error: `An error occurred when trying to retrieve the events related to the email ID ${emailId}. The status code is ${resp.status}.`,
+      }),
+    ).promptResponse;
   }
 
-  const data = await resp.json() as EventList;
+  const data = (await resp.json()) as EventList;
   let storageUrl;
   const events = [];
   for (const event of data.items) {
@@ -79,7 +82,7 @@ export const retrieveEmailInfoHandler = async({
     }
     events.push({
       event: eventType,
-      timestamp: new Date(event.timestamp * 1000).toISOString()
+      timestamp: new Date(event.timestamp * 1000).toISOString(),
     });
   }
 
@@ -93,33 +96,38 @@ export const retrieveEmailInfoHandler = async({
     events: Array<{ event?: string; timestamp: string }>;
   } = {
     message_id: emailId,
-    events: events
+    events: events,
   };
 
-  const storedEmail = await fetch(
-    storageUrl!,
-    {
-      method: 'GET',
-      headers: {
-        Authorization: 'Basic ' + Buffer.from(`api:${credentials.apiKey}`).toString('base64'),
-        'User-Agent': formatUserAgent(TOOL_NAME, sha256(credentials.apiKey)),
-      }
-    }
-  );
+  const storedEmail = await fetch(storageUrl!, {
+    method: 'GET',
+    headers: {
+      Authorization: 'Basic ' + Buffer.from(`api:${credentials.apiKey}`).toString('base64'),
+      'User-Agent': formatUserAgent(TOOL_NAME, sha256(credentials.apiKey)),
+    },
+  });
 
   if (storedEmail.status === 200) {
-    const storedEmailData = await storedEmail.json() as { 'body-html': string; Sender: string; From: string; To: string; Subject: string };
+    const storedEmailData = (await storedEmail.json()) as {
+      'body-html': string;
+      Sender: string;
+      From: string;
+      To: string;
+      Subject: string;
+    };
     result.sender = storedEmailData['Sender'];
     result.from = storedEmailData['From'];
     result.to = storedEmailData['To'];
     result.subject = storedEmailData['Subject'];
     result.body_html = storedEmailData['body-html'];
   } else {
-    return new PromptResponse(JSON.stringify({
-      success: false,
-      error: `An error occurred when trying to retrieve the events related to the email ID ${emailId}. The status code is ${storedEmail.status}.`
-    })).promptResponse;
+    return new PromptResponse(
+      JSON.stringify({
+        success: false,
+        error: `An error occurred when trying to retrieve the events related to the email ID ${emailId}. The status code is ${storedEmail.status}.`,
+      }),
+    ).promptResponse;
   }
 
   return new PromptResponse(JSON.stringify({ success: true, data: result })).promptResponse;
-}
+};

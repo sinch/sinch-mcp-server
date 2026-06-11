@@ -6,9 +6,7 @@ import { getToolName, NumbersToolKey, toolsConfig } from './utils/numbers-tools-
 import { getNumbersService } from './utils/numbers-service-helper';
 
 const ReleaseRentedNumberSchema = {
-  phoneNumber: z
-    .string()
-    .describe('The phone number in E.164 format with leading `+`'),
+  phoneNumber: z.string().describe('The phone number in E.164 format with leading `+`'),
 };
 
 type ReleaseRentedNumber = z.infer<z.ZodObject<typeof ReleaseRentedNumberSchema>>;
@@ -17,7 +15,9 @@ const TOOL_KEY: NumbersToolKey = 'releaseRentedNumber';
 const TOOL_NAME = getToolName(TOOL_KEY);
 
 export const registerReleaseRentedNumber = (server: McpServer, tags: Tags[]) => {
-  if (!matchesAnyTag(tags, toolsConfig[TOOL_KEY].tags)) return;
+  if (!matchesAnyTag(tags, toolsConfig[TOOL_KEY].tags)) {
+    return;
+  }
 
   server.registerTool(
     TOOL_NAME,
@@ -25,13 +25,11 @@ export const registerReleaseRentedNumber = (server: McpServer, tags: Tags[]) => 
       description: 'Releases a rented phone number from your project.',
       inputSchema: ReleaseRentedNumberSchema,
     },
-    releaseRentedNumberHandler
+    releaseRentedNumberHandler,
   );
 };
 
-export const releaseRentedNumberHandler = async ({
-  phoneNumber,
-}: ReleaseRentedNumber) => {
+export const releaseRentedNumberHandler = async ({ phoneNumber }: ReleaseRentedNumber) => {
   const maybeService = getNumbersService(TOOL_NAME);
   if (isPromptResponse(maybeService)) {
     return maybeService.promptResponse;
@@ -44,16 +42,14 @@ export const releaseRentedNumberHandler = async ({
       JSON.stringify({
         success: true,
         data: response,
-      })
+      }),
     ).promptResponse;
   } catch (error) {
     return new PromptResponse(
       JSON.stringify({
         success: false,
-        error: `Failed to release number '${phoneNumber}': ${
-          error instanceof Error ? error.message : String(error)
-        }`,
-      })
+        error: `Failed to release number '${phoneNumber}': ${error instanceof Error ? error.message : String(error)}`,
+      }),
     ).promptResponse;
   }
 };

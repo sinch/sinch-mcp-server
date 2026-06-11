@@ -10,68 +10,67 @@ Here is the list of tools available in the MCP server (all the phone numbers mus
 
 ### Conversation Tools
 
-| Tool                                  | Description                                                                                                                                                                                                                         | Tags                       |
-|---------------------------------------|-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|----------------------------|
-| **send-text-message**                 | Send a plain text message to a recipient on a supported channel. <br> *Example prompt*: "Send a quick update to the phone number +33612345678 on SMS."                                                                              | conversation, notification |
-| **send-media-message**                | Send an image, video, or document via a media message. <br> *Example prompt*: "Send the product brochure PDF to the phone number +33612345678 on WhatsApp."                                                                         | conversation, notification |
-| **send-template-message**             | Send a message using a predefined template (omni-template only). <br> *Example prompt*: "Send the appointment reminder template in Spanish to this user on Messenger."                                                              | conversation, notification |
-| **send-whatsapp-template-message**    | Send a message using a predefined WhatsApp template. <br> *Example prompt*: "Send a message using the template "appointment-reminder" on WhatsApp."                                                                                 | conversation, notification |
-| **send-choice-message**               | Send a message that includes interactive choices (buttons or quick replies). <br> *Example prompt*: "Send a RCS survey about preferred ice cream flavor to +33612345678 with the following choices: Vanilla, Strawberry, Hazelnut". | conversation, notification |
-| **send-location-message**             | Send a location pin or coordinates to a user. <br> *Example prompt*: "Send a pin to the Guggenheim Museum location in Bilbao to the phone number +33612345678."                                                                     | conversation, notification |
-| **list-conversation-apps**            | List all configured Conversation apps in the Sinch account. <br> *Example prompt*: "What messaging apps do I have set up in my account?"                                                                                            | conversation, notification |
-| **create-conversation-app**           | Create a new Conversation API app (no channels required at creation). <br> *Example prompt*: "Create a Conversation app named My Support Bot in the EU region."                                                                       | conversation, configuration |
-| **set-sms-channel-on-app**            | Set (create or replace) the SMS channel on a Conversation app. <br> *Example prompt*: "Set SMS on app abc123 using service plan XYZ and API token …"                                                                                   | conversation, configuration |
-| **set-rcs-channel-on-app**            | Set (create or replace) the RCS channel on a Conversation app. <br> *Example prompt*: "Set RCS on app abc123 with sender ID … and bearer token …"                                                                                   | conversation, configuration |
-| **set-whatsapp-channel-on-app**       | Set (create or replace) the WhatsApp channel on a Conversation app. <br> *Example prompt*: "Set WhatsApp on app abc123 with sender ID … and bearer token …"                                                                         | conversation, configuration |
-| **list-messaging-templates**          | List all omni-channel and channel-specific message templates. <br> *Example prompt*: "Show me all message templates in my account."                                                                                                 | conversation, notification |
-| **list-webhooks**                     | List webhooks configured for a Conversation app. <br> *Example prompt*: "List all webhooks for my Conversation app."                                                                                                                | conversation, configuration |
-| **get-webhook**                       | Get a webhook by ID. <br> *Example prompt*: "Show me the details of webhook ID abc123."                                                                                                                                             | conversation, configuration |
-| **create-webhook**                    | Create a webhook that delivers Conversation API events to a target URL. <br> *Example prompt*: "Create a webhook for inbound messages at https://example.com/callback."                                                             | conversation, configuration |
-| **update-webhook**                    | Update a webhook target URL and/or triggers. <br> *Example prompt*: "Update webhook abc123 to also receive MESSAGE_DELIVERY events."                                                                                                | conversation, configuration |
-| **delete-webhook**                    | Delete a webhook by ID. <br> *Example prompt*: "Delete webhook abc123."                                                                                                                                                             | conversation, configuration |
-
+| Tool                               | Description                                                                                                                                                                                                                         | Tags                        |
+| ---------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------- |
+| **send-text-message**              | Send a plain text message to a recipient on a supported channel. <br> _Example prompt_: "Send a quick update to the phone number +33612345678 on SMS."                                                                              | conversation, notification  |
+| **send-media-message**             | Send an image, video, or document via a media message. <br> _Example prompt_: "Send the product brochure PDF to the phone number +33612345678 on WhatsApp."                                                                         | conversation, notification  |
+| **send-template-message**          | Send a message using a predefined template (omni-template only). <br> _Example prompt_: "Send the appointment reminder template in Spanish to this user on Messenger."                                                              | conversation, notification  |
+| **send-whatsapp-template-message** | Send a message using a predefined WhatsApp template. <br> _Example prompt_: "Send a message using the template "appointment-reminder" on WhatsApp."                                                                                 | conversation, notification  |
+| **send-choice-message**            | Send a message that includes interactive choices (buttons or quick replies). <br> _Example prompt_: "Send a RCS survey about preferred ice cream flavor to +33612345678 with the following choices: Vanilla, Strawberry, Hazelnut". | conversation, notification  |
+| **send-location-message**          | Send a location pin or coordinates to a user. <br> _Example prompt_: "Send a pin to the Guggenheim Museum location in Bilbao to the phone number +33612345678."                                                                     | conversation, notification  |
+| **list-conversation-apps**         | List all configured Conversation apps in the Sinch account. <br> _Example prompt_: "What messaging apps do I have set up in my account?"                                                                                            | conversation, notification  |
+| **create-conversation-app**        | Create a new Conversation API app (no channels required at creation). <br> _Example prompt_: "Create a Conversation app named My Support Bot in the EU region."                                                                     | conversation, configuration |
+| **set-sms-channel-on-app**         | Set (create or replace) the SMS channel on a Conversation app. <br> _Example prompt_: "Set SMS on app abc123 using service plan XYZ and API token …"                                                                                | conversation, configuration |
+| **set-rcs-channel-on-app**         | Set (create or replace) the RCS channel on a Conversation app. <br> _Example prompt_: "Set RCS on app abc123 with sender ID … and bearer token …"                                                                                   | conversation, configuration |
+| **set-whatsapp-channel-on-app**    | Set (create or replace) the WhatsApp channel on a Conversation app. <br> _Example prompt_: "Set WhatsApp on app abc123 with sender ID … and bearer token …"                                                                         | conversation, configuration |
+| **list-messaging-templates**       | List all omni-channel and channel-specific message templates. <br> _Example prompt_: "Show me all message templates in my account."                                                                                                 | conversation, notification  |
+| **list-webhooks**                  | List webhooks configured for a Conversation app. <br> _Example prompt_: "List all webhooks for my Conversation app."                                                                                                                | conversation, configuration |
+| **get-webhook**                    | Get a webhook by ID. <br> _Example prompt_: "Show me the details of webhook ID abc123."                                                                                                                                             | conversation, configuration |
+| **create-webhook**                 | Create a webhook that delivers Conversation API events to a target URL. <br> _Example prompt_: "Create a webhook for inbound messages at https://example.com/callback."                                                             | conversation, configuration |
+| **update-webhook**                 | Update a webhook target URL and/or triggers. <br> _Example prompt_: "Update webhook abc123 to also receive MESSAGE_DELIVERY events."                                                                                                | conversation, configuration |
+| **delete-webhook**                 | Delete a webhook by ID. <br> _Example prompt_: "Delete webhook abc123."                                                                                                                                                             | conversation, configuration |
 
 ### Email tools (Mailgun)
 
 | Tool                     | Description                                                                                                                                                                                          | Tags                |
-|--------------------------|------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|---------------------|
-| **send-email**           | Send an email using a predefined HTML template or raw HTML/text content. <br> *Example prompt*: "Send a welcome email to [john@example.com](mailto:john@example.com) using our onboarding template." | email, notification |
-| **list-email-templates** | List all email templates available for a specific domain. <br> *Example prompt*: "What email templates do I have available?"                                                                         | email, notification |
-| **retrieve-email-info**  | Retrieve metadata, content and delivery status for a specific email message. <br> *Example prompt*: "Can you get the delivery status of the email with ID <email-id>?"                               | email, notification |
-| **list-email-events**    | Retrieve and group recent email delivery events, such as bounces, opens, or clicks. <br> *Example prompt*: "Show me all recent email activity for my account."                                       | email               |
-| **analytics-metrics**    | Retrieve email analytics metrics, such as open rates or click-through rates. <br> *Example prompt*: "What are the open rates during the last week?"                                                  | email               |
+| ------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------- |
+| **send-email**           | Send an email using a predefined HTML template or raw HTML/text content. <br> _Example prompt_: "Send a welcome email to [john@example.com](mailto:john@example.com) using our onboarding template." | email, notification |
+| **list-email-templates** | List all email templates available for a specific domain. <br> _Example prompt_: "What email templates do I have available?"                                                                         | email, notification |
+| **retrieve-email-info**  | Retrieve metadata, content and delivery status for a specific email message. <br> _Example prompt_: "Can you get the delivery status of the email with ID <email-id>?"                               | email, notification |
+| **list-email-events**    | Retrieve and group recent email delivery events, such as bounces, opens, or clicks. <br> _Example prompt_: "Show me all recent email activity for my account."                                       | email               |
+| **analytics-metrics**    | Retrieve email analytics metrics, such as open rates or click-through rates. <br> _Example prompt_: "What are the open rates during the last week?"                                                  | email               |
 
 ### Verification Tools
 
-| Tool                              | Description                                                                                                                                             | Tags                       |
-|-----------------------------------|---------------------------------------------------------------------------------------------------------------------------------------------------------|----------------------------|
-| **number-lookup**                 | Lookup a phone number for its status and capabilities. <br> *Example prompt*: "Lookup for the following phone number capabilities: +33501020304."       | verification               |
-| **start-sms-verification**        | Initiate an SMS verification by sending an OTP to a user's phone number. <br> *Example prompt*: "Start phone verification for the number +33612345678." | verification               |
-| **report-sms-verification**       | Submit a one-time password (OTP) to complete SMS verification. <br> *Example prompt*: "Verify the phone number with this code: 1234."                   | verification               |
+| Tool                        | Description                                                                                                                                             | Tags         |
+| --------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------ |
+| **number-lookup**           | Lookup a phone number for its status and capabilities. <br> _Example prompt_: "Lookup for the following phone number capabilities: +33501020304."       | verification |
+| **start-sms-verification**  | Initiate an SMS verification by sending an OTP to a user's phone number. <br> _Example prompt_: "Start phone verification for the number +33612345678." | verification |
+| **report-sms-verification** | Submit a one-time password (OTP) to complete SMS verification. <br> _Example prompt_: "Verify the phone number with this code: 1234."                   | verification |
 
 ### Voice Tools
 
-| Tool                              | Description                                                                                                                                                                                              | Tags                       |
-|-----------------------------------|----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|----------------------------|
-| **tts-callout**                   | Place a voice call and read aloud a message using Text-to-Speech. <br> *Example prompt*: "Call the phone number +33612345678 and say: 'Your appointment is tomorrow at 10 AM.'"                          | voice, notification        |
-| **conference-callout**            | Start a voice call to one or more participants and connect them to a shared conference. <br> *Example prompt*: "Call John (+33612345678) and Lisa (+34987654321) and connect them to a conference room." | voice                      |
-| **manage-conference-participant** | Mute, unmute, hold, or resume an individual participant in a conference call. <br> *Example prompt*: "Mute the caller with ID xyz789 in the conference."                                                 | voice                      |
-| **close-conference**              | End a conference call by disconnecting all the participants using the ID of the conference. <br> *Example prompt*: "End the current conference call with ID abc123."                                     | voice                      |
+| Tool                              | Description                                                                                                                                                                                              | Tags                |
+| --------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------- |
+| **tts-callout**                   | Place a voice call and read aloud a message using Text-to-Speech. <br> _Example prompt_: "Call the phone number +33612345678 and say: 'Your appointment is tomorrow at 10 AM.'"                          | voice, notification |
+| **conference-callout**            | Start a voice call to one or more participants and connect them to a shared conference. <br> _Example prompt_: "Call John (+33612345678) and Lisa (+34987654321) and connect them to a conference room." | voice               |
+| **manage-conference-participant** | Mute, unmute, hold, or resume an individual participant in a conference call. <br> _Example prompt_: "Mute the caller with ID xyz789 in the conference."                                                 | voice               |
+| **close-conference**              | End a conference call by disconnecting all the participants using the ID of the conference. <br> _Example prompt_: "End the current conference call with ID abc123."                                     | voice               |
 
 ### Numbers Tools
 
-| Tool                              | Description                                                                                                                                                                                                    | Tags    |
-|-----------------------------------|----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|---------|
-| **list-available-regions**        | List all regions where phone numbers are available for the project. Can filter by number type (MOBILE, LOCAL, TOLL_FREE). <br> *Example prompt*: "Which regions have toll-free numbers available?"              | numbers |
-| **list-rented-numbers**           | List all active (rented) phone numbers for the project. Can filter by region, type, pattern, and capability. <br> *Example prompt*: "Show me all my active phone numbers in the US."                           | numbers |
-| **search-for-available-numbers**  | Search for phone numbers available to rent, with filters for region, type, pattern, and capabilities. <br> *Example prompt*: "Find available local numbers in the US that support SMS."                         | numbers |
-| **rent-sinch-virtual-numbers**    | Rent (activate) one or more phone numbers by providing them in E.164 format. <br> *Example prompt*: "Rent the phone number +12025551234."                                                                      | numbers |
+| Tool                             | Description                                                                                                                                                                                        | Tags    |
+| -------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------- |
+| **list-available-regions**       | List all regions where phone numbers are available for the project. Can filter by number type (MOBILE, LOCAL, TOLL_FREE). <br> _Example prompt_: "Which regions have toll-free numbers available?" | numbers |
+| **list-rented-numbers**          | List all active (rented) phone numbers for the project. Can filter by region, type, pattern, and capability. <br> _Example prompt_: "Show me all my active phone numbers in the US."               | numbers |
+| **search-for-available-numbers** | Search for phone numbers available to rent, with filters for region, type, pattern, and capabilities. <br> _Example prompt_: "Find available local numbers in the US that support SMS."            | numbers |
+| **rent-sinch-virtual-numbers**   | Rent (activate) one or more phone numbers by providing them in E.164 format. <br> _Example prompt_: "Rent the phone number +12025551234."                                                          | numbers |
 
 ### Configuration Tools
 
 | Tool                        | Description                                                                                                                                                                                           | Tags |
-|-----------------------------|-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|------|
-| **sinch-mcp-configuration** | List all available tools in the Sinch MCP server and their status. If a tool is disabled, it will display the reason why. <br> *Example prompt*: "Which tools are available in the Sinch MCP server?" |      |
+| --------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---- |
+| **sinch-mcp-configuration** | List all available tools in the Sinch MCP server and their status. If a tool is disabled, it will display the reason why. <br> _Example prompt_: "Which tools are available in the Sinch MCP server?" |      |
 
 ## Getting Started
 
@@ -84,9 +83,10 @@ Here is the list of tools available in the MCP server (all the phone numbers mus
 ### API credentials
 
 To use the APIs used by the MCP tools, you will need the following credentials:
+
 - Conversation / Numbers API credentials:
   - (Required) `PROJECT_ID`: Select the project you want to use from your [Sinch Build dashboard](https://dashboard.sinch.com/dashboard) (Located at the left of the top toolbar)
-![Project ID selection](./docs/projectId-selection.png)
+    ![Project ID selection](./docs/projectId-selection.png)
   - (Required) `KEY_ID`: Select or create a new access key in the [Access keys section](https://dashboard.sinch.com/settings/access-keys) of the Sinch Build dashboard.
   - (Required) `KEY_SECRET`: This is the secret associated with the `Access Key` you selected or created in the previous step. Be careful, the `Access Key Secret` is only shown once when you create the `Access Key`. If you lose it, you will need to create a new `Access Key`.
   - `CONVERSATION_APP_ID`: This is the ID of the conversation app you want to use. You can find it in the [Conversation API / Apps section](https://dashboard.sinch.com/convapi/apps) of the Sinch Build dashboard. If you don't set it, you will have to specify it in the prompt.
@@ -114,10 +114,7 @@ The Sinch MCP server is available as an NPM package to the executed. Here is how
   "mcpServers": {
     "sinch": {
       "command": "npx",
-      "args": [
-        "-y",
-        "@sinch/mcp"
-      ],
+      "args": ["-y", "@sinch/mcp"],
       "env": {
         "PROJECT_ID": "",
         "KEY_ID": "",
@@ -137,8 +134,6 @@ The Sinch MCP server is available as an NPM package to the executed. Here is how
   }
 }
 ```
-
-
 
 # Running the MCP Server locally
 
@@ -169,9 +164,7 @@ Here is an example of how to configure the MCP server in the [Claude Desktop](ht
   "mcpServers": {
     "sinch": {
       "command": "node",
-      "args": [
-        "/your/path/to/sinch-mcp-server/dist/index.js"
-      ],
+      "args": ["/your/path/to/sinch-mcp-server/dist/index.js"],
       "env": {
         "PROJECT_ID": "",
         "KEY_ID": "",
@@ -196,30 +189,34 @@ Here is an example of how to configure the MCP server in the [Claude Desktop](ht
 
 Too many tools mean bigger context, mean higher tokens usage and more confusion for the LLM to select the right tool to use.<br>
 You can filter the tools that are available in the MCP server by using the `tags` options. For example, if you want to only use the conversation tools, you can add the following options to the `args` array:
+
 ```
       "args": [
         "/your/path/to/sinch-mcp-server/dist/index.js",
-        "--tags", 
+        "--tags",
         "conversation"
       ],
 ```
+
 You can combine multiple tags by separating them with commas. For example, if you want to use both conversation and verification tools, you can use the following command:
+
 ```
       "args": [
         "/your/path/to/sinch-mcp-server/dist/index.js",
-        "--tags", 
+        "--tags",
         "conversation,verification"
       ],
 ```
+
 If you want to use all the tools, you can omit the `--tags` option, or use the tag `all`:
+
 ```
       "args": [
         "/your/path/to/sinch-mcp-server/dist/index.js",
-        "--tags", 
+        "--tags",
         "all"
       ],
 ```
-
 
 ## Option 2: Start the MCP server remotely and connect to it using SSE
 
@@ -237,6 +234,7 @@ npm run build
 ### Step 2: Set up the MCP server configuration
 
 Copy the file `.template.env` and rename it `.env`. Then replace the placeholders with your own credentials and delete any key you don't need. The `.env` file should look like this ():
+
 ```dotenv
 # Conversation / Numbers tools related environment variables
 PROJECT_ID=
@@ -270,6 +268,7 @@ npm run start:stdio
 ```
 
 By default, this command will start the MCP with all the tools available. If you want to filter the tools that are available in the MCP server, you can use the `--tags` option. For example, if you want to only use the conversation tools, you can modify the command as follows:
+
 ```bash
 # Original command
 "start:sse": "tsc --project tsconfig.build.json && (npx -y supergateway --stdio \"node dist/index.js\" --port 8000 --baseUrl http://localhost:8000 --ssePath /sse --messagePath /message)"
@@ -279,6 +278,7 @@ By default, this command will start the MCP with all the tools available. If you
 ```
 
 You can combine multiple tags by separating them with commas. For example, if you want to use both conversation and verification tools, you can use the following command:
+
 ```bash
 "start": "tsc --project tsconfig.build.json && (npx -y supergateway --stdio \"node dist/index.js --tag conversation,verification\" --port 8000 --baseUrl http://localhost:8000 --ssePath /sse --messagePath /message)"
 ```
@@ -286,20 +286,19 @@ You can combine multiple tags by separating them with commas. For example, if yo
 ### Step 4: Configure the MCP server in Claude Desktop
 
 You can then configure the MCP server in the Claude configuration file as follows:
+
 ```json
 {
   "mcpServers": {
     "sinch": {
       "command": "npx",
-      "args": [
-        "-y", "supergateway", "--sse", "http://localhost:8000/sse"
-      ]
+      "args": ["-y", "supergateway", "--sse", "http://localhost:8000/sse"]
     }
   }
 }
 ```
-(Replace the `http://localhost:8000/sse` with the URL of your MCP server if it is not running locally)
 
+(Replace the `http://localhost:8000/sse` with the URL of your MCP server if it is not running locally)
 
 ## Contributing: Defining new tools
 
@@ -315,12 +314,14 @@ Dependencies are pinned to **exact versions** in `package.json` (no `^` ranges).
 When bumping `@modelcontextprotocol/sdk` or `zod`, test the server startup and your transport path (stdio, SSE, or Streamable HTTP) — some version combinations have been problematic in the past.
 
 Tools are registered in the `src/index.ts` file.
+
 - Conversation tools: send various types of messages, list conversation apps, templates
 - Verification tools: lookup for a number, perform a verification flow
 - Voice tools: make a TTS call, create a conference call, manage participants
 - Email tools: send emails, retrieve email information
 
 Tools are defined under `src/tools/` and are registered in the `index.ts` file of their respective domain folder.
+
 - Conversation tools: `src/tools/conversation/index.ts`
 - Verification tools: `src/tools/verification/index.ts`
 - Voice tools: `src/tools/voice/index.ts`

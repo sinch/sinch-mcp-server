@@ -1,7 +1,5 @@
 import { Conversation } from '@sinch/conversation';
-import {
-  formatListAllTemplatesResponse
-} from '../../../../src/tools/conversation/utils/format-list-all-templates-response';
+import { formatListAllTemplatesResponse } from '../../../../src/tools/conversation/utils/format-list-all-templates-response';
 
 describe('formatListAllTemplatesResponse', () => {
   it('should correctly format templates with all fields present', () => {
@@ -20,9 +18,9 @@ describe('formatListAllTemplatesResponse', () => {
               update_time: new Date('2024-07-17T14:37:36Z'),
               variables: [{ key: 'name', preview_value: 'Professor Jones' }],
               text_message: { text: 'Hello ${name}' },
-              channel_template_overrides: {}
+              channel_template_overrides: {},
             },
-            { language_code: 'fr-FR', version: '2', text_message: { text: 'Bonjour ${name}' }},
+            { language_code: 'fr-FR', version: '2', text_message: { text: 'Bonjour ${name}' } },
           ],
         },
       ],

@@ -5,15 +5,12 @@ const mockGetApp = jest.fn();
 
 const mockConversationService = {
   app: {
-    get: mockGetApp
-  }
+    get: mockGetApp,
+  },
 };
 
 const baseAppConfig = {
-  channel_credentials: [
-    { channel: 'WHATSAPP' },
-    { channel: 'SMS' }
-  ]
+  channel_credentials: [{ channel: 'WHATSAPP' }, { channel: 'SMS' }],
 } as Conversation.AppResponse;
 
 beforeEach(() => {
@@ -30,16 +27,16 @@ test('buildMessageBase sets correct base structure and adds SMS fallback when ne
     app_id: 'my-app-id',
     processing_strategy: 'DISPATCH_ONLY',
     channel_properties: {
-      SMS_SENDER: '+12014444333'
+      SMS_SENDER: '+12014444333',
     },
     recipient: {
       identified_by: {
         channel_identities: [
           { channel: 'WHATSAPP', identity: '+1234567890' },
-          { channel: 'SMS', identity: '+1234567890' } // fallback
-        ]
-      }
-    }
+          { channel: 'SMS', identity: '+1234567890' }, // fallback
+        ],
+      },
+    },
   });
 });
 
@@ -54,10 +51,13 @@ test('MMS fallback switches to SMS when MMS is not configured', async () => {
 test('No SMS fallback is added if already included', async () => {
   mockGetApp.mockResolvedValue(baseAppConfig);
 
-  const result = await buildMessageBase(mockConversationService as any, 'my-app-id', '+1234567890', ['WHATSAPP', 'SMS']);
+  const result = await buildMessageBase(mockConversationService as any, 'my-app-id', '+1234567890', [
+    'WHATSAPP',
+    'SMS',
+  ]);
 
-  const channels = result.recipient.identified_by.channel_identities.map(ci => ci.channel);
-  const smsCount = channels.filter(c => c === 'SMS').length;
+  const channels = result.recipient.identified_by.channel_identities.map((ci) => ci.channel);
+  const smsCount = channels.filter((c) => c === 'SMS').length;
 
   expect(smsCount).toBe(1); // only once
 });

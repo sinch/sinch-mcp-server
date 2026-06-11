@@ -17,21 +17,25 @@ const TOOL_KEY: VoiceToolKey = 'manageConferenceParticipant';
 const TOOL_NAME = getToolName(TOOL_KEY);
 
 export const registerManageConferenceParticipant = (server: McpServer, tags: Tags[]) => {
-  if (!matchesAnyTag(tags, voiceToolsConfig[TOOL_KEY].tags)) return;
+  if (!matchesAnyTag(tags, voiceToolsConfig[TOOL_KEY].tags)) {
+    return;
+  }
 
   server.registerTool(
     TOOL_NAME,
     {
-      description: 'Manage a conference participant. The conference is identified by the conference Id used in the callout, and the participants by the callId associated to their phone number when the conference callout to their number was made',
+      description:
+        'Manage a conference participant. The conference is identified by the conference Id used in the callout, and the participants by the callId associated to their phone number when the conference callout to their number was made',
       inputSchema: ManageConferenceParticipantSchema,
     },
-    manageConferenceParticipantHandler);
+    manageConferenceParticipantHandler,
+  );
 };
 
 export const manageConferenceParticipantHandler = async ({
   conferenceId,
   participantId,
-  action
+  action,
 }: ManageConferenceParticipant): Promise<IPromptResponse> => {
   const maybeService = getVoiceService(TOOL_NAME);
   if (isPromptResponse(maybeService)) {
@@ -44,20 +48,24 @@ export const manageConferenceParticipantHandler = async ({
       conferenceId,
       callId: participantId,
       manageParticipantRequestBody: {
-        command: action
-      }
+        command: action,
+      },
     });
 
-    return new PromptResponse(JSON.stringify({
-      success: true,
-      conference_id: conferenceId,
-      participant_id: participantId,
-      action: action
-    })).promptResponse;
+    return new PromptResponse(
+      JSON.stringify({
+        success: true,
+        conference_id: conferenceId,
+        participant_id: participantId,
+        action: action,
+      }),
+    ).promptResponse;
   } catch (error) {
-    return new PromptResponse(JSON.stringify({
-      success: false,
-      error: error instanceof Error ? error.message : String(error)
-    })).promptResponse;
+    return new PromptResponse(
+      JSON.stringify({
+        success: false,
+        error: error instanceof Error ? error.message : String(error),
+      }),
+    ).promptResponse;
   }
 };

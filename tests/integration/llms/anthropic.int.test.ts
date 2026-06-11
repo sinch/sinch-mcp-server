@@ -9,12 +9,11 @@ const transformToAnthropicFormat = (tools: any[]): Anthropic.Messages.Tool[] => 
     description: t.description,
     input_schema: t.inputSchema,
   }));
-}
+};
 
 const targetModel = process.env.TARGET_MODEL || 'claude-3-7-sonnet-latest';
 
 describe(`Tool invocation tests - Anthropic - ${targetModel}`, () => {
-
   let tools: Anthropic.Messages.Tool[];
   let anthropic: Anthropic;
 
@@ -31,9 +30,7 @@ describe(`Tool invocation tests - Anthropic - ${targetModel}`, () => {
       const response = await anthropic.messages.create({
         model: targetModel,
         max_tokens: MAX_TOKENS,
-        messages: [
-          {role: 'user', content: prompt}
-        ],
+        messages: [{ role: 'user', content: prompt }],
         tools,
         temperature: TEMPERATURE,
         tool_choice: {
@@ -41,9 +38,7 @@ describe(`Tool invocation tests - Anthropic - ${targetModel}`, () => {
         },
       });
 
-      const toolCall = response.content.find(
-        (obj) => obj.type === "tool_use"
-      );
+      const toolCall = response.content.find((obj) => obj.type === 'tool_use');
 
       if (!expectedToolName) {
         expect(toolCall).toBeUndefined();
@@ -57,7 +52,6 @@ describe(`Tool invocation tests - Anthropic - ${targetModel}`, () => {
         expect(toolCall!.input).toEqual(expectedArguments);
       }
     },
-    TIMEOUT
+    TIMEOUT,
   );
-
 });

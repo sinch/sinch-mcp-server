@@ -20,8 +20,8 @@ export const voiceToolsConfig: Record<string, ToolsConfig> = {
   getCallInformation: {
     name: 'get-call-information',
     tags: ['all', 'voice', 'notification', 'get-call-information'],
-  }
-}
+  },
+};
 
 export type VoiceToolKey = keyof typeof voiceToolsConfig;
 

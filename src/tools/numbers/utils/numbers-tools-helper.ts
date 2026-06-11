@@ -2,7 +2,7 @@ import { ToolsConfig } from '../../../types';
 
 const defineToolsConfig = <T extends Record<string, ToolsConfig>>(config: T) => {
   return config;
-}
+};
 
 export const toolsConfig = defineToolsConfig({
   listAvailableRegions: {
@@ -24,7 +24,7 @@ export const toolsConfig = defineToolsConfig({
   searchForAvailableNumbers: {
     name: 'search-for-available-numbers',
     tags: ['all', 'numbers', 'search-for-available-numbers'],
-  }
+  },
 });
 
 export type NumbersToolKey = keyof typeof toolsConfig;

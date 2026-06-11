@@ -4,9 +4,13 @@ import {
   getConversationService,
 } from '../../../src/tools/conversation/utils/conversation-service-helper';
 
-jest.mock('@sinch/sdk-core/package.json', () => ({
-  version: '1.0.0',
-}), { virtual: true });
+jest.mock(
+  '@sinch/sdk-core/package.json',
+  () => ({
+    version: '1.0.0',
+  }),
+  { virtual: true },
+);
 
 jest.mock('../../../src/tools/conversation/utils/conversation-service-helper', () => ({
   getConversationService: jest.fn(),
@@ -28,13 +32,15 @@ beforeEach(() => {
 
 test('listWebhooksHandler returns formatted webhooks without secrets', async () => {
   mockList.mockResolvedValue({
-    webhooks: [{
-      id: 'wh-1',
-      app_id: 'app-123',
-      target: 'https://example.com/hook',
-      triggers: ['MESSAGE_INBOUND'],
-      secret: 'must-not-appear',
-    }],
+    webhooks: [
+      {
+        id: 'wh-1',
+        app_id: 'app-123',
+        target: 'https://example.com/hook',
+        triggers: ['MESSAGE_INBOUND'],
+        secret: 'must-not-appear',
+      },
+    ],
   });
 
   const result = await listWebhooksHandler({});
@@ -42,13 +48,15 @@ test('listWebhooksHandler returns formatted webhooks without secrets', async () 
   expect(mockList).toHaveBeenCalledWith({ app_id: 'app-123' });
   expect(JSON.parse(result.content[0].text)).toEqual({
     success: true,
-    webhooks: [{
-      id: 'wh-1',
-      app_id: 'app-123',
-      target: 'https://example.com/hook',
-      target_type: undefined,
-      triggers: ['MESSAGE_INBOUND'],
-    }],
+    webhooks: [
+      {
+        id: 'wh-1',
+        app_id: 'app-123',
+        target: 'https://example.com/hook',
+        target_type: undefined,
+        triggers: ['MESSAGE_INBOUND'],
+      },
+    ],
     total_count: 1,
   });
 });

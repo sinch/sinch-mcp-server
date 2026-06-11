@@ -19,16 +19,23 @@ import {
 
 const SendWhatsAppTemplateMessageSchema = {
   recipient: Recipient,
-  templateName: z.string()
+  templateName: z
+    .string()
     .describe('The name of the template to use for sending the message on WhatsApp specifically.'),
-  templateLanguage: z.string()
-    .describe('The language to use for the WhatsApp template (BCP-47).'),
-  parameters: z.record(z.string(), z.string()).optional()
-    .describe('The parameters to use for the template. This is a key-value map where the key is the parameter name and the value is the parameter value. Look carefully in the prompt to find which parameters are expected by the template.'),
+  templateLanguage: z.string().describe('The language to use for the WhatsApp template (BCP-47).'),
+  parameters: z
+    .record(z.string(), z.string())
+    .optional()
+    .describe(
+      'The parameters to use for the template. This is a key-value map where the key is the parameter name and the value is the parameter value. Look carefully in the prompt to find which parameters are expected by the template.',
+    ),
   appId: ConversationAppIdOverride,
   sender: MessageSenderNumberOverride,
   region: ConversationRegionOverride,
-  metadata: z.string().optional().describe('Custom data to send along with the message (e.g. correlation IDs, appointment IDs, etc.)'),
+  metadata: z
+    .string()
+    .optional()
+    .describe('Custom data to send along with the message (e.g. correlation IDs, appointment IDs, etc.)'),
 };
 
 type SendWhatsAppTemplateMessage = z.infer<z.ZodObject<typeof SendWhatsAppTemplateMessageSchema>>;
@@ -37,7 +44,9 @@ const TOOL_KEY: ConversationToolKey = 'sendWhatsAppTemplateMessage';
 const TOOL_NAME = getToolName(TOOL_KEY);
 
 export const registerSendWhatsAppTemplateMessage = (server: McpServer, tags: Tags[]) => {
-  if (!matchesAnyTag(tags, toolsConfig[TOOL_KEY].tags)) return;
+  if (!matchesAnyTag(tags, toolsConfig[TOOL_KEY].tags)) {
+    return;
+  }
 
   server.registerTool(
     TOOL_NAME,
@@ -45,7 +54,7 @@ export const registerSendWhatsAppTemplateMessage = (server: McpServer, tags: Tag
       description: 'Send a template message to a contact (phone number in E.164 format) on the WhatsApp channel.',
       inputSchema: SendWhatsAppTemplateMessageSchema,
     },
-    sendTemplateMessageHandler
+    sendTemplateMessageHandler,
   );
 };
 
@@ -80,33 +89,39 @@ export const sendTemplateMessageHandler = async ({
         language_code: templateLanguage,
         version: '',
         parameters: {
-          ...parameters
-        }
-      }
-    }
+          ...parameters,
+        },
+      },
+    },
   };
   const request: Conversation.SendTemplateMessageRequestData<Conversation.IdentifiedBy> = {
     sendMessageRequestBody: {
       ...requestBase,
       message: {
         template_message: {
-          ...whatsappMessage
-        }
+          ...whatsappMessage,
+        },
       },
-      message_metadata: metadata
-    }
+      message_metadata: metadata,
+    },
   };
 
   try {
     const response = await conversationService.messages.sendTemplateMessage(request);
-    return new PromptResponse(JSON.stringify({
-      success: true,
-      message_id: response.message_id
-    })).promptResponse;
+    return new PromptResponse(
+      JSON.stringify({
+        success: true,
+        message_id: response.message_id,
+      }),
+    ).promptResponse;
   } catch (error) {
-    return new PromptResponse(JSON.stringify({
-      success: false,
-      error: (error instanceof Error ? error.message : String(error)) + `. Are you sure you are using the right region to send your message? The current region is ${usedRegion}.`
-    })).promptResponse;
+    return new PromptResponse(
+      JSON.stringify({
+        success: false,
+        error:
+          (error instanceof Error ? error.message : String(error)) +
+          `. Are you sure you are using the right region to send your message? The current region is ${usedRegion}.`,
+      }),
+    ).promptResponse;
   }
 };

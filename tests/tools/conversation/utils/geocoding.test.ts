@@ -4,21 +4,23 @@ import { getLatitudeLongitudeFromAddress } from '../../../../src/tools/conversat
 jest.mock('axios');
 const mockedAxios = axios as jest.Mocked<typeof axios>;
 
-const mockAddress = 'Phare d\'Eckmühl';
+const mockAddress = "Phare d'Eckmühl";
 
 const mockSuccessResponse = {
   data: {
     status: 'OK',
-    results: [{
-      formatted_address: 'Pl. du Maréchal Davout, 29760 Penmarch, France',
-      geometry: {
-        location: {
-          lat: 47.7981899,
-          lng: -4.372768499999999
-        }
-      }
-    }]
-  }
+    results: [
+      {
+        formatted_address: 'Pl. du Maréchal Davout, 29760 Penmarch, France',
+        geometry: {
+          location: {
+            lat: 47.7981899,
+            lng: -4.372768499999999,
+          },
+        },
+      },
+    ],
+  },
 };
 
 beforeEach(() => {
@@ -34,11 +36,11 @@ test('returns coordinates when API responds with OK', async () => {
   expect(result).toEqual({
     latitude: 47.7981899,
     longitude: -4.372768499999999,
-    formattedAddress: 'Pl. du Maréchal Davout, 29760 Penmarch, France'
+    formattedAddress: 'Pl. du Maréchal Davout, 29760 Penmarch, France',
   });
 
   expect(mockedAxios.get).toHaveBeenCalledWith(expect.stringContaining('geocode/json'), {
-    params: { address: mockAddress, key: 'test-api-key' }
+    params: { address: mockAddress, key: 'test-api-key' },
   });
 });
 
@@ -51,7 +53,7 @@ test('returns fallback when API status is not OK', async () => {
   expect(result).toEqual({
     latitude: 0,
     longitude: 0,
-    formattedAddress: 'Unknown'
+    formattedAddress: 'Unknown',
   });
 
   expect(consoleSpy).toHaveBeenCalledWith('Geocoding failed:', 'ZERO_RESULTS');
@@ -67,7 +69,7 @@ test('returns fallback when axios throws', async () => {
   expect(result).toEqual({
     latitude: 0,
     longitude: 0,
-    formattedAddress: 'Unknown'
+    formattedAddress: 'Unknown',
   });
 
   expect(consoleSpy).toHaveBeenCalledWith('Request failed:', new Error('Network error'));
@@ -79,11 +81,14 @@ test('includes GEOCODING_API_KEY in query params', async () => {
 
   await getLatitudeLongitudeFromAddress(mockAddress);
 
-  expect(mockedAxios.get).toHaveBeenCalledWith(expect.any(String), expect.objectContaining({
-    params: expect.objectContaining({
-      key: 'test-api-key'
-    })
-  }));
+  expect(mockedAxios.get).toHaveBeenCalledWith(
+    expect.any(String),
+    expect.objectContaining({
+      params: expect.objectContaining({
+        key: 'test-api-key',
+      }),
+    }),
+  );
 });
 
 test('returns fallback when GEOCODING_API_KEY is not set', async () => {
@@ -98,14 +103,17 @@ test('returns fallback when GEOCODING_API_KEY is not set', async () => {
   expect(result).toEqual({
     latitude: 0,
     longitude: 0,
-    formattedAddress: 'Unknown'
+    formattedAddress: 'Unknown',
   });
 
-  expect(mockedAxios.get).toHaveBeenCalledWith(expect.any(String), expect.objectContaining({
-    params: expect.objectContaining({
-      key: undefined
-    })
-  }));
+  expect(mockedAxios.get).toHaveBeenCalledWith(
+    expect.any(String),
+    expect.objectContaining({
+      params: expect.objectContaining({
+        key: undefined,
+      }),
+    }),
+  );
 
   expect(consoleSpy).toHaveBeenCalledWith('Request failed:', new Error('API key missing'));
   consoleSpy.mockRestore();

@@ -15,7 +15,9 @@ const TOOL_KEY: VoiceToolKey = 'closeConference';
 const TOOL_NAME = getToolName(TOOL_KEY);
 
 export const registerCloseConference = (server: McpServer, tags: Tags[]) => {
-  if (!matchesAnyTag(tags, voiceToolsConfig[TOOL_KEY].tags)) return;
+  if (!matchesAnyTag(tags, voiceToolsConfig[TOOL_KEY].tags)) {
+    return;
+  }
 
   server.registerTool(
     TOOL_NAME,
@@ -23,13 +25,11 @@ export const registerCloseConference = (server: McpServer, tags: Tags[]) => {
       description: 'Close a conference callout',
       inputSchema: CloseConferenceSchema,
     },
-    closeConferenceHandler
+    closeConferenceHandler,
   );
 };
 
-export const closeConferenceHandler = async (
-  { conferenceId }: CloseConference
-): Promise<IPromptResponse> => {
+export const closeConferenceHandler = async ({ conferenceId }: CloseConference): Promise<IPromptResponse> => {
   const maybeService = getVoiceService(TOOL_NAME);
   if (isPromptResponse(maybeService)) {
     return maybeService.promptResponse;
@@ -38,17 +38,21 @@ export const closeConferenceHandler = async (
 
   try {
     await voiceService.conferences.kickAll({
-      conferenceId
+      conferenceId,
     });
-    return new PromptResponse(JSON.stringify({
-      success: true,
-      conference_id: conferenceId
-    })).promptResponse;
+    return new PromptResponse(
+      JSON.stringify({
+        success: true,
+        conference_id: conferenceId,
+      }),
+    ).promptResponse;
   } catch (error) {
     console.error(`Error closing conference ${conferenceId}:`, error);
-    return new PromptResponse(JSON.stringify({
-      success: false,
-      error: error instanceof Error ? error.message : String(error)
-    })).promptResponse;
+    return new PromptResponse(
+      JSON.stringify({
+        success: false,
+        error: error instanceof Error ? error.message : String(error),
+      }),
+    ).promptResponse;
   }
 };

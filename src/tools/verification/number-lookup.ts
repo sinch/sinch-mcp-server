@@ -15,22 +15,22 @@ const TOOL_KEY: VerificationToolKey = 'numberLookup';
 const TOOL_NAME = getToolName(TOOL_KEY);
 
 export const registerNumberLookup = (server: McpServer, tags: Tags[]) => {
-  if(!matchesAnyTag(tags, verificationToolsConfig[TOOL_KEY].tags)) return;
+  if (!matchesAnyTag(tags, verificationToolsConfig[TOOL_KEY].tags)) {
+    return;
+  }
 
   server.registerTool(
     TOOL_NAME,
     {
-      description: 'With quick and easy access to Number Lookup, you can enhance your communications and keep your database as clean as a whistle. Number Lookup checks against first-party numbering sources and provides real-time feedback. Test numbers to ensure your recipients are ready and waiting to receive your messages!',
+      description:
+        'With quick and easy access to Number Lookup, you can enhance your communications and keep your database as clean as a whistle. Number Lookup checks against first-party numbering sources and provides real-time feedback. Test numbers to ensure your recipients are ready and waiting to receive your messages!',
       inputSchema: NumberLookupSchema,
     },
-    numberLookupHandler
+    numberLookupHandler,
   );
 };
 
-export const numberLookupHandler = async (
-  { phoneNumber }: NumberLookup
-): Promise<IPromptResponse> => {
-
+export const numberLookupHandler = async ({ phoneNumber }: NumberLookup): Promise<IPromptResponse> => {
   const maybeService = getNumberLookupService(TOOL_NAME);
   if (isPromptResponse(maybeService)) {
     return maybeService.promptResponse;
@@ -41,18 +41,21 @@ export const numberLookupHandler = async (
     const response = await numberLookupService.lookup({
       numberLookupRequestBody: {
         number: phoneNumber,
-        features: ['LineType']
-      }
-    })
-    return new PromptResponse(JSON.stringify({
-      success: true,
-      data: response
-    })).promptResponse;
+        features: ['LineType'],
+      },
+    });
+    return new PromptResponse(
+      JSON.stringify({
+        success: true,
+        data: response,
+      }),
+    ).promptResponse;
   } catch (error) {
-    return new PromptResponse(JSON.stringify({
-      success: false,
-      error:  `Failed to look up number '${phoneNumber}': ${error instanceof Error ? error.message : String(error)}`
-  })).promptResponse;
+    return new PromptResponse(
+      JSON.stringify({
+        success: false,
+        error: `Failed to look up number '${phoneNumber}': ${error instanceof Error ? error.message : String(error)}`,
+      }),
+    ).promptResponse;
   }
-
 };

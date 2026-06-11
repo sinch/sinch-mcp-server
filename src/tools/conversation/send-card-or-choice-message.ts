@@ -19,27 +19,33 @@ import {
 import { isPromptResponse, matchesAnyTag } from '../../utils';
 import { IPromptResponse, PromptResponse, Tags } from '../../types';
 
-const choiceMessage = z.object({
-  // Call
-  phone_number: z.string().optional().describe('E.164 format'),
-  // Location
-  lat: z.number().optional(),
-  long: z.number().optional(),
-  address: z.string().optional(),
-  // Text
-  text: z.string().optional(),
-  // URL
-  url: z.string().url().optional(),
-  // Common
-  title: z.string().optional()
-}).refine(
-  data =>
-    Number(!!data.text) +
-    Number(!!data.url) +
-    Number(!!data.phone_number) +
-    Number((!!data.lat && !!data.long) || !!data.address) === 1,
-  { message: 'Must provide exactly one type of choice: call, location, text, or URL' }
-).describe('Choice message that can be a call, location, text, or URL. Exactly one must be provided. The "title" parameter must not be provided is case of text choice.');
+const choiceMessage = z
+  .object({
+    // Call
+    phone_number: z.string().optional().describe('E.164 format'),
+    // Location
+    lat: z.number().optional(),
+    long: z.number().optional(),
+    address: z.string().optional(),
+    // Text
+    text: z.string().optional(),
+    // URL
+    url: z.string().url().optional(),
+    // Common
+    title: z.string().optional(),
+  })
+  .refine(
+    (data) =>
+      Number(!!data.text) +
+        Number(!!data.url) +
+        Number(!!data.phone_number) +
+        Number((!!data.lat && !!data.long) || !!data.address) ===
+      1,
+    { message: 'Must provide exactly one type of choice: call, location, text, or URL' },
+  )
+  .describe(
+    'Choice message that can be a call, location, text, or URL. Exactly one must be provided. The "title" parameter must not be provided is case of text choice.',
+  );
 
 const SendCardOrChoiceMessageSchema = {
   recipient: Recipient,
@@ -58,15 +64,18 @@ const TOOL_KEY: ConversationToolKey = 'sendCardOrChoiceMessage';
 const TOOL_NAME = getToolName(TOOL_KEY);
 
 export const registerSendCardOrChoiceMessage = (server: McpServer, tags: Tags[]) => {
-  if (!matchesAnyTag(tags, toolsConfig[TOOL_KEY].tags)) return;
+  if (!matchesAnyTag(tags, toolsConfig[TOOL_KEY].tags)) {
+    return;
+  }
 
   server.registerTool(
     TOOL_NAME,
     {
-      description: 'Send a choice message to the user. The choice message can contain up to 3 choices if not text or up to 10 message if text only. Each choice can be a call message (phone number + title to display next to it), a location message (latitude / longitude + title to display next to it), a text message or a URL message (the URL to click on + title to display next to it). The contact can be a phone number in E.164 format, or the identifier for the specified channel.',
+      description:
+        'Send a choice message to the user. The choice message can contain up to 3 choices if not text or up to 10 message if text only. Each choice can be a call message (phone number + title to display next to it), a location message (latitude / longitude + title to display next to it), a text message or a URL message (the URL to click on + title to display next to it). The contact can be a phone number in E.164 format, or the identifier for the specified channel.',
       inputSchema: SendCardOrChoiceMessageSchema,
     },
-    sendCardOrChoiceMessageHandler
+    sendCardOrChoiceMessageHandler,
   );
 };
 
@@ -78,7 +87,7 @@ export const sendCardOrChoiceMessageHandler = async ({
   mediaUrl,
   appId,
   sender,
-  region
+  region,
 }: SendCardOrChoiceMessage): Promise<IPromptResponse> => {
   const maybeAppId = getConversationAppId(appId);
   if (isPromptResponse(maybeAppId)) {
@@ -99,18 +108,18 @@ export const sendCardOrChoiceMessageHandler = async ({
       choices.push({
         call_message: {
           phone_number: choice.phone_number,
-          title: choice.title
-        }
+          title: choice.title,
+        },
       } as Conversation.CallMessageChoice);
     } else if ('lat' in choice && 'long' in choice) {
       choices.push({
         location_message: {
           coordinates: {
             latitude: choice.lat,
-            longitude: choice.long
+            longitude: choice.long,
           },
-          title: choice.title
-        }
+          title: choice.title,
+        },
       } as Conversation.LocationMessageChoice);
     } else if ('address' in choice && choice.address) {
       const coordinates = await getLatitudeLongitudeFromAddress(choice.address);
@@ -118,23 +127,23 @@ export const sendCardOrChoiceMessageHandler = async ({
         location_message: {
           coordinates: {
             latitude: coordinates.latitude,
-            longitude: coordinates.longitude
+            longitude: coordinates.longitude,
           },
-          title: coordinates.formattedAddress
-        }
+          title: coordinates.formattedAddress,
+        },
       } as Conversation.LocationMessageChoice);
     } else if ('text' in choice) {
       choices.push({
         text_message: {
-          text: choice.text
-        }
+          text: choice.text,
+        },
       } as Conversation.TextMessageChoice);
     } else if ('url' in choice) {
       choices.push({
         url_message: {
           url: choice.url,
-          title: choice.title
-        }
+          title: choice.title,
+        },
       } as Conversation.UrlMessageChoice);
     }
   }
@@ -152,11 +161,11 @@ export const sendCardOrChoiceMessageHandler = async ({
               choices,
               title: text,
               media_message: {
-                url: mediaUrl
-              }
-            }
-          }
-        }
+                url: mediaUrl,
+              },
+            },
+          },
+        },
       });
     } else {
       response = await conversationService.messages.sendChoiceMessage({
@@ -165,22 +174,28 @@ export const sendCardOrChoiceMessageHandler = async ({
           message: {
             choice_message: {
               choices,
-              text_message:{
-                text
-              }
-            }
-          }
-        }
+              text_message: {
+                text,
+              },
+            },
+          },
+        },
       });
     }
-    return new PromptResponse(JSON.stringify({
-      success: true,
-      message_id: response.message_id
-    })).promptResponse;
+    return new PromptResponse(
+      JSON.stringify({
+        success: true,
+        message_id: response.message_id,
+      }),
+    ).promptResponse;
   } catch (error) {
-    return new PromptResponse(JSON.stringify({
-      success: false,
-      error: (error instanceof Error ? error.message : String(error)) + `. Are you sure you are using the right region to send your message? The current region is ${usedRegion}.`
-    })).promptResponse;
+    return new PromptResponse(
+      JSON.stringify({
+        success: false,
+        error:
+          (error instanceof Error ? error.message : String(error)) +
+          `. Are you sure you are using the right region to send your message? The current region is ${usedRegion}.`,
+      }),
+    ).promptResponse;
   }
-}
+};

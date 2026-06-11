@@ -17,7 +17,9 @@ const TOOL_KEY: VoiceToolKey = 'ttsCallout';
 const TOOL_NAME = getToolName(TOOL_KEY);
 
 export const registerTtsCallout = (server: McpServer, tags: Tags[]) => {
-  if (!matchesAnyTag(tags, voiceToolsConfig[TOOL_KEY].tags)) return;
+  if (!matchesAnyTag(tags, voiceToolsConfig[TOOL_KEY].tags)) {
+    return;
+  }
 
   server.registerTool(
     TOOL_NAME,
@@ -25,14 +27,11 @@ export const registerTtsCallout = (server: McpServer, tags: Tags[]) => {
       description: 'Make a callout with a Text-To-Speech prompt',
       inputSchema: TtsCalloutSchema,
     },
-    ttsCalloutHandler
+    ttsCalloutHandler,
   );
 };
 
-export const ttsCalloutHandler = async ({
-  phoneNumber,
-  message
-}: TtsCallout): Promise<IPromptResponse> => {
+export const ttsCalloutHandler = async ({ phoneNumber, message }: TtsCallout): Promise<IPromptResponse> => {
   const maybeService = getVoiceService(TOOL_NAME);
   if (isPromptResponse(maybeService)) {
     return maybeService.promptResponse;
@@ -47,28 +46,32 @@ export const ttsCalloutHandler = async ({
       ttsCallout: {
         destination: {
           type: 'number',
-          endpoint: phoneNumber
+          endpoint: phoneNumber,
         },
-        text: message
-      }
-    }
+        text: message,
+      },
+    },
   };
-  if(cli) {
+  if (cli) {
     request.ttsCalloutRequestBody.ttsCallout.cli = cli;
   }
 
   try {
     const response = await voiceService.callouts.tts(request);
 
-    return new PromptResponse(JSON.stringify({
-      success: true,
-      call_id: response.callId,
-      destination: phoneNumber
-    })).promptResponse;
+    return new PromptResponse(
+      JSON.stringify({
+        success: true,
+        call_id: response.callId,
+        destination: phoneNumber,
+      }),
+    ).promptResponse;
   } catch (error) {
-    return new PromptResponse(JSON.stringify({
-      success: false,
-      error: error instanceof Error ? error.message : String(error)
-    })).promptResponse;
+    return new PromptResponse(
+      JSON.stringify({
+        success: false,
+        error: error instanceof Error ? error.message : String(error),
+      }),
+    ).promptResponse;
   }
 };

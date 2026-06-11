@@ -7,7 +7,7 @@ global.fetch = jest.fn();
 describe('listEmailEventsHandler', () => {
   const mockCredentials = {
     domain: 'example.com',
-    apiKey: 'test-api-key'
+    apiKey: 'test-api-key',
   };
 
   beforeEach(() => {
@@ -29,9 +29,9 @@ describe('listEmailEventsHandler', () => {
               'message-id': 'abc123@example.com',
               from: 'sender@example.com',
               to: 'user@example.com',
-              subject: 'Test Subject'
-            }
-          }
+              subject: 'Test Subject',
+            },
+          },
         },
         {
           id: 'event2',
@@ -43,9 +43,9 @@ describe('listEmailEventsHandler', () => {
               'message-id': 'abc123@example.com',
               from: 'sender@example.com',
               to: 'user@example.com',
-              subject: 'Test Subject'
-            }
-          }
+              subject: 'Test Subject',
+            },
+          },
         },
         {
           id: 'event3',
@@ -55,8 +55,8 @@ describe('listEmailEventsHandler', () => {
           message: {
             headers: {
               'message-id': 'abc123@example.com',
-            }
-          }
+            },
+          },
         },
         {
           id: 'event3',
@@ -66,15 +66,15 @@ describe('listEmailEventsHandler', () => {
           message: {
             headers: {
               'message-id': 'xyz789@example.com',
-            }
-          }
-        }
-      ]
+            },
+          },
+        },
+      ],
     };
 
     (fetch as jest.Mock).mockResolvedValue({
       ok: true,
-      json: async () => mockResponse
+      json: async () => mockResponse,
     });
 
     // When
@@ -91,15 +91,13 @@ describe('listEmailEventsHandler', () => {
           events: [
             { event: 'accepted', timestamp: '2024-03-09T16:00:00.755Z' },
             { event: 'delivered', timestamp: '2024-03-09T16:01:40.163Z' },
-            { event: 'opened', 'timestamp': '2024-03-09T16:03:20.745Z' }
+            { event: 'opened', timestamp: '2024-03-09T16:03:20.745Z' },
           ],
         },
         {
           message_id: 'xyz789@example.com',
-          events: [
-            { event: 'opened', timestamp: '2024-03-09T16:05:00.859Z' }
-          ],
-        }
+          events: [{ event: 'opened', timestamp: '2024-03-09T16:05:00.859Z' }],
+        },
       ],
       total_count: 4,
     });
@@ -120,8 +118,8 @@ describe('listEmailEventsHandler', () => {
           message: {
             headers: {
               'message-id': 'abc123@example.com',
-            }
-          }
+            },
+          },
         },
         {
           id: 'event3',
@@ -131,15 +129,15 @@ describe('listEmailEventsHandler', () => {
           message: {
             headers: {
               'message-id': 'xyz789@example.com',
-            }
-          }
-        }
-      ]
+            },
+          },
+        },
+      ],
     };
 
     (fetch as jest.Mock).mockResolvedValue({
       ok: true,
-      json: async () => mockResponse
+      json: async () => mockResponse,
     });
 
     // When
@@ -148,7 +146,7 @@ describe('listEmailEventsHandler', () => {
       event: 'opened',
       limit: 50,
       beginSearchPeriod: '2024-03-09T16:00:00Z',
-      endSearchPeriod: '2024-03-09T17:00:00Z'
+      endSearchPeriod: '2024-03-09T17:00:00Z',
     });
 
     // Then
@@ -156,18 +154,14 @@ describe('listEmailEventsHandler', () => {
       events: [
         {
           message_id: 'abc123@example.com',
-          events: [
-            { 'event': 'opened', 'timestamp': '2024-03-09T16:03:20.745Z' }
-          ],
+          events: [{ event: 'opened', timestamp: '2024-03-09T16:03:20.745Z' }],
         },
         {
           message_id: 'xyz789@example.com',
-          events: [
-            { event: 'opened', timestamp: '2024-03-09T16:05:00.859Z' }
-          ],
+          events: [{ event: 'opened', timestamp: '2024-03-09T16:05:00.859Z' }],
         },
       ],
-      total_count: 2
+      total_count: 2,
     });
 
     expect(result.role).toBe('assistant');
@@ -179,7 +173,7 @@ describe('listEmailEventsHandler', () => {
     (fetch as jest.Mock).mockResolvedValue({
       ok: false,
       status: 403,
-      statusText: 'Forbidden'
+      statusText: 'Forbidden',
     });
 
     // When
@@ -188,7 +182,7 @@ describe('listEmailEventsHandler', () => {
     // Then
     const expectedResponse = JSON.stringify({
       success: false,
-      error: 'Mailgun API error: 403 Forbidden'
+      error: 'Mailgun API error: 403 Forbidden',
     });
     expect(result).toEqual(new PromptResponse(expectedResponse).promptResponse);
   });
@@ -197,7 +191,9 @@ describe('listEmailEventsHandler', () => {
     // Given
     (fetch as jest.Mock).mockResolvedValue({
       ok: true,
-      json: async () => { throw new Error('invalid json'); }
+      json: async () => {
+        throw new Error('invalid json');
+      },
     });
 
     // When
@@ -206,17 +202,19 @@ describe('listEmailEventsHandler', () => {
     // Then
     const expectedResponse = JSON.stringify({
       success: false,
-      error: 'invalid json'
+      error: 'invalid json',
     });
     expect(result).toEqual(new PromptResponse(expectedResponse).promptResponse);
   });
 
   it('returns early on credential fetch error', async () => {
     // Given
-    const promptResponse = new PromptResponse(JSON.stringify({
-      success: false,
-      error: 'Missing credentials'
-    }));
+    const promptResponse = new PromptResponse(
+      JSON.stringify({
+        success: false,
+        error: 'Missing credentials',
+      }),
+    );
     jest.spyOn(mailgunHelper, 'getMailgunCredentials').mockReturnValue(promptResponse);
 
     // When
