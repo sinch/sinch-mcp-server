@@ -52,7 +52,27 @@ export const toolsConfig = defineToolsConfig({
   sendTextMessage: {
     name: 'send-text-message',
     tags: ['all', 'conversation', 'notification', 'send-text-message'],
-  }
+  },
+  listWebhooks: {
+    name: 'list-webhooks',
+    tags: ['all', 'conversation', 'configuration', 'list-webhooks'],
+  },
+  getWebhook: {
+    name: 'get-webhook',
+    tags: ['all', 'conversation', 'configuration', 'get-webhook'],
+  },
+  createWebhook: {
+    name: 'create-webhook',
+    tags: ['all', 'conversation', 'configuration', 'create-webhook'],
+  },
+  updateWebhook: {
+    name: 'update-webhook',
+    tags: ['all', 'conversation', 'configuration', 'update-webhook'],
+  },
+  deleteWebhook: {
+    name: 'delete-webhook',
+    tags: ['all', 'conversation', 'configuration', 'delete-webhook'],
+  },
 });
 
 export type ConversationToolKey = keyof typeof toolsConfig;
