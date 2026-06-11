@@ -59,12 +59,12 @@ Here is the list of tools available in the MCP server (all the phone numbers mus
 
 ### Numbers Tools
 
-| Tool                             | Description                                                                                                                                                                                        | Tags    |
-| -------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------- |
-| **list-available-regions**       | List all regions where phone numbers are available for the project. Can filter by number type (MOBILE, LOCAL, TOLL_FREE). <br> _Example prompt_: "Which regions have toll-free numbers available?" | numbers |
-| **list-rented-numbers**          | List all active (rented) phone numbers for the project. Can filter by region, type, pattern, and capability. <br> _Example prompt_: "Show me all my active phone numbers in the US."               | numbers |
-| **search-for-available-numbers** | Search for phone numbers available to rent, with filters for region, type, pattern, and capabilities. <br> _Example prompt_: "Find available local numbers in the US that support SMS."            | numbers |
-| **rent-sinch-virtual-numbers**   | Rent (activate) one or more phone numbers by providing them in E.164 format. <br> _Example prompt_: "Rent the phone number +12025551234."                                                          | numbers |
+| Tool                             | Description                                                                                                                                                                                              | Tags    |
+| -------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------- |
+| **list-available-regions**       | List all regions where phone numbers are available for the project. Can filter by number type (`MOBILE`, `LOCAL`, `TOLL_FREE`). <br> _Example prompt_: "Which regions have toll-free numbers available?" | numbers |
+| **list-rented-numbers**          | List all active (rented) phone numbers for the project. Can filter by region, type, pattern, and capability. <br> _Example prompt_: "Show me all my active phone numbers in the US."                     | numbers |
+| **search-for-available-numbers** | Search for phone numbers available to rent, with filters for region, type, pattern, and capabilities. <br> _Example prompt_: "Find available local numbers in the US that support SMS."                  | numbers |
+| **rent-sinch-virtual-numbers**   | Rent (activate) one or more phone numbers by providing them in E.164 format. <br> _Example prompt_: "Rent the phone number +12025551234."                                                                | numbers |
 
 ### Configuration Tools
 
