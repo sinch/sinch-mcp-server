@@ -1,5 +1,6 @@
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { Conversation } from '@sinch/conversation';
+import { z } from 'zod';
 import {
   getConversationAppId,
   setConversationRegion,
@@ -18,22 +19,28 @@ import {
 } from './prompt-schemas';
 import { IPromptResponse, PromptResponse, Tags } from '../../types';
 
+const SendTextMessageSchema = {
+  recipient: Recipient,
+  message: TextMessage,
+  channel: ConversationChannel,
+  appId: ConversationAppIdOverride,
+  sender: MessageSenderNumberOverride,
+  region: ConversationRegionOverride,
+};
+
+type SendTextMessage = z.infer<z.ZodObject<typeof SendTextMessageSchema>>;
+
 const TOOL_KEY: ConversationToolKey = 'sendTextMessage';
 const TOOL_NAME = getToolName(TOOL_KEY);
 
 export const registerSendTextMessage = (server: McpServer, tags: Tags[]) => {
   if (!matchesAnyTag(tags, toolsConfig[TOOL_KEY].tags)) return;
 
-  server.tool(
+  server.registerTool(
     TOOL_NAME,
-    'Send a text message to a contact on the specified channel. The contact can be a phone number in E.164 format, or the identifier for the specified channel.',
     {
-      recipient: Recipient,
-      message: TextMessage,
-      channel: ConversationChannel,
-      appId: ConversationAppIdOverride,
-      sender: MessageSenderNumberOverride,
-      region: ConversationRegionOverride,
+      description: 'Send a text message to a contact on the specified channel. The contact can be a phone number in E.164 format, or the identifier for the specified channel.',
+      inputSchema: SendTextMessageSchema,
     },
     sendTextMessageHandler
   );
@@ -46,14 +53,7 @@ export const sendTextMessageHandler = async({
   appId,
   sender,
   region,
-}: {
-  message: string;
-  channel: string[];
-  recipient: string;
-  appId?: string;
-  sender?: string;
-  region?: string;
-}): Promise<IPromptResponse> => {
+}: SendTextMessage): Promise<IPromptResponse> => {
   const maybeAppId = getConversationAppId(appId);
   if (isPromptResponse(maybeAppId)) {
     return maybeAppId.promptResponse;

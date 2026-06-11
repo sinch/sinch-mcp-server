@@ -5,19 +5,25 @@ import { getToolName, VoiceToolKey, voiceToolsConfig } from './utils/voice-tools
 import { isPromptResponse, matchesAnyTag } from '../../utils';
 import { IPromptResponse, PromptResponse, Tags } from '../../types';
 
+const ManageConferenceParticipantSchema = {
+  conferenceId: z.string().describe('The conference ID used in the callout to create the conference'),
+  participantId: z.string().describe('The participant ID, which is the call ID from the conference callout'),
+  action: z.enum(['mute', 'unmute', 'onhold', 'resume']).describe('The action to perform on the participant'),
+};
+
+type ManageConferenceParticipant = z.infer<z.ZodObject<typeof ManageConferenceParticipantSchema>>;
+
 const TOOL_KEY: VoiceToolKey = 'manageConferenceParticipant';
 const TOOL_NAME = getToolName(TOOL_KEY);
 
 export const registerManageConferenceParticipant = (server: McpServer, tags: Tags[]) => {
   if (!matchesAnyTag(tags, voiceToolsConfig[TOOL_KEY].tags)) return;
 
-  server.tool(
+  server.registerTool(
     TOOL_NAME,
-    'Manage a conference participant. The conference is identified by the conference Id used in the callout, and the participants by the callId associated to their phone number when the conference callout to their number was made',
     {
-      conferenceId: z.string().describe('The conference ID used in the callout to create the conference'),
-      participantId: z.string().describe('The participant ID, which is the call ID from the conference callout'),
-      action: z.enum(['mute', 'unmute', 'onhold', 'resume']).describe('The action to perform on the participant')
+      description: 'Manage a conference participant. The conference is identified by the conference Id used in the callout, and the participants by the callId associated to their phone number when the conference callout to their number was made',
+      inputSchema: ManageConferenceParticipantSchema,
     },
     manageConferenceParticipantHandler);
 };
@@ -26,11 +32,7 @@ export const manageConferenceParticipantHandler = async ({
   conferenceId,
   participantId,
   action
-}: {
-  conferenceId: string;
-  participantId: string;
-  action: 'mute' | 'unmute' | 'onhold' | 'resume';
-}): Promise<IPromptResponse> => {
+}: ManageConferenceParticipant): Promise<IPromptResponse> => {
   const maybeService = getVoiceService(TOOL_NAME);
   if (isPromptResponse(maybeService)) {
     return maybeService.promptResponse;

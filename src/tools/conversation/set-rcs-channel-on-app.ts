@@ -14,22 +14,28 @@ import {
   ConversationRegionOverride,
 } from './prompt-schemas';
 
+const SetRcsChannelOnAppSchema = {
+  appId: ConversationAppId,
+  senderId: z.string()
+    .describe('RCS sender ID.'),
+  bearerToken: z.string()
+    .describe('Bearer token for the RCS channel.'),
+  region: ConversationRegionOverride,
+};
+
+type SetRcsChannelOnApp = z.infer<z.ZodObject<typeof SetRcsChannelOnAppSchema>>;
+
 const TOOL_KEY: ConversationToolKey = 'setRcsChannelOnApp';
 const TOOL_NAME = getToolName(TOOL_KEY);
 
 export const registerSetRcsChannelOnApp = (server: McpServer, tags: Tags[]) => {
   if (!matchesAnyTag(tags, toolsConfig[TOOL_KEY].tags)) return;
 
-  server.tool(
+  server.registerTool(
     TOOL_NAME,
-    'Set (create or replace) the RCS channel on a Conversation API app. Requires the RCS sender ID and bearer token. For vague requests such as "add messaging", ask whether the user means SMS, RCS, or WhatsApp and collect the required credentials before calling a tool.',
     {
-      appId: ConversationAppId,
-      senderId: z.string()
-        .describe('RCS sender ID.'),
-      bearerToken: z.string()
-        .describe('Bearer token for the RCS channel.'),
-      region: ConversationRegionOverride,
+      description: 'Set (create or replace) the RCS channel on a Conversation API app. Requires the RCS sender ID and bearer token. For vague requests such as "add messaging", ask whether the user means SMS, RCS, or WhatsApp and collect the required credentials before calling a tool.',
+      inputSchema: SetRcsChannelOnAppSchema,
     },
     setRcsChannelOnAppHandler,
   );
@@ -40,12 +46,7 @@ export const setRcsChannelOnAppHandler = async ({
   senderId,
   bearerToken,
   region,
-}: {
-  appId: string;
-  senderId: string;
-  bearerToken: string;
-  region?: string;
-}): Promise<IPromptResponse> => {
+}: SetRcsChannelOnApp): Promise<IPromptResponse> => {
   const maybeService = getConversationService(TOOL_NAME);
   if (isPromptResponse(maybeService)) {
     return maybeService.promptResponse;

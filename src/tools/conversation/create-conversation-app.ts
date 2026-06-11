@@ -11,19 +11,25 @@ import { appendRegionHint } from './utils/region-hint';
 import { IPromptResponse, PromptResponse, Tags } from '../../types';
 import { ConversationRegionOverride } from './prompt-schemas';
 
+const CreateConversationAppSchema = {
+  displayName: z.string()
+    .describe('Display name for the Conversation API app.'),
+  region: ConversationRegionOverride,
+};
+
+type CreateConversationApp = z.infer<z.ZodObject<typeof CreateConversationAppSchema>>;
+
 const TOOL_KEY: ConversationToolKey = 'createConversationApp';
 const TOOL_NAME = getToolName(TOOL_KEY);
 
 export const registerCreateConversationApp = (server: McpServer, tags: Tags[]) => {
   if (!matchesAnyTag(tags, toolsConfig[TOOL_KEY].tags)) return;
 
-  server.tool(
+  server.registerTool(
     TOOL_NAME,
-    'Create a new Conversation API app in the project. No channels are configured at creation; use set-sms-channel-on-app, set-rcs-channel-on-app, or set-whatsapp-channel-on-app to configure channels later. Read the conversation-app-setup resource for the full flow.',
     {
-      displayName: z.string()
-        .describe('Display name for the Conversation API app.'),
-      region: ConversationRegionOverride,
+      description: 'Create a new Conversation API app in the project. No channels are configured at creation; use set-sms-channel-on-app, set-rcs-channel-on-app, or set-whatsapp-channel-on-app to configure channels later. Read the conversation-app-setup resource for the full flow.',
+      inputSchema: CreateConversationAppSchema,
     },
     createConversationAppHandler,
   );
@@ -32,10 +38,7 @@ export const registerCreateConversationApp = (server: McpServer, tags: Tags[]) =
 export const createConversationAppHandler = async ({
   displayName,
   region,
-}: {
-  displayName: string;
-  region?: string;
-}): Promise<IPromptResponse> => {
+}: CreateConversationApp): Promise<IPromptResponse> => {
   const maybeService = getConversationService(TOOL_NAME);
   if (isPromptResponse(maybeService)) {
     return maybeService.promptResponse;

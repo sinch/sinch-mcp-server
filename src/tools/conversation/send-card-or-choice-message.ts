@@ -41,24 +41,30 @@ const choiceMessage = z.object({
   { message: 'Must provide exactly one type of choice: call, location, text, or URL' }
 ).describe('Choice message that can be a call, location, text, or URL. Exactly one must be provided. The "title" parameter must not be provided is case of text choice.');
 
+const SendCardOrChoiceMessageSchema = {
+  recipient: Recipient,
+  choiceContent: z.array(choiceMessage).max(10).optional().describe('The list of choices to send to the user'),
+  text: z.string().describe('The text to be sent along the choice array'),
+  mediaUrl: z.string().optional().describe('The media URL to be sent along the choice array'),
+  channel: ConversationChannel,
+  appId: ConversationAppIdOverride,
+  sender: MessageSenderNumberOverride,
+  region: ConversationRegionOverride,
+};
+
+type SendCardOrChoiceMessage = z.infer<z.ZodObject<typeof SendCardOrChoiceMessageSchema>>;
+
 const TOOL_KEY: ConversationToolKey = 'sendCardOrChoiceMessage';
 const TOOL_NAME = getToolName(TOOL_KEY);
 
 export const registerSendCardOrChoiceMessage = (server: McpServer, tags: Tags[]) => {
   if (!matchesAnyTag(tags, toolsConfig[TOOL_KEY].tags)) return;
 
-  server.tool(
+  server.registerTool(
     TOOL_NAME,
-    'Send a choice message to the user. The choice message can contain up to 3 choices if not text or up to 10 message if text only. Each choice can be a call message (phone number + title to display next to it), a location message (latitude / longitude + title to display next to it), a text message or a URL message (the URL to click on + title to display next to it). The contact can be a phone number in E.164 format, or the identifier for the specified channel.',
     {
-      recipient: Recipient,
-      choiceContent: z.array(choiceMessage).max(10).optional().describe('The list of choices to send to the user'),
-      text: z.string().describe('The text to be sent along the choice array'),
-      mediaUrl: z.string().optional().describe('The media URL to be sent along the choice array'),
-      channel: ConversationChannel,
-      appId: ConversationAppIdOverride,
-      sender: MessageSenderNumberOverride,
-      region: ConversationRegionOverride,
+      description: 'Send a choice message to the user. The choice message can contain up to 3 choices if not text or up to 10 message if text only. Each choice can be a call message (phone number + title to display next to it), a location message (latitude / longitude + title to display next to it), a text message or a URL message (the URL to click on + title to display next to it). The contact can be a phone number in E.164 format, or the identifier for the specified channel.',
+      inputSchema: SendCardOrChoiceMessageSchema,
     },
     sendCardOrChoiceMessageHandler
   );
@@ -73,16 +79,7 @@ export const sendCardOrChoiceMessageHandler = async ({
   appId,
   sender,
   region
-}: {
-  recipient: string;
-  channel: string[];
-  choiceContent?: z.infer<typeof choiceMessage>[];
-  text: string;
-  mediaUrl?: string;
-  appId?: string;
-  sender?: string;
-  region?: string;
-}): Promise<IPromptResponse> => {
+}: SendCardOrChoiceMessage): Promise<IPromptResponse> => {
   const maybeAppId = getConversationAppId(appId);
   if (isPromptResponse(maybeAppId)) {
     return maybeAppId.promptResponse;

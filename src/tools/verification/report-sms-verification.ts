@@ -5,25 +5,31 @@ import { getToolName, VerificationToolKey, verificationToolsConfig } from './uti
 import { isPromptResponse, matchesAnyTag } from '../../utils';
 import { IPromptResponse, PromptResponse, Tags } from '../../types';
 
+const ReportSmsVerificationSchema = {
+  phoneNumber: z.string().describe('Phone number in E.164 format used to start the verification process'),
+  oneTimePassword: z.string().describe('The code which was received by the user submitting the SMS verification.'),
+};
+
+type ReportSmsVerification = z.infer<z.ZodObject<typeof ReportSmsVerificationSchema>>;
+
 const TOOL_KEY: VerificationToolKey = 'reportSmsVerification';
 const TOOL_NAME = getToolName(TOOL_KEY);
 
 export const registerReportSmsVerification = (server: McpServer, tags: Tags[]) => {
   if(!matchesAnyTag(tags, verificationToolsConfig[TOOL_KEY].tags)) return;
 
-  server.tool(
+  server.registerTool(
     TOOL_NAME,
-    'Report the received verification code to verify it, using the phone number of the user',
     {
-      phoneNumber: z.string().describe('Phone number in E.164 format used to start the verification process'),
-      oneTimePassword: z.string().describe('The code which was received by the user submitting the SMS verification.')
+      description: 'Report the received verification code to verify it, using the phone number of the user',
+      inputSchema: ReportSmsVerificationSchema,
     },
     reportSmsVerificationHandler
   );
 };
 
 export const reportSmsVerificationHandler = async (
-  { phoneNumber, oneTimePassword }: { phoneNumber: string; oneTimePassword: string; }
+  { phoneNumber, oneTimePassword }: ReportSmsVerification
 ): Promise<IPromptResponse> => {
   try {
     const maybeService = getVerificationService(TOOL_NAME);

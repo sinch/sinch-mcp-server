@@ -6,18 +6,24 @@ import { getToolName, VoiceToolKey, voiceToolsConfig } from './utils/voice-tools
 import { isPromptResponse, matchesAnyTag } from '../../utils';
 import { IPromptResponse, PromptResponse, Tags } from '../../types';
 
+const TtsCalloutSchema = {
+  phoneNumber: z.string().describe('The phone number to call'),
+  message: z.string().describe('The message to read out loud'),
+};
+
+type TtsCallout = z.infer<z.ZodObject<typeof TtsCalloutSchema>>;
+
 const TOOL_KEY: VoiceToolKey = 'ttsCallout';
 const TOOL_NAME = getToolName(TOOL_KEY);
 
 export const registerTtsCallout = (server: McpServer, tags: Tags[]) => {
   if (!matchesAnyTag(tags, voiceToolsConfig[TOOL_KEY].tags)) return;
 
-  server.tool(
+  server.registerTool(
     TOOL_NAME,
-    'Make a callout with a Text-To-Speech prompt',
     {
-      phoneNumber: z.string().describe('The phone number to call'),
-      message: z.string().describe('The message to read out loud')
+      description: 'Make a callout with a Text-To-Speech prompt',
+      inputSchema: TtsCalloutSchema,
     },
     ttsCalloutHandler
   );
@@ -26,10 +32,7 @@ export const registerTtsCallout = (server: McpServer, tags: Tags[]) => {
 export const ttsCalloutHandler = async ({
   phoneNumber,
   message
-}: {
-  phoneNumber: string;
-  message: string;
-}): Promise<IPromptResponse> => {
+}: TtsCallout): Promise<IPromptResponse> => {
   const maybeService = getVoiceService(TOOL_NAME);
   if (isPromptResponse(maybeService)) {
     return maybeService.promptResponse;

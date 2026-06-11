@@ -6,7 +6,11 @@ import {
   getConversationService,
   setConversationRegion,
 } from './utils/conversation-service-helper';
-import { ConversationToolKey, getToolName, toolsConfig } from './utils/conversation-tools-helper';
+import {
+  ConversationToolKey,
+  getToolName,
+  toolsConfig,
+} from './utils/conversation-tools-helper';
 import {
   Recipient,
   ConversationAppIdOverride,
@@ -26,24 +30,35 @@ const location = z.object({
   address: z.string().optional(),
 });
 
+const LocationMessageSchema = {
+  recipient: Recipient,
+  address: location.describe(
+    'It can either be the plain text address that will be converted into latitude /longitude or directly the latitude / longitude coordinates if the user wants to send a specific location.',
+  ),
+  channel: ConversationChannel,
+  appId: ConversationAppIdOverride,
+  sender: MessageSenderNumberOverride,
+  region: ConversationRegionOverride,
+};
+
+type LocationMessage = z.infer<z.ZodObject<typeof LocationMessageSchema>>;
+
 const TOOL_KEY: ConversationToolKey = 'sendLocationMessage';
 const TOOL_NAME = getToolName(TOOL_KEY);
 
-export const registerSendLocationMessage = (server: McpServer, tags: Tags[]) => {
+export const registerSendLocationMessage = (
+  server: McpServer,
+  tags: Tags[],
+) => {
   if (!matchesAnyTag(tags, toolsConfig[TOOL_KEY].tags)) return;
 
-  server.tool(
+  server.registerTool(
     TOOL_NAME,
-    'Send a location message from an address given in parameter to a contact on the specified channel. The contact can be a phone number in E.164 format, or the identifier for the specified channel.',
     {
-      recipient: Recipient,
-      address: location.describe('It can either be the plain text address that will be converted into latitude /longitude or directly the latitude / longitude coordinates if the user wants to send a specific location.'),
-      channel: ConversationChannel,
-      appId: ConversationAppIdOverride,
-      sender: MessageSenderNumberOverride,
-      region: ConversationRegionOverride,
+      description: 'Send a location message from an address given in parameter to a contact on the specified channel. The contact can be a phone number in E.164 format, or the identifier for the specified channel.',
+      inputSchema: LocationMessageSchema,
     },
-    sendLocationMessageHandler
+    sendLocationMessageHandler,
   );
 };
 
@@ -53,15 +68,8 @@ export const sendLocationMessageHandler = async ({
   address,
   appId,
   sender,
-  region
-}: {
-  recipient: string;
-  channel: string[];
-  address: { lat?: number; long?: number; title?: string; address?: string; };
-  appId?: string;
-  sender?: string;
-  region?: string;
-}): Promise<IPromptResponse> => {
+  region,
+}: LocationMessage): Promise<IPromptResponse> => {
   const maybeAppId = getConversationAppId(appId);
   if (isPromptResponse(maybeAppId)) {
     return maybeAppId.promptResponse;
@@ -75,10 +83,13 @@ export const sendLocationMessageHandler = async ({
   const conversationService = maybeService;
   const usedRegion = setConversationRegion(region, conversationService);
 
-  let latitude = 0, longitude = 0;
+  let latitude = 0,
+    longitude = 0;
   let formattedAddress = 'Default tile';
   if (address.address) {
-    const geocodingAddress = await getLatitudeLongitudeFromAddress(address.address);
+    const geocodingAddress = await getLatitudeLongitudeFromAddress(
+      address.address,
+    );
     latitude = geocodingAddress.latitude;
     longitude = geocodingAddress.longitude;
     formattedAddress = geocodingAddress.formattedAddress;
@@ -87,32 +98,46 @@ export const sendLocationMessageHandler = async ({
     longitude = address.long;
     formattedAddress = address.title;
   }
-  const requestBase = await buildMessageBase(conversationService, conversationAppId, recipient, channel, sender);
-  const request: Conversation.SendLocationMessageRequestData<Conversation.IdentifiedBy> = {
-    sendMessageRequestBody: {
-      ...requestBase,
-      message: {
-        location_message: {
-          coordinates: {
-            longitude,
-            latitude
+  const requestBase = await buildMessageBase(
+    conversationService,
+    conversationAppId,
+    recipient,
+    channel,
+    sender,
+  );
+  const request: Conversation.SendLocationMessageRequestData<Conversation.IdentifiedBy> =
+    {
+      sendMessageRequestBody: {
+        ...requestBase,
+        message: {
+          location_message: {
+            coordinates: {
+              longitude,
+              latitude,
+            },
+            title: formattedAddress,
           },
-          title: formattedAddress
-        }
-      }
-    }
-  };
+        },
+      },
+    };
 
   try {
-    const response = await conversationService.messages.sendLocationMessage(request);
-    return new PromptResponse(JSON.stringify({
-      success: true,
-      message_id: response.message_id
-    })).promptResponse;
+    const response =
+      await conversationService.messages.sendLocationMessage(request);
+    return new PromptResponse(
+      JSON.stringify({
+        success: true,
+        message_id: response.message_id,
+      }),
+    ).promptResponse;
   } catch (error) {
-    return new PromptResponse(JSON.stringify({
-      success: false,
-      error: (error instanceof Error ? error.message : String(error)) + `. Are you sure you are using the right region to send your message? The current region is ${usedRegion}.`
-    })).promptResponse;
+    return new PromptResponse(
+      JSON.stringify({
+        success: false,
+        error:
+          (error instanceof Error ? error.message : String(error)) +
+          `. Are you sure you are using the right region to send your message? The current region is ${usedRegion}.`,
+      }),
+    ).promptResponse;
   }
 };
