@@ -8,9 +8,7 @@ export const formatWebhook = (webhook: Conversation.Webhook) => ({
   triggers: webhook.triggers,
 });
 
-export const formatListWebhooksResponse = (
-  response: Conversation.ListWebhooksResponse | undefined,
-) => {
+export const formatListWebhooksResponse = (response: Conversation.ListWebhooksResponse | undefined) => {
   if (!response?.webhooks?.length) {
     return { webhooks: [] };
   }

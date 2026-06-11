@@ -9,7 +9,7 @@ global.fetch = jest.fn();
 describe('listEmailTemplatesHandler', () => {
   const mockCredentials = {
     domain: 'example.com',
-    apiKey: 'test-api-key'
+    apiKey: 'test-api-key',
   };
 
   beforeEach(() => {
@@ -25,20 +25,20 @@ describe('listEmailTemplatesHandler', () => {
           id: 'template1',
           name: 'my Template 1',
           description: 'The template #1',
-          createdAt: 'Fri, 28 Mar 2025 17:42:30 UTC'
+          createdAt: 'Fri, 28 Mar 2025 17:42:30 UTC',
         },
         {
           id: 'template2',
           name: 'my Template 2',
           description: 'The template #2',
-          createdAt: 'Wed, 26 Mar 2025 11:11:48 UTC'
-        }
-      ]
+          createdAt: 'Wed, 26 Mar 2025 11:11:48 UTC',
+        },
+      ],
     };
 
     (fetch as jest.Mock).mockResolvedValue({
       ok: true,
-      json: async () => mockResponse
+      json: async () => mockResponse,
     });
 
     // When
@@ -51,17 +51,17 @@ describe('listEmailTemplatesHandler', () => {
           id: 'template1',
           name: 'my Template 1',
           description: 'The template #1',
-          createdAt: '2025-03-28T17:42:30.000Z'
+          createdAt: '2025-03-28T17:42:30.000Z',
         },
         {
           id: 'template2',
           name: 'my Template 2',
           description: 'The template #2',
-          createdAt: '2025-03-26T11:11:48.000Z'
-        }
+          createdAt: '2025-03-26T11:11:48.000Z',
+        },
       ],
-      total_count: 2
-    })
+      total_count: 2,
+    });
 
     expect(result.role).toBe('assistant');
     expect(result.content[0].text).toBe(expectedResponse);
@@ -72,7 +72,7 @@ describe('listEmailTemplatesHandler', () => {
     (fetch as jest.Mock).mockResolvedValue({
       ok: false,
       status: 403,
-      statusText: 'Forbidden'
+      statusText: 'Forbidden',
     });
 
     // When
@@ -81,7 +81,7 @@ describe('listEmailTemplatesHandler', () => {
     // Then
     const expectedResponse = JSON.stringify({
       success: false,
-      error: 'Mailgun API error: 403 Forbidden'
+      error: 'Mailgun API error: 403 Forbidden',
     });
     expect(result).toEqual(new PromptResponse(expectedResponse).promptResponse);
   });
@@ -90,7 +90,9 @@ describe('listEmailTemplatesHandler', () => {
     // Given
     (fetch as jest.Mock).mockResolvedValue({
       ok: true,
-      json: async () => { throw new Error('invalid json'); }
+      json: async () => {
+        throw new Error('invalid json');
+      },
     });
 
     // When
@@ -99,17 +101,19 @@ describe('listEmailTemplatesHandler', () => {
     // Then
     const expectedResponse = JSON.stringify({
       success: false,
-      error: 'invalid json'
+      error: 'invalid json',
     });
     expect(result).toEqual(new PromptResponse(expectedResponse).promptResponse);
   });
 
   it('returns early on credential fetch error', async () => {
     // Given
-    const promptResponse = new PromptResponse(JSON.stringify({
-      success: false,
-      error: 'Missing credentials'
-    }));
+    const promptResponse = new PromptResponse(
+      JSON.stringify({
+        success: false,
+        error: 'Missing credentials',
+      }),
+    );
     jest.spyOn(mailgunHelper, 'getMailgunCredentials').mockReturnValue(promptResponse);
 
     // When

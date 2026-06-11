@@ -1,5 +1,6 @@
 import js from '@eslint/js';
-import eslintPluginPrettierRecommended from 'eslint-config-prettier';
+import eslintConfigPrettier from 'eslint-config-prettier';
+import eslintPluginPrettier from 'eslint-plugin-prettier';
 import typescriptEslint from '@typescript-eslint/eslint-plugin';
 import parser from '@typescript-eslint/parser';
 import jest from 'eslint-plugin-jest';
@@ -28,16 +29,14 @@ export default [
       jest,
       'jest-formatting': jestFormatting,
       'jest-extended': jestExtended,
+      'prettier': eslintPluginPrettier,
     },
     rules: {
       ...typescriptEslint.configs.recommended.rules,
+      ...eslintConfigPrettier.rules,
 
       '@typescript-eslint/no-explicit-any': 'off',
       '@typescript-eslint/no-var-requires': 'off',
-
-      'semi': 'warn',
-      'comma-dangle': 'warn',
-      'quotes': ['warn', 'single'],
 
       'jest-extended/prefer-to-be-true': 'warn',
       'jest-extended/prefer-to-be-false': 'error',
@@ -46,30 +45,9 @@ export default [
       'jest/expect-expect': 'error',
 
       'curly': ['error', 'all'],
-      'indent': ['error', 2],
-      'object-curly-spacing': [
-        'error',
-        'always',
-        {
-          objectsInObjects: true,
-          arraysInObjects: true,
-        },
-      ],
       'require-jsdoc': 'off',
-      'operator-linebreak': ['error', 'before'],
-      'max-len': [
-        'error',
-        {
-          code: 120,
-          ignoreUrls: true,
-          ignoreComments: true,
-          ignoreTemplateLiterals: true,
-          ignoreRegExpLiterals: true,
-          ignorePattern: '^import.+|test',
-        },
-      ],
       'new-cap': 'off',
+      'prettier/prettier': 'warn',
     },
-  },
-  eslintPluginPrettierRecommended,
+  }
 ];

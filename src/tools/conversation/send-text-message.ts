@@ -34,19 +34,22 @@ const TOOL_KEY: ConversationToolKey = 'sendTextMessage';
 const TOOL_NAME = getToolName(TOOL_KEY);
 
 export const registerSendTextMessage = (server: McpServer, tags: Tags[]) => {
-  if (!matchesAnyTag(tags, toolsConfig[TOOL_KEY].tags)) return;
+  if (!matchesAnyTag(tags, toolsConfig[TOOL_KEY].tags)) {
+    return;
+  }
 
   server.registerTool(
     TOOL_NAME,
     {
-      description: 'Send a text message to a contact on the specified channel. The contact can be a phone number in E.164 format, or the identifier for the specified channel.',
+      description:
+        'Send a text message to a contact on the specified channel. The contact can be a phone number in E.164 format, or the identifier for the specified channel.',
       inputSchema: SendTextMessageSchema,
     },
-    sendTextMessageHandler
+    sendTextMessageHandler,
   );
 };
 
-export const sendTextMessageHandler = async({
+export const sendTextMessageHandler = async ({
   recipient,
   channel,
   message,
@@ -73,22 +76,28 @@ export const sendTextMessageHandler = async({
       ...requestBase,
       message: {
         text_message: {
-          text: message
-        }
-      }
-    }
+          text: message,
+        },
+      },
+    },
   };
 
-  try{
+  try {
     const response = await conversationService.messages.sendTextMessage(request);
-    return new PromptResponse(JSON.stringify({
-      success: true,
-      message_id: response.message_id
-    })).promptResponse;
+    return new PromptResponse(
+      JSON.stringify({
+        success: true,
+        message_id: response.message_id,
+      }),
+    ).promptResponse;
   } catch (error) {
-    return new PromptResponse(JSON.stringify({
-      success: false,
-      error: (error instanceof Error ? error.message : String(error)) + `. Are you sure you are using the right region to send your message? The current region is ${usedRegion}.`
-    })).promptResponse;
+    return new PromptResponse(
+      JSON.stringify({
+        success: false,
+        error:
+          (error instanceof Error ? error.message : String(error)) +
+          `. Are you sure you are using the right region to send your message? The current region is ${usedRegion}.`,
+      }),
+    ).promptResponse;
   }
 };

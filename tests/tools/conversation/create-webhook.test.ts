@@ -5,9 +5,13 @@ import {
 } from '../../../src/tools/conversation/utils/conversation-service-helper';
 import { buildDormantTriggersWarning } from '../../../src/tools/conversation/utils/webhook-tools-helper';
 
-jest.mock('@sinch/sdk-core/package.json', () => ({
-  version: '1.0.0',
-}), { virtual: true });
+jest.mock(
+  '@sinch/sdk-core/package.json',
+  () => ({
+    version: '1.0.0',
+  }),
+  { virtual: true },
+);
 
 jest.mock('../../../src/tools/conversation/utils/conversation-service-helper', () => ({
   getConversationService: jest.fn(),

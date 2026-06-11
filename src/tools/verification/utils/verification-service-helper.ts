@@ -12,36 +12,26 @@ import { VerificationService } from '@sinch/verification';
 import { formatUserAgent } from '../../../utils';
 
 export const getVerificationService = (toolName: string): VerificationService | PromptResponse => {
-
   const applicationKey = env.APPLICATION_KEY;
   const applicationSecret = env.APPLICATION_SECRET;
 
   if (!applicationKey && !applicationSecret) {
-    return new PromptResponse(
-      'Missing environment variables: "APPLICATION_KEY" and "APPLICATION_SECRET".'
-    );
+    return new PromptResponse('Missing environment variables: "APPLICATION_KEY" and "APPLICATION_SECRET".');
   }
   if (!applicationKey) {
-    return new PromptResponse(
-      'Missing environment variable: "APPLICATION_KEY".'
-    );
+    return new PromptResponse('Missing environment variable: "APPLICATION_KEY".');
   }
   if (!applicationSecret) {
-    return new PromptResponse(
-      'Missing environment variable: "APPLICATION_SECRET".'
-    );
+    return new PromptResponse('Missing environment variable: "APPLICATION_SECRET".');
   }
 
-  const verificationService  = new VerificationService({});
+  const verificationService = new VerificationService({});
   const fetcher = new ApiFetchClient({
     requestPlugins: [
       new XTimestampRequest(),
       new SigningRequest(applicationKey, applicationSecret),
       new AdditionalHeadersRequest({
-        headers: buildHeader(
-          'User-Agent',
-          formatUserAgent(toolName, applicationKey),
-        ),
+        headers: buildHeader('User-Agent', formatUserAgent(toolName, applicationKey)),
       }),
     ],
   });

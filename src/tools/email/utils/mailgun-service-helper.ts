@@ -4,11 +4,10 @@ import { env } from '../../../env';
 export type MailgunCredentials = {
   domain: string;
   apiKey: string;
-}
+};
 
 // TODO: Replace this method with a getMailgunService() method that will return the SinchClient once the Mailgun service is implemented.
 export const getMailgunCredentials = (domain: string | undefined): MailgunCredentials | PromptResponse => {
-
   let credentials: MailgunCredentials | undefined = undefined;
 
   const mailgunDomain = domain || env.MAILGUN_DOMAIN;
@@ -17,7 +16,7 @@ export const getMailgunCredentials = (domain: string | undefined): MailgunCreden
   if (mailgunDomain && apiKey) {
     credentials = {
       domain: mailgunDomain,
-      apiKey: apiKey
+      apiKey: apiKey,
     };
   }
 
@@ -27,24 +26,27 @@ export const getMailgunCredentials = (domain: string | undefined): MailgunCreden
       errorMessage = 'The "domain" is not provided and "MAILGUN_DOMAIN" is not set in the environment variables.';
     }
     if (!apiKey) {
-      errorMessage += '"MAILGUN_API_KEY" is not set in the environment variables. The property is required to use the emails related tools.';
+      errorMessage +=
+        '"MAILGUN_API_KEY" is not set in the environment variables. The property is required to use the emails related tools.';
     }
     return new PromptResponse(errorMessage);
   }
 
   return credentials;
-
 };
 
 export const getMailgunApiKey = (): string | PromptResponse => {
   const apiKey = env.MAILGUN_API_KEY;
 
   if (!apiKey) {
-    return new PromptResponse(JSON.stringify({
-      success: false,
-      error: 'The "MAILGUN_API_KEY" environment variable is not set. The property is required to use the emails related tools.'
-    }));
+    return new PromptResponse(
+      JSON.stringify({
+        success: false,
+        error:
+          'The "MAILGUN_API_KEY" environment variable is not set. The property is required to use the emails related tools.',
+      }),
+    );
   }
 
   return apiKey;
-}
+};

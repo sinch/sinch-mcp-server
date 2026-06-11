@@ -17,19 +17,19 @@ describe('formatListAllAppsResponse', () => {
               callback_secret: 'secret1',
               state: {
                 status: 'ACTIVE',
-                description: ''
+                description: '',
               },
               channel_known_id: '12345',
             },
             {
               channel: 'TELEGRAM',
               telegram_credentials: {
-                token: 'token2'
+                token: 'token2',
               },
               callback_secret: 'secret2',
               state: {
                 status: 'ACTIVE',
-                description: ''
+                description: '',
               },
               channel_known_id: '',
             },
@@ -42,24 +42,24 @@ describe('formatListAllAppsResponse', () => {
               callback_secret: '',
               state: {
                 status: 'FAILING',
-                description: ''
+                description: '',
               },
               channel_known_id: '',
-            }
+            },
           ],
           conversation_metadata_report_view: 'NONE',
           rate_limits: {
             outbound: 80,
             inbound: 100,
-            webhooks: 100
-          }
+            webhooks: 100,
+          },
         },
         {
           id: 'app2',
           display_name: 'App Two',
-          channel_credentials: []
-        }
-      ]
+          channel_credentials: [],
+        },
+      ],
     };
 
     const output = formatListAllAppsResponse(input);
@@ -68,17 +68,14 @@ describe('formatListAllAppsResponse', () => {
         {
           id: 'app1',
           display_name: 'App One',
-          channel_credentials: [
-            { channel: 'MESSENGER' },
-            { channel: 'TELEGRAM' }
-          ]
+          channel_credentials: [{ channel: 'MESSENGER' }, { channel: 'TELEGRAM' }],
         },
         {
           id: 'app2',
           display_name: 'App Two',
-          channel_credentials: []
-        }
-      ]
+          channel_credentials: [],
+        },
+      ],
     });
   });
 
@@ -87,5 +84,4 @@ describe('formatListAllAppsResponse', () => {
     const output = formatListAllAppsResponse(input);
     expect(output).toEqual({ apps: [] });
   });
-
 });

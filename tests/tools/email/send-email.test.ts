@@ -10,14 +10,13 @@ jest.mock('undici', () => ({
     set(key: string, value: string) {
       this.fields[key] = value;
     }
-  }
+  },
 }));
 
 describe('sendEmailHandler', () => {
-
   const mockCredentials = {
     domain: 'example.com',
-    apiKey: 'test-api-key'
+    apiKey: 'test-api-key',
   };
 
   beforeEach(() => {
@@ -31,7 +30,7 @@ describe('sendEmailHandler', () => {
     (fetch as jest.Mock).mockResolvedValue({
       status: 200,
       statusText: 'OK',
-      json: mockJson
+      json: mockJson,
     });
 
     // When
@@ -39,7 +38,7 @@ describe('sendEmailHandler', () => {
       sender: 'sender@example.com',
       recipient: 'user@example.com',
       subject: 'Test Subject',
-      body: '<p>Hello</p>'
+      body: '<p>Hello</p>',
     });
 
     // Then
@@ -47,8 +46,8 @@ describe('sendEmailHandler', () => {
       success: true,
       message_id: '<test-id-123.mailgun.org>',
       recipient: 'user@example.com',
-      subject: 'Test Subject'
-    })
+      subject: 'Test Subject',
+    });
     expect(result.content[0].text).toBe(expectedResponse);
   });
 
@@ -58,7 +57,7 @@ describe('sendEmailHandler', () => {
     (fetch as jest.Mock).mockResolvedValue({
       status: 200,
       statusText: 'OK',
-      json: mockJson
+      json: mockJson,
     });
 
     // When
@@ -67,7 +66,7 @@ describe('sendEmailHandler', () => {
       recipient: 'user@example.com',
       subject: 'Template Subject',
       template: 'welcome-email',
-      templateVariables: { name: 'User' }
+      templateVariables: { name: 'User' },
     });
 
     // Then
@@ -75,7 +74,7 @@ describe('sendEmailHandler', () => {
       success: true,
       message_id: '<template-id-456.mailgun.org>',
       recipient: 'user@example.com',
-      subject: 'Template Subject'
+      subject: 'Template Subject',
     });
     expect(result.content[0].text).toBe(expectedResponse);
   });
@@ -85,13 +84,13 @@ describe('sendEmailHandler', () => {
     const result = await sendEmailHandler({
       sender: 'sender@example.com',
       recipient: 'user@example.com',
-      subject: 'Missing Content'
+      subject: 'Missing Content',
     });
 
     // Then
     const expectedResponse = JSON.stringify({
       success: false,
-      error: 'The "body" is not provided and no template name is specified.'
+      error: 'The "body" is not provided and no template name is specified.',
     });
     expect(result.content[0].text).toBe(expectedResponse);
   });
@@ -102,7 +101,7 @@ describe('sendEmailHandler', () => {
       ok: false,
       status: 403,
       statusText: 'Forbidden',
-      text: async () => 'Forbidden'
+      text: async () => 'Forbidden',
     });
 
     // When
@@ -110,23 +109,25 @@ describe('sendEmailHandler', () => {
       sender: 'sender@example.com',
       recipient: 'user@example.com',
       subject: 'Test Subject',
-      body: '<p>Hello</p>'
+      body: '<p>Hello</p>',
     });
 
     // Then
     const expectedResponse = JSON.stringify({
       success: false,
-      error: '(403 - Forbidden) An error occurred when sending an email to user@example.com: Forbidden'
+      error: '(403 - Forbidden) An error occurred when sending an email to user@example.com: Forbidden',
     });
     expect(result).toEqual(new PromptResponse(expectedResponse).promptResponse);
   });
 
   it('returns early on credential fetch error', async () => {
     // Given
-    const promptResponse = new PromptResponse(JSON.stringify({
-      success: false,
-      error: 'Missing credentials'
-    }));
+    const promptResponse = new PromptResponse(
+      JSON.stringify({
+        success: false,
+        error: 'Missing credentials',
+      }),
+    );
     jest.spyOn(mailgunHelper, 'getMailgunCredentials').mockReturnValue(promptResponse);
 
     // When
@@ -134,11 +135,10 @@ describe('sendEmailHandler', () => {
       sender: 'sender@example.com',
       recipient: 'user@example.com',
       subject: 'Test Subject',
-      body: '<p>Hello</p>'
+      body: '<p>Hello</p>',
     });
 
     // Then
     expect(result).toEqual(promptResponse.promptResponse);
   });
-
 });

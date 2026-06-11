@@ -5,9 +5,13 @@ import { formatUserAgent } from '../../../../src/utils';
 import { PromptResponse } from '../../../../src/types';
 import { mockEnv, resetMockEnv } from '../../../helpers/mock-env';
 
-jest.mock('@sinch/sdk-core/package.json', () => ({
-  version: '1.0.0',
-}), { virtual: true });
+jest.mock(
+  '@sinch/sdk-core/package.json',
+  () => ({
+    version: '1.0.0',
+  }),
+  { virtual: true },
+);
 
 describe('getNumbersService', () => {
   const PROJECT_ID = 'test-project';
@@ -28,13 +32,11 @@ describe('getNumbersService', () => {
     expect(numbersFetchClient!.apiClientOptions.hostname).toBe(NUMBERS_HOSTNAME);
 
     const userAgentPlugin = numbersFetchClient!.apiClientOptions.requestPlugins?.find(
-      (plugin) => plugin.getName() === 'AdditionalHeadersRequest'
+      (plugin) => plugin.getName() === 'AdditionalHeadersRequest',
     );
     expect(userAgentPlugin).toBeDefined();
     const expectedUserAgent = formatUserAgent(TOOL_NAME, PROJECT_ID);
-    expect(
-      (await (userAgentPlugin as any).additionalHeaders.headers)['User-Agent']
-    ).toBe(expectedUserAgent);
+    expect((await (userAgentPlugin as any).additionalHeaders.headers)['User-Agent']).toBe(expectedUserAgent);
   });
 
   it('returns prompt response when credentials are missing', () => {
@@ -43,8 +45,6 @@ describe('getNumbersService', () => {
     const result = getNumbersService(TOOL_NAME);
 
     expect(result).toBeInstanceOf(PromptResponse);
-    expect((result as PromptResponse).promptResponse.content[0].text).toContain(
-      'Missing env vars'
-    );
+    expect((result as PromptResponse).promptResponse.content[0].text).toContain('Missing env vars');
   });
 });

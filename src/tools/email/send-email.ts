@@ -12,9 +12,17 @@ const SendEmailSchema = {
   subject: z.string().describe('The subject of the email.'),
   sender: z.string().optional().describe('The sender of the email.'),
   body: z.string().optional().describe('The body of the email. Can be text or HTML'),
-  template: z.string().optional().describe('The name of a template to use to render the email body. If provided, the body will be ignored.'),
+  template: z
+    .string()
+    .optional()
+    .describe('The name of a template to use to render the email body. If provided, the body will be ignored.'),
   templateVariables: z.record(z.string()).optional().describe('Variables to use in the template.'),
-  domain: z.string().optional().describe('The domain to use for sending the email. It would override the domain provided in the environment variables.'),
+  domain: z
+    .string()
+    .optional()
+    .describe(
+      'The domain to use for sending the email. It would override the domain provided in the environment variables.',
+    ),
 };
 
 type SendEmail = z.infer<z.ZodObject<typeof SendEmailSchema>>;
@@ -23,7 +31,9 @@ const TOOL_KEY: EmailToolKey = 'sendEmail';
 const TOOL_NAME = getToolName(TOOL_KEY);
 
 export const registerSendEmail = (server: McpServer, tags: Tags[]) => {
-  if (!matchesAnyTag(tags, toolsConfig[TOOL_KEY].tags)) return;
+  if (!matchesAnyTag(tags, toolsConfig[TOOL_KEY].tags)) {
+    return;
+  }
 
   server.registerTool(
     TOOL_NAME,
@@ -31,7 +41,7 @@ export const registerSendEmail = (server: McpServer, tags: Tags[]) => {
       description: 'Send an email to a recipient with a subject and body.',
       inputSchema: SendEmailSchema,
     },
-    sendEmailHandler
+    sendEmailHandler,
   );
 };
 
@@ -42,7 +52,7 @@ export const sendEmailHandler = async ({
   body,
   template,
   templateVariables,
-  domain
+  domain,
 }: SendEmail): Promise<IPromptResponse> => {
   const maybeCredentials = getMailgunCredentials(domain);
   if (isPromptResponse(maybeCredentials)) {
@@ -53,10 +63,12 @@ export const sendEmailHandler = async ({
   if (!sender) {
     sender = env.MAILGUN_SENDER_ADDRESS;
     if (!sender) {
-      return new PromptResponse(JSON.stringify({
-        success: false,
-        error: 'The "sender" is not provided and MAILGUN_SENDER_ADDRESS is no set in the environment variables.'
-      })).promptResponse;
+      return new PromptResponse(
+        JSON.stringify({
+          success: false,
+          error: 'The "sender" is not provided and MAILGUN_SENDER_ADDRESS is no set in the environment variables.',
+        }),
+      ).promptResponse;
     }
   }
 
@@ -72,37 +84,40 @@ export const sendEmailHandler = async ({
   } else if (body) {
     form.set('html', body);
   } else {
-    return new PromptResponse(JSON.stringify({
-      success: false,
-      error: 'The "body" is not provided and no template name is specified.'
-    })).promptResponse;
+    return new PromptResponse(
+      JSON.stringify({
+        success: false,
+        error: 'The "body" is not provided and no template name is specified.',
+      }),
+    ).promptResponse;
   }
 
-  const resp = await fetch(
-    `https://api.mailgun.net/v3/${credentials.domain}/messages`,
-    {
-      method: 'POST',
-      headers: {
-        Authorization: 'Basic ' + Buffer.from(`api:${credentials.apiKey}`).toString('base64'),
-        'User-Agent': formatUserAgent(TOOL_NAME, sha256(credentials.apiKey)),
-      },
-      body: form
-    }
-  );
+  const resp = await fetch(`https://api.mailgun.net/v3/${credentials.domain}/messages`, {
+    method: 'POST',
+    headers: {
+      Authorization: 'Basic ' + Buffer.from(`api:${credentials.apiKey}`).toString('base64'),
+      'User-Agent': formatUserAgent(TOOL_NAME, sha256(credentials.apiKey)),
+    },
+    body: form,
+  });
 
   if (resp.status !== 200) {
-    return new PromptResponse(JSON.stringify({
-      success: false,
-      error: `(${resp.status} - ${resp.statusText}) An error occurred when sending an email to ${recipient}: ${await resp.text()}`
-    })).promptResponse;
+    return new PromptResponse(
+      JSON.stringify({
+        success: false,
+        error: `(${resp.status} - ${resp.statusText}) An error occurred when sending an email to ${recipient}: ${await resp.text()}`,
+      }),
+    ).promptResponse;
   }
 
-  const data = await resp.json() as { id: string };
+  const data = (await resp.json()) as { id: string };
 
-  return new PromptResponse(JSON.stringify({
-    success: true,
-    message_id: data.id,
-    recipient: recipient,
-    subject: subject
-  })).promptResponse;
+  return new PromptResponse(
+    JSON.stringify({
+      success: true,
+      message_id: data.id,
+      recipient: recipient,
+      subject: subject,
+    }),
+  ).promptResponse;
 };

@@ -4,4 +4,4 @@ import { Tags } from '../types';
 
 export const registerPrompts = (server: McpServer, tags: Tags[]) => {
   registerAppId(server, tags);
-}
+};

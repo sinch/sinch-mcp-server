@@ -6,8 +6,15 @@ import { getMailgunCredentials } from './utils/mailgun-service-helper';
 import { EmailToolKey, getToolName, sha256, toolsConfig } from './utils/mailgun-tools-helper';
 
 const eventTypes = [
-  'accepted', 'rejected', 'delivered', 'failed',
-  'opened', 'clicked', 'unsubscribed', 'complained', 'stored'
+  'accepted',
+  'rejected',
+  'delivered',
+  'failed',
+  'opened',
+  'clicked',
+  'unsubscribed',
+  'complained',
+  'stored',
 ] as const;
 
 type EventType = (typeof eventTypes)[number];
@@ -16,8 +23,16 @@ const ListEmailEventsSchema = {
   domain: z.string().optional().describe('(Optional) The Mailgun domain to fetch events for.'),
   event: z.enum(eventTypes).optional().describe('(Optional) Filter by event type (e.g., delivered, opened, failed).'),
   limit: z.number().int().min(1).max(300).optional().describe('(Optional) Number of events to return (max: 300).'),
-  beginSearchPeriod: z.string().datetime().optional().describe('(Optional) The beginning of the search time range in ISO 8601 format (e.g., 2025-01-01T00:00:00Z).'),
-  endSearchPeriod: z.string().datetime().optional().describe('(Optional) The end of the search time range in ISO 8601 format (e.g., 2025-01-01T00:00:00Z).'),
+  beginSearchPeriod: z
+    .string()
+    .datetime()
+    .optional()
+    .describe('(Optional) The beginning of the search time range in ISO 8601 format (e.g., 2025-01-01T00:00:00Z).'),
+  endSearchPeriod: z
+    .string()
+    .datetime()
+    .optional()
+    .describe('(Optional) The end of the search time range in ISO 8601 format (e.g., 2025-01-01T00:00:00Z).'),
 };
 
 type ListEmailEvents = z.infer<z.ZodObject<typeof ListEmailEventsSchema>>;
@@ -26,15 +41,18 @@ const TOOL_KEY: EmailToolKey = 'listEmailEvents';
 const TOOL_NAME = getToolName(TOOL_KEY);
 
 export const registerListEmailEvents = (server: McpServer, tags: Tags[]) => {
-  if (!matchesAnyTag(tags, toolsConfig[TOOL_KEY].tags)) return;
+  if (!matchesAnyTag(tags, toolsConfig[TOOL_KEY].tags)) {
+    return;
+  }
 
   server.registerTool(
     TOOL_NAME,
     {
-      description: 'Get a list of email events from Mailgun for a specific domain. You can filter by event type and limit the number of results.',
+      description:
+        'Get a list of email events from Mailgun for a specific domain. You can filter by event type and limit the number of results.',
       inputSchema: ListEmailEventsSchema,
     },
-    listEmailEventsHandler
+    listEmailEventsHandler,
   );
 };
 
@@ -43,7 +61,7 @@ export const listEmailEventsHandler = async ({
   event,
   limit,
   beginSearchPeriod,
-  endSearchPeriod
+  endSearchPeriod,
 }: ListEmailEvents): Promise<IPromptResponse> => {
   const maybeCredentials = getMailgunCredentials(domain);
   if (isPromptResponse(maybeCredentials)) {
@@ -52,10 +70,18 @@ export const listEmailEventsHandler = async ({
   const credentials = maybeCredentials;
 
   const params = new URLSearchParams();
-  if (event) params.append('event', event);
-  if (limit) params.append('limit', limit.toString());
-  if (beginSearchPeriod) params.append('begin', (new Date(beginSearchPeriod).getTime() / 1000).toString());
-  if (endSearchPeriod) params.append('end', (new Date(endSearchPeriod).getTime() / 1000).toString());
+  if (event) {
+    params.append('event', event);
+  }
+  if (limit) {
+    params.append('limit', limit.toString());
+  }
+  if (beginSearchPeriod) {
+    params.append('begin', (new Date(beginSearchPeriod).getTime() / 1000).toString());
+  }
+  if (endSearchPeriod) {
+    params.append('end', (new Date(endSearchPeriod).getTime() / 1000).toString());
+  }
   if (beginSearchPeriod && !endSearchPeriod) {
     params.append('end', (new Date().getTime() / 1000).toString()); // Default to now if no end is provided
   }
@@ -64,29 +90,36 @@ export const listEmailEventsHandler = async ({
 
   const response = await fetch(url, {
     headers: {
-      'Authorization': 'Basic ' + Buffer.from(`api:${credentials.apiKey}`).toString('base64'),
+      Authorization: 'Basic ' + Buffer.from(`api:${credentials.apiKey}`).toString('base64'),
       'User-Agent': formatUserAgent(TOOL_NAME, sha256(credentials.apiKey)),
-    }
+    },
   });
 
   if (!response.ok) {
-    return new PromptResponse(JSON.stringify({
-      success: false,
-      error: `Mailgun API error: ${response.status} ${response.statusText}`
-    })).promptResponse;
+    return new PromptResponse(
+      JSON.stringify({
+        success: false,
+        error: `Mailgun API error: ${response.status} ${response.statusText}`,
+      }),
+    ).promptResponse;
   }
 
   let responseData;
   try {
-    responseData = await response.json() as MailgunEventsResponse;
+    responseData = (await response.json()) as MailgunEventsResponse;
   } catch (error) {
-    return new PromptResponse(JSON.stringify({
-      success: false,
-      error: error instanceof Error ? error.message : String(error)
-    })).promptResponse;
+    return new PromptResponse(
+      JSON.stringify({
+        success: false,
+        error: error instanceof Error ? error.message : String(error),
+      }),
+    ).promptResponse;
   }
 
-  const grouped: Map<string, { recipient?: string; subject?: string; from?: string; events: { event: string; timestamp: string }[] }> = new Map();
+  const grouped: Map<
+    string,
+    { recipient?: string; subject?: string; from?: string; events: { event: string; timestamp: string }[] }
+  > = new Map();
 
   const events = responseData.items || [];
   for (const e of events) {
@@ -101,17 +134,23 @@ export const listEmailEventsHandler = async ({
         recipient,
         subject,
         from,
-        events: []
+        events: [],
       });
     }
     const group = grouped.get(messageId)!;
-    if (subject && !group.subject) group.subject = subject;
-    if (from && !group.from) group.from = from;
-    if (recipient && !group.recipient) group.recipient = recipient;
+    if (subject && !group.subject) {
+      group.subject = subject;
+    }
+    if (from && !group.from) {
+      group.from = from;
+    }
+    if (recipient && !group.recipient) {
+      group.recipient = recipient;
+    }
 
     group.events.push({
       event: e.event || '',
-      timestamp: e.timestamp ? new Date(e.timestamp * 1000).toISOString() : ''
+      timestamp: e.timestamp ? new Date(e.timestamp * 1000).toISOString() : '',
     });
   }
 
@@ -120,13 +159,15 @@ export const listEmailEventsHandler = async ({
     from: data.from,
     to: data.recipient,
     subject: data.subject,
-    events: data.events
+    events: data.events,
   }));
 
-  return new PromptResponse(JSON.stringify({
-    events: groupedArray,
-    total_count: events.length
-  })).promptResponse;
+  return new PromptResponse(
+    JSON.stringify({
+      events: groupedArray,
+      total_count: events.length,
+    }),
+  ).promptResponse;
 };
 
 interface MailgunEventsResponse {

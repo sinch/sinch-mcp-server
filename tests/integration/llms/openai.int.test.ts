@@ -1,4 +1,4 @@
-import OpenAI from "openai";
+import OpenAI from 'openai';
 import { Tool } from 'openai/resources/responses/responses';
 import { toolTestCases } from '../toolsTestCases';
 import { listTools } from '../list-tools';
@@ -9,15 +9,14 @@ const transformToOpenAIFormat = (tools: any[]): Tool[] => {
     type: 'function',
     name: t.name,
     description: t.description,
-    parameters: JSON.stringify(t.inputSchema) === JSON.stringify({ type: "object" }) ? null : t.inputSchema,
+    parameters: JSON.stringify(t.inputSchema) === JSON.stringify({ type: 'object' }) ? null : t.inputSchema,
     strict: false,
   }));
-}
+};
 
 const targetModel = process.env.TARGET_MODEL || 'gpt-4o-mini';
 
 describe(`Tool invocation tests - Open AI - ${targetModel}`, () => {
-
   let tools: Tool[];
   let openai: OpenAI;
 
@@ -40,9 +39,7 @@ describe(`Tool invocation tests - Open AI - ${targetModel}`, () => {
         tool_choice: 'auto',
       });
 
-      const toolCall = response.output.find(
-        (obj) => obj.type === "function_call"
-      );
+      const toolCall = response.output.find((obj) => obj.type === 'function_call');
 
       if (!expectedToolName) {
         expect(toolCall).toBeUndefined();
@@ -56,7 +53,6 @@ describe(`Tool invocation tests - Open AI - ${targetModel}`, () => {
         expect(JSON.parse(toolCall!.arguments)).toEqual(expectedArguments);
       }
     },
-    TIMEOUT
+    TIMEOUT,
   );
-
 });

@@ -1,11 +1,13 @@
 import { listAllAppsHandler } from '../../../src/tools/conversation/list-all-apps';
-import {
-  getConversationService,
-} from '../../../src/tools/conversation/utils/conversation-service-helper';
+import { getConversationService } from '../../../src/tools/conversation/utils/conversation-service-helper';
 
-jest.mock('@sinch/sdk-core/package.json', () => ({
-  version: '1.0.0',
-}), { virtual: true });
+jest.mock(
+  '@sinch/sdk-core/package.json',
+  () => ({
+    version: '1.0.0',
+  }),
+  { virtual: true },
+);
 
 jest.mock('../../../src/tools/conversation/utils/conversation-service-helper', () => ({
   getConversationService: jest.fn(),
@@ -20,28 +22,30 @@ const listMock = jest.fn();
 listMock.mockImplementation(() => {
   if (currentRegion === 'us') {
     return Promise.resolve({
-      apps: [{
-        id: 'us1',
-        displayName: 'App US',
-        channel_credentials: [
-          {channel: 'WHATSAPP', callback_secret: "pa$$word", state: {status: 'ACTIVE'}},
-        ]
-      }]
+      apps: [
+        {
+          id: 'us1',
+          displayName: 'App US',
+          channel_credentials: [{ channel: 'WHATSAPP', callback_secret: 'pa$$word', state: { status: 'ACTIVE' } }],
+        },
+      ],
     });
   } else if (currentRegion === 'eu') {
     return Promise.resolve({
-      apps: []
+      apps: [],
     });
   } else if (currentRegion === 'br') {
     return Promise.resolve({
-      apps: [{
-        id: 'br1',
-        displayName: 'App BR',
-        channel_credentials: [
-          {channel: 'MESSENGER', static_token: {token: '{Facebook_Token}'}, state: {status: 'ACTIVE'}},
-          {channel: 'RCS', state: {status: 'ACTIVE'}}
-        ]
-      }]
+      apps: [
+        {
+          id: 'br1',
+          displayName: 'App BR',
+          channel_credentials: [
+            { channel: 'MESSENGER', static_token: { token: '{Facebook_Token}' }, state: { status: 'ACTIVE' } },
+            { channel: 'RCS', state: { status: 'ACTIVE' } },
+          ],
+        },
+      ],
     });
   }
   return Promise.resolve([]);
@@ -85,14 +89,14 @@ test('listAllAppsHandler returns formatted app list for all regions', async () =
     apps: [
       {
         id: 'us1',
-        channel_credentials: [{ 'channel': 'WHATSAPP' }],
-        region: 'us'
+        channel_credentials: [{ channel: 'WHATSAPP' }],
+        region: 'us',
       },
       {
         id: 'br1',
-        channel_credentials: [{ 'channel': 'MESSENGER' }, { 'channel': 'RCS' }],
+        channel_credentials: [{ channel: 'MESSENGER' }, { channel: 'RCS' }],
         region: 'br',
-      }
+      },
     ],
     total_count: 2,
   });
@@ -117,17 +121,17 @@ test('listAllAppsHandler returns error response on failure', async () => {
     errors: [
       {
         region: 'us',
-        error: 'Oops'
+        error: 'Oops',
       },
       {
         region: 'eu',
-        error: 'Oops'
+        error: 'Oops',
       },
       {
         region: 'br',
-        error: 'Oops'
-      }
-    ]
+        error: 'Oops',
+      },
+    ],
   });
   expect(result.content[0].text).toBe(expectedResponse);
 });

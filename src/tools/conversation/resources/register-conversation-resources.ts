@@ -1,10 +1,7 @@
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { Tags } from '../../../types';
 import { matchesAnyTag } from '../../../utils';
-import {
-  CONVERSATION_APP_SETUP_URI,
-  conversationAppSetupGuide,
-} from './conversation-app-setup-guide';
+import { CONVERSATION_APP_SETUP_URI, conversationAppSetupGuide } from './conversation-app-setup-guide';
 
 const RESOURCE_TAGS: Tags[] = [
   'all',
@@ -17,7 +14,9 @@ const RESOURCE_TAGS: Tags[] = [
 ];
 
 export const registerConversationResources = (server: McpServer, tags: Tags[]) => {
-  if (!matchesAnyTag(tags, RESOURCE_TAGS)) return;
+  if (!matchesAnyTag(tags, RESOURCE_TAGS)) {
+    return;
+  }
 
   server.registerResource(
     'conversation-app-setup',
@@ -27,11 +26,13 @@ export const registerConversationResources = (server: McpServer, tags: Tags[]) =
       mimeType: 'text/markdown',
     },
     async () => ({
-      contents: [{
-        uri: CONVERSATION_APP_SETUP_URI,
-        mimeType: 'text/markdown',
-        text: conversationAppSetupGuide,
-      }],
+      contents: [
+        {
+          uri: CONVERSATION_APP_SETUP_URI,
+          mimeType: 'text/markdown',
+          text: conversationAppSetupGuide,
+        },
+      ],
     }),
   );
 };

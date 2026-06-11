@@ -62,8 +62,10 @@
     "start:stdio": "tsc && node dist/index.js",
     "start:sse": "tsc --project tsconfig.build.json && npx -y supergateway --stdio \"node dist/index.js\" --port 8000 --baseUrl http://localhost:8000 --ssePath /sse --messagePath /message",
     "start:http": "tsc --project tsconfig.build.json && npx -y supergateway --stdio \"node dist/index.js\" --port 8000 --outputTransport streamableHttp",
-    "lint": "eslint src/ tests/ --ext .ts",
+    "lint": "eslint src/ tests/ --ext .ts --max-warnings 0",
+    "lint:fix": "eslint src/ tests/ --ext .ts --fix",
     "prettier": "prettier './**/*.{js,ts,md}' --write",
+    "format": "npm run lint:fix && npm run prettier",
     "test": "jest --testPathIgnorePatterns='/tests/integration/'",
     "test:integration": "jest tests/integration/llms --runInBand"
   },

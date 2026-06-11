@@ -20,9 +20,7 @@ describe('analyticsMetricsHandler', () => {
       start: 'Mon, 02 Jun 2025 00:00:00 +0000',
       end: 'Mon, 09 Jun 2025 00:00:00 +0000',
       resolution: 'day',
-      dimensions: [
-        'time'
-      ],
+      dimensions: ['time'],
       items: [],
       aggregates: {
         metrics: {
@@ -32,15 +30,15 @@ describe('analyticsMetricsHandler', () => {
           opened_count: 5,
           clicked_count: 3,
           unsubscribed_count: 1,
-          complained_count: 0
-        }
-      }
+          complained_count: 0,
+        },
+      },
     };
 
     const mockedFetch = fetch as jest.Mock;
     mockedFetch.mockResolvedValue({
       ok: true,
-      json: async () => mockResponse
+      json: async () => mockResponse,
     });
 
     // When
@@ -60,8 +58,8 @@ describe('analyticsMetricsHandler', () => {
       },
       period: {
         begin: 'Mon, 02 Jun 2025 00:00:00 +0000',
-        end: 'Mon, 09 Jun 2025 00:00:00 +0000'
-      }
+        end: 'Mon, 09 Jun 2025 00:00:00 +0000',
+      },
     });
     expect(result.role).toBe('assistant');
     expect(result.content[0].text).toBe(expectedText);
@@ -86,7 +84,7 @@ describe('analyticsMetricsHandler', () => {
     (fetch as jest.Mock).mockResolvedValue({
       ok: false,
       status: 403,
-      statusText: 'Forbidden'
+      statusText: 'Forbidden',
     });
 
     // When
@@ -97,7 +95,7 @@ describe('analyticsMetricsHandler', () => {
     // Then
     const expectedResponse = JSON.stringify({
       success: false,
-      error: 'Mailgun API error: 403 Forbidden'
+      error: 'Mailgun API error: 403 Forbidden',
     });
     expect(result).toEqual(new PromptResponse(expectedResponse).promptResponse);
   });
@@ -106,7 +104,9 @@ describe('analyticsMetricsHandler', () => {
     // Given
     (fetch as jest.Mock).mockResolvedValue({
       ok: true,
-      json: async () => { throw new Error('Unexpected token'); }
+      json: async () => {
+        throw new Error('Unexpected token');
+      },
     });
 
     // When
@@ -117,17 +117,19 @@ describe('analyticsMetricsHandler', () => {
     // Then
     const expectedResponse = JSON.stringify({
       success: false,
-      error: 'Unexpected token'
+      error: 'Unexpected token',
     });
     expect(result).toEqual(new PromptResponse(expectedResponse).promptResponse);
   });
 
   it('returns early on credential fetch error', async () => {
     // Given
-    const promptResponse = new PromptResponse(JSON.stringify({
-      success: false,
-      error: 'Missing API key'
-    }));
+    const promptResponse = new PromptResponse(
+      JSON.stringify({
+        success: false,
+        error: 'Missing API key',
+      }),
+    );
     jest.spyOn(mailgunHelper, 'getMailgunApiKey').mockReturnValue(promptResponse);
 
     // When

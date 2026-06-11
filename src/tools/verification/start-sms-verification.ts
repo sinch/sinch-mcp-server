@@ -15,21 +15,22 @@ const TOOL_KEY: VerificationToolKey = 'startSmsVerification';
 const TOOL_NAME = getToolName(TOOL_KEY);
 
 export const registerStartVerificationWithSms = (server: McpServer, tags: Tags[]) => {
-  if(!matchesAnyTag(tags, verificationToolsConfig[TOOL_KEY].tags)) return;
+  if (!matchesAnyTag(tags, verificationToolsConfig[TOOL_KEY].tags)) {
+    return;
+  }
 
   server.registerTool(
     TOOL_NAME,
     {
-      description: 'Start new phone number verification requests. If the request is successful, you should ask the user to enter the OTP they received on the phone number we are verifying.',
+      description:
+        'Start new phone number verification requests. If the request is successful, you should ask the user to enter the OTP they received on the phone number we are verifying.',
       inputSchema: StartSmsVerificationSchema,
     },
-    startSmsVerificationHandler
+    startSmsVerificationHandler,
   );
 };
 
-export const startSmsVerificationHandler = async (
-  { phoneNumber }: StartSmsVerification
-): Promise<IPromptResponse> => {
+export const startSmsVerificationHandler = async ({ phoneNumber }: StartSmsVerification): Promise<IPromptResponse> => {
   try {
     const maybeService = getVerificationService(TOOL_NAME);
     if (isPromptResponse(maybeService)) {
@@ -41,20 +42,24 @@ export const startSmsVerificationHandler = async (
       startVerificationWithSmsRequestBody: {
         identity: {
           type: 'number',
-          endpoint: phoneNumber
-        }
-      }
+          endpoint: phoneNumber,
+        },
+      },
     });
 
-    return new PromptResponse(JSON.stringify({
-      success: true,
-      verification_id: response.id,
-      phone_number: phoneNumber
-    })).promptResponse;
+    return new PromptResponse(
+      JSON.stringify({
+        success: true,
+        verification_id: response.id,
+        phone_number: phoneNumber,
+      }),
+    ).promptResponse;
   } catch (error) {
-    return new PromptResponse(JSON.stringify({
-      success: false,
-      error: error instanceof Error ? error.message : String(error)
-    })).promptResponse;
+    return new PromptResponse(
+      JSON.stringify({
+        success: false,
+        error: error instanceof Error ? error.message : String(error),
+      }),
+    ).promptResponse;
   }
 };

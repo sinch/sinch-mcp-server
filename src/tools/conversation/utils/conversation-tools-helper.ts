@@ -2,7 +2,7 @@ import { ToolsConfig } from '../../../types';
 
 const defineToolsConfig = <T extends Record<string, ToolsConfig>>(config: T) => {
   return config;
-}
+};
 
 export const toolsConfig = defineToolsConfig({
   listConversationApps: {

@@ -7,7 +7,9 @@ import { getNumbersService } from './utils/numbers-service-helper';
 import { Numbers } from '@sinch/numbers';
 
 const RentNumbersSchema = {
-  numbers: z.array(z.string()).describe('Array of phone numbers to rent. Each number should be in E.164 format with leading `+`'),
+  numbers: z
+    .array(z.string())
+    .describe('Array of phone numbers to rent. Each number should be in E.164 format with leading `+`'),
 };
 
 type RentNumbers = z.infer<z.ZodObject<typeof RentNumbersSchema>>;
@@ -16,22 +18,22 @@ const TOOL_KEY: NumbersToolKey = 'rentNumbers';
 const TOOL_NAME = getToolName(TOOL_KEY);
 
 export const registerRentNumbers = (server: McpServer, tags: Tags[]) => {
-  if (!matchesAnyTag(tags, toolsConfig[TOOL_KEY].tags)) return;
+  if (!matchesAnyTag(tags, toolsConfig[TOOL_KEY].tags)) {
+    return;
+  }
 
   server.registerTool(
     TOOL_NAME,
     {
-      description: 'Activates a phone number that matches the search criteria provided in the request. Currently the rentAny operation works only for US LOCAL numbers',
+      description:
+        'Activates a phone number that matches the search criteria provided in the request. Currently the rentAny operation works only for US LOCAL numbers',
       inputSchema: RentNumbersSchema,
     },
-    rentNumbersHandler
+    rentNumbersHandler,
   );
-}
+};
 
-export const rentNumbersHandler = async (
-  { numbers }: RentNumbers
-) => {
-
+export const rentNumbersHandler = async ({ numbers }: RentNumbers) => {
   const maybeService = getNumbersService(TOOL_NAME);
   if (isPromptResponse(maybeService)) {
     return maybeService.promptResponse;
@@ -45,25 +47,27 @@ export const rentNumbersHandler = async (
     try {
       const response = await numbersService.rent({
         phoneNumber: number,
-        rentNumberRequestBody: {}
+        rentNumberRequestBody: {},
       });
       successfulRentals.push({ number, details: response });
     } catch (error) {
       failedRentals.push({
         number,
-        error: error instanceof Error ? error.message : String(error)
+        error: error instanceof Error ? error.message : String(error),
       });
     }
   }
 
-  return new PromptResponse(JSON.stringify({
-    success: failedRentals.length === 0,
-    successful_rentals: successfulRentals,
-    failed_rentals: failedRentals,
-    summary: {
-      total: numbers.length,
-      successful: successfulRentals.length,
-      failed: failedRentals.length
-    }
-  })).promptResponse;
+  return new PromptResponse(
+    JSON.stringify({
+      success: failedRentals.length === 0,
+      successful_rentals: successfulRentals,
+      failed_rentals: failedRentals,
+      summary: {
+        total: numbers.length,
+        successful: successfulRentals.length,
+        failed: failedRentals.length,
+      },
+    }),
+  ).promptResponse;
 };

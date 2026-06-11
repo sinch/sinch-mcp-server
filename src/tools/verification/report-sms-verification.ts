@@ -16,7 +16,9 @@ const TOOL_KEY: VerificationToolKey = 'reportSmsVerification';
 const TOOL_NAME = getToolName(TOOL_KEY);
 
 export const registerReportSmsVerification = (server: McpServer, tags: Tags[]) => {
-  if(!matchesAnyTag(tags, verificationToolsConfig[TOOL_KEY].tags)) return;
+  if (!matchesAnyTag(tags, verificationToolsConfig[TOOL_KEY].tags)) {
+    return;
+  }
 
   server.registerTool(
     TOOL_NAME,
@@ -24,13 +26,14 @@ export const registerReportSmsVerification = (server: McpServer, tags: Tags[]) =
       description: 'Report the received verification code to verify it, using the phone number of the user',
       inputSchema: ReportSmsVerificationSchema,
     },
-    reportSmsVerificationHandler
+    reportSmsVerificationHandler,
   );
 };
 
-export const reportSmsVerificationHandler = async (
-  { phoneNumber, oneTimePassword }: ReportSmsVerification
-): Promise<IPromptResponse> => {
+export const reportSmsVerificationHandler = async ({
+  phoneNumber,
+  oneTimePassword,
+}: ReportSmsVerification): Promise<IPromptResponse> => {
   try {
     const maybeService = getVerificationService(TOOL_NAME);
     if (isPromptResponse(maybeService)) {
@@ -42,20 +45,24 @@ export const reportSmsVerificationHandler = async (
       endpoint: phoneNumber,
       reportSmsVerificationByIdentityRequestBody: {
         sms: {
-          code: oneTimePassword
-        }
-      }
+          code: oneTimePassword,
+        },
+      },
     });
 
-    return new PromptResponse(JSON.stringify({
-      success: true,
-      verification_id: response.id,
-      status: response.status
-    })).promptResponse;
+    return new PromptResponse(
+      JSON.stringify({
+        success: true,
+        verification_id: response.id,
+        status: response.status,
+      }),
+    ).promptResponse;
   } catch (error) {
-    return new PromptResponse(JSON.stringify({
-      success: false,
-      error: error instanceof Error ? error.message : String(error)
-    })).promptResponse;
+    return new PromptResponse(
+      JSON.stringify({
+        success: false,
+        error: error instanceof Error ? error.message : String(error),
+      }),
+    ).promptResponse;
   }
 };

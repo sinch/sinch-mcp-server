@@ -6,9 +6,13 @@ import {
 } from '../../../src/tools/conversation/utils/conversation-service-helper';
 import { buildMessageBase } from '../../../src/tools/conversation/utils/send-message-builder';
 
-jest.mock('@sinch/sdk-core/package.json', () => ({
-  version: '1.0.0',
-}), { virtual: true });
+jest.mock(
+  '@sinch/sdk-core/package.json',
+  () => ({
+    version: '1.0.0',
+  }),
+  { virtual: true },
+);
 
 jest.mock('../../../src/tools/conversation/utils/conversation-service-helper');
 jest.mock('../../../src/tools/conversation/utils/send-message-builder');
@@ -42,8 +46,8 @@ test('sendTextMessageHandler returns success response', async () => {
   });
 
   const expectedResponse = JSON.stringify({
-    success:true,
-    message_id:'abc123'
+    success: true,
+    message_id: 'abc123',
   });
 
   expect(result.content[0].text).toEqual(expectedResponse);
@@ -64,8 +68,8 @@ test('sendTextMessageHandler returns error response on failure', async () => {
   });
 
   const expectedResponse = JSON.stringify({
-    success:false,
-    error:'Oops. Are you sure you are using the right region to send your message? The current region is eu.'
+    success: false,
+    error: 'Oops. Are you sure you are using the right region to send your message? The current region is eu.',
   });
 
   expect(result.content[0].text).toEqual(expectedResponse);

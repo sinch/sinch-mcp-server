@@ -1,8 +1,5 @@
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
-import {
-  getConversationService,
-  setConversationRegion,
-} from './utils/conversation-service-helper';
+import { getConversationService, setConversationRegion } from './utils/conversation-service-helper';
 import { appendRegionHint } from './utils/webhook-tools-helper';
 import { ConversationToolKey, getToolName, toolsConfig } from './utils/conversation-tools-helper';
 import { ConversationRegionOverride, WebhookId } from './prompt-schemas';
@@ -13,7 +10,9 @@ const TOOL_KEY: ConversationToolKey = 'deleteWebhook';
 const TOOL_NAME = getToolName(TOOL_KEY);
 
 export const registerDeleteWebhook = (server: McpServer, tags: Tags[]) => {
-  if (!matchesAnyTag(tags, toolsConfig[TOOL_KEY].tags)) return;
+  if (!matchesAnyTag(tags, toolsConfig[TOOL_KEY].tags)) {
+    return;
+  }
 
   server.registerTool(
     TOOL_NAME,
@@ -46,14 +45,18 @@ export const deleteWebhookHandler = async ({
     await conversationService.webhooks.delete({
       webhook_id: webhookId,
     });
-    return new PromptResponse(JSON.stringify({
-      success: true,
-      webhook_id: webhookId,
-    })).promptResponse;
+    return new PromptResponse(
+      JSON.stringify({
+        success: true,
+        webhook_id: webhookId,
+      }),
+    ).promptResponse;
   } catch (error) {
-    return new PromptResponse(JSON.stringify({
-      success: false,
-      error: appendRegionHint(error, usedRegion),
-    })).promptResponse;
+    return new PromptResponse(
+      JSON.stringify({
+        success: false,
+        error: appendRegionHint(error, usedRegion),
+      }),
+    ).promptResponse;
   }
 };

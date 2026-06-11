@@ -12,9 +12,7 @@ export const registerAppId = (server: McpServer, tags: Tags[]) => {
     'conversation-app-id',
     {
       argsSchema: {
-        appId: z
-          .string()
-          .describe('The ID of the app to use for the Sinch conversation API'),
+        appId: z.string().describe('The ID of the app to use for the Sinch conversation API'),
       },
     },
     ({ appId }) => ({

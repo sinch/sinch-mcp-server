@@ -8,8 +8,8 @@ import { Tags } from '../../types';
 
 export const registerNumbersTools = (server: McpServer, tags: Tags[]) => {
   registerListAvailableRegions(server, tags);
-  registerListRentedNumbers(server, tags)
+  registerListRentedNumbers(server, tags);
   registerRentNumbers(server, tags);
   registerReleaseRentedNumber(server, tags);
-  registerSearchAvailableNumbers(server, tags)
-}
+  registerSearchAvailableNumbers(server, tags);
+};

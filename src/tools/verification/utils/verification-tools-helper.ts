@@ -12,8 +12,8 @@ export const verificationToolsConfig: Record<string, ToolsConfig> = {
   startSmsVerification: {
     name: 'start-sms-verification',
     tags: ['all', 'verification', 'start-sms-verification'],
-  }
-}
+  },
+};
 
 export type VerificationToolKey = keyof typeof verificationToolsConfig;
 

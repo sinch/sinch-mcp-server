@@ -1,7 +1,7 @@
 import { Conversation } from '@sinch/conversation';
 
 export const formatListAllTemplatesResponse = (
-  data: Conversation.V2ListTemplatesResponse
+  data: Conversation.V2ListTemplatesResponse,
 ): {
   id: string;
   description?: string;
@@ -14,8 +14,6 @@ export const formatListAllTemplatesResponse = (
     description: template.description,
     version: template.version,
     defaultTranslation: template.default_translation,
-    translations: template.translations?.map(
-      (t) => `${t.language_code} (version "${t.version}")`
-    ),
+    translations: template.translations?.map((t) => `${t.language_code} (version "${t.version}")`),
   }));
 };

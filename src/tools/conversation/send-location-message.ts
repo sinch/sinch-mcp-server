@@ -6,11 +6,7 @@ import {
   getConversationService,
   setConversationRegion,
 } from './utils/conversation-service-helper';
-import {
-  ConversationToolKey,
-  getToolName,
-  toolsConfig,
-} from './utils/conversation-tools-helper';
+import { ConversationToolKey, getToolName, toolsConfig } from './utils/conversation-tools-helper';
 import {
   Recipient,
   ConversationAppIdOverride,
@@ -46,16 +42,16 @@ type LocationMessage = z.infer<z.ZodObject<typeof LocationMessageSchema>>;
 const TOOL_KEY: ConversationToolKey = 'sendLocationMessage';
 const TOOL_NAME = getToolName(TOOL_KEY);
 
-export const registerSendLocationMessage = (
-  server: McpServer,
-  tags: Tags[],
-) => {
-  if (!matchesAnyTag(tags, toolsConfig[TOOL_KEY].tags)) return;
+export const registerSendLocationMessage = (server: McpServer, tags: Tags[]) => {
+  if (!matchesAnyTag(tags, toolsConfig[TOOL_KEY].tags)) {
+    return;
+  }
 
   server.registerTool(
     TOOL_NAME,
     {
-      description: 'Send a location message from an address given in parameter to a contact on the specified channel. The contact can be a phone number in E.164 format, or the identifier for the specified channel.',
+      description:
+        'Send a location message from an address given in parameter to a contact on the specified channel. The contact can be a phone number in E.164 format, or the identifier for the specified channel.',
       inputSchema: LocationMessageSchema,
     },
     sendLocationMessageHandler,
@@ -87,9 +83,7 @@ export const sendLocationMessageHandler = async ({
     longitude = 0;
   let formattedAddress = 'Default tile';
   if (address.address) {
-    const geocodingAddress = await getLatitudeLongitudeFromAddress(
-      address.address,
-    );
+    const geocodingAddress = await getLatitudeLongitudeFromAddress(address.address);
     latitude = geocodingAddress.latitude;
     longitude = geocodingAddress.longitude;
     formattedAddress = geocodingAddress.formattedAddress;
@@ -98,32 +92,24 @@ export const sendLocationMessageHandler = async ({
     longitude = address.long;
     formattedAddress = address.title;
   }
-  const requestBase = await buildMessageBase(
-    conversationService,
-    conversationAppId,
-    recipient,
-    channel,
-    sender,
-  );
-  const request: Conversation.SendLocationMessageRequestData<Conversation.IdentifiedBy> =
-    {
-      sendMessageRequestBody: {
-        ...requestBase,
-        message: {
-          location_message: {
-            coordinates: {
-              longitude,
-              latitude,
-            },
-            title: formattedAddress,
+  const requestBase = await buildMessageBase(conversationService, conversationAppId, recipient, channel, sender);
+  const request: Conversation.SendLocationMessageRequestData<Conversation.IdentifiedBy> = {
+    sendMessageRequestBody: {
+      ...requestBase,
+      message: {
+        location_message: {
+          coordinates: {
+            longitude,
+            latitude,
           },
+          title: formattedAddress,
         },
       },
-    };
+    },
+  };
 
   try {
-    const response =
-      await conversationService.messages.sendLocationMessage(request);
+    const response = await conversationService.messages.sendLocationMessage(request);
     return new PromptResponse(
       JSON.stringify({
         success: true,

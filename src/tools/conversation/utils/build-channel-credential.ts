@@ -35,10 +35,10 @@ export const buildWhatsAppChannelCredential = (
 
 export const mergeChannelCredentials = (
   existing: Conversation.ConversationChannelCredentialResponse[] | undefined,
-  incoming: Conversation.ConversationChannelCredentialRequest
+  incoming: Conversation.ConversationChannelCredentialRequest,
 ): Conversation.ConversationChannelCredentialRequest[] => {
   const credentials = (existing ?? []).map(toChannelCredentialRequest);
-  const index = credentials.findIndex(cred => cred.channel === incoming.channel);
+  const index = credentials.findIndex((cred) => cred.channel === incoming.channel);
   if (index >= 0) {
     credentials[index] = incoming;
   } else {
@@ -47,19 +47,15 @@ export const mergeChannelCredentials = (
   return credentials;
 };
 
-const optionalRequestFields = (
-  credential: Conversation.ConversationChannelCredentialResponse
-) => ({
+const optionalRequestFields = (credential: Conversation.ConversationChannelCredentialResponse) => ({
   ...(credential.credential_ordinal_number !== undefined
     ? { credential_ordinal_number: credential.credential_ordinal_number }
     : {}),
-  ...(credential.callback_secret !== undefined
-    ? { callback_secret: credential.callback_secret }
-    : {}),
+  ...(credential.callback_secret !== undefined ? { callback_secret: credential.callback_secret } : {}),
 });
 
 export const toChannelCredentialRequest = (
-  credential: Conversation.ConversationChannelCredentialResponse
+  credential: Conversation.ConversationChannelCredentialResponse,
 ): Conversation.ConversationChannelCredentialRequest => {
   const optional = optionalRequestFields(credential);
 

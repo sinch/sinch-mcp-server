@@ -1,10 +1,6 @@
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import './env';
-import {
-  instantiateMcpServer,
-  parseArgs,
-  registerCapabilities,
-} from './server';
+import { instantiateMcpServer, parseArgs, registerCapabilities } from './server';
 
 export const main = async () => {
   const transport = new StdioServerTransport();

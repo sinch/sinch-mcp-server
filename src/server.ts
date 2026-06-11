@@ -15,20 +15,20 @@ export const instantiateMcpServer = () => {
     capabilities: {
       resources: {},
       tools: {},
-      prompts: {}
-    }
-  })
+      prompts: {},
+    },
+  });
 };
 
 export const parseArgs = (args: string[]): Tags[] => {
   const args1 = args.slice(2);
-  return args1.includes('--tags')
-      ? args1[args1.indexOf('--tags') + 1].split(',')
-      : [];
-}
+  return args1.includes('--tags') ? args1[args1.indexOf('--tags') + 1].split(',') : [];
+};
 
 export const registerCapabilities = (server: McpServer, tags: Tags[]) => {
-  if ( tags.length === 0) tags.push('all')
+  if (tags.length === 0) {
+    tags.push('all');
+  }
 
   // Register the prompts
   registerPrompts(server, tags);
@@ -39,4 +39,4 @@ export const registerCapabilities = (server: McpServer, tags: Tags[]) => {
   registerVoiceTools(server, tags);
   registerEmailTools(server, tags);
   registerNumbersTools(server, tags);
-}
+};

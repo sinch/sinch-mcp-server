@@ -27,12 +27,14 @@ Dependencies are pinned to **exact versions** in `package.json` (no `^` ranges).
 When bumping `@modelcontextprotocol/sdk` or `zod`, test the server startup and your transport path (stdio, SSE, or Streamable HTTP) — some version combinations have been problematic in the past.
 
 Tools are registered in the `src/index.ts` file.
+
 - Conversation tools: send various types of messages, list conversation apps, templates
 - Verification tools: lookup for a number, perform a verification flow
 - Voice tools: make a TTS call, create a conference call, manage participants
 - Email tools: send emails, retrieve email information
 
 Tools are defined under `src/tools/` and are registered in the `index.ts` file of their respective domain folder.
+
 - Conversation tools: `src/tools/conversation/index.ts`
 - Verification tools: `src/tools/verification/index.ts`
 - Voice tools: `src/tools/voice/index.ts`

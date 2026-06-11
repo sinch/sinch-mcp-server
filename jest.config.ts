@@ -1,11 +1,14 @@
-import type {Config} from 'jest';
+import type { Config } from 'jest';
 
 const config: Config = {
   preset: 'ts-jest',
   transform: {
-    '^.+\\.tsx?$': ['ts-jest', {
-      tsconfig: 'tsconfig.tests.json',
-    }],
+    '^.+\\.tsx?$': [
+      'ts-jest',
+      {
+        tsconfig: 'tsconfig.tests.json',
+      },
+    ],
   },
   testEnvironment: 'node',
   setupFiles: ['<rootDir>/tests/setup/env.mock.ts'],

@@ -6,7 +6,10 @@ import { getToolName, NumbersToolKey, toolsConfig } from './utils/numbers-tools-
 import { getNumbersService } from './utils/numbers-service-helper';
 
 const ListAvailableRegionsSchema = {
-  types: z.array(z.enum(['MOBILE', 'LOCAL', 'TOLL_FREE'])).optional().describe('Only return regions for which numbers are provided with the given types: MOBILE, LOCAL or TOLL_FREE.'),
+  types: z
+    .array(z.enum(['MOBILE', 'LOCAL', 'TOLL_FREE']))
+    .optional()
+    .describe('Only return regions for which numbers are provided with the given types: MOBILE, LOCAL or TOLL_FREE.'),
 };
 
 type ListAvailableRegions = z.infer<z.ZodObject<typeof ListAvailableRegionsSchema>>;
@@ -15,7 +18,9 @@ const TOOL_KEY: NumbersToolKey = 'listAvailableRegions';
 const TOOL_NAME = getToolName(TOOL_KEY);
 
 export const registerListAvailableRegions = (server: McpServer, tags: Tags[]) => {
-  if (!matchesAnyTag(tags, toolsConfig[TOOL_KEY].tags)) return;
+  if (!matchesAnyTag(tags, toolsConfig[TOOL_KEY].tags)) {
+    return;
+  }
 
   server.registerTool(
     TOOL_NAME,
@@ -23,34 +28,33 @@ export const registerListAvailableRegions = (server: McpServer, tags: Tags[]) =>
       description: 'Lists all regions for numbers provided for the project ID.',
       inputSchema: ListAvailableRegionsSchema,
     },
-    listAvailableRegionsHandler
+    listAvailableRegionsHandler,
   );
-}
+};
 
-export const listAvailableRegionsHandler = async (
-  { types }: ListAvailableRegions
-) => {
-
+export const listAvailableRegionsHandler = async ({ types }: ListAvailableRegions) => {
   const maybeService = getNumbersService(TOOL_NAME);
   if (isPromptResponse(maybeService)) {
     return maybeService.promptResponse;
   }
   const numbersService = maybeService;
 
-  try{
+  try {
     const response = await numbersService.availableRegions.list({
-      types
+      types,
     });
-    return new PromptResponse(JSON.stringify({
-      success: true,
-      data: response.availableRegions
-    })).promptResponse;
+    return new PromptResponse(
+      JSON.stringify({
+        success: true,
+        data: response.availableRegions,
+      }),
+    ).promptResponse;
   } catch (error) {
-    return new PromptResponse(JSON.stringify({
-      success: false,
-      error: (error instanceof Error ? error.message : String(error))
-    })).promptResponse;
+    return new PromptResponse(
+      JSON.stringify({
+        success: false,
+        error: error instanceof Error ? error.message : String(error),
+      }),
+    ).promptResponse;
   }
-
-
 };

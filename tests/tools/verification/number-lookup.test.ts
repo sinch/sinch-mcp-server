@@ -2,9 +2,13 @@ import { numberLookupHandler } from '../../../src/tools/verification/number-look
 import { PromptResponse } from '../../../src/types';
 import { getNumberLookupService } from '../../../src/tools/verification/utils/number-lookup-service-helper';
 
-jest.mock('@sinch/sdk-core/package.json', () => ({
-  version: '1.0.0',
-}), { virtual: true });
+jest.mock(
+  '@sinch/sdk-core/package.json',
+  () => ({
+    version: '1.0.0',
+  }),
+  { virtual: true },
+);
 
 jest.mock('../../../src/tools/verification/utils/number-lookup-service-helper');
 
@@ -36,11 +40,11 @@ describe('numberLookupHandler', () => {
         carrier: 'CarrierX',
         type: 'mobile',
         mobileCountryCode: '123',
-        mobileNetworkCode: '456'
+        mobileNetworkCode: '456',
       },
       countryCode: 'US',
       number: '+1234567890',
-      traceId: 'trace-1234'
+      traceId: 'trace-1234',
     });
 
     // When
@@ -55,12 +59,12 @@ describe('numberLookupHandler', () => {
           carrier: 'CarrierX',
           type: 'mobile',
           mobileCountryCode: '123',
-          mobileNetworkCode: '456'
+          mobileNetworkCode: '456',
         },
         countryCode: 'US',
         number: '+1234567890',
-        traceId: 'trace-1234'
-      }
+        traceId: 'trace-1234',
+      },
     });
     expect(result.content[0].text).toEqual(expectedResponse);
   });
@@ -75,9 +79,8 @@ describe('numberLookupHandler', () => {
     // Then
     const expectedResponse = JSON.stringify({
       success: false,
-      error: 'Failed to look up number \'+1234567890\': Unauthorized'
+      error: "Failed to look up number '+1234567890': Unauthorized",
     });
     expect(result).toEqual(new PromptResponse(expectedResponse).promptResponse);
   });
-
 });

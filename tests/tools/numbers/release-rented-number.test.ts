@@ -3,9 +3,13 @@ import { PromptResponse } from '../../../src/types';
 import * as numbersServiceHelper from '../../../src/tools/numbers/utils/numbers-service-helper';
 import { mockEnv, resetMockEnv } from '../../helpers/mock-env';
 
-jest.mock('@sinch/sdk-core/package.json', () => ({
-  version: '1.0.0',
-}), { virtual: true });
+jest.mock(
+  '@sinch/sdk-core/package.json',
+  () => ({
+    version: '1.0.0',
+  }),
+  { virtual: true },
+);
 
 const mockNumbersService = {
   release: jest.fn(),
@@ -14,9 +18,7 @@ const mockNumbersService = {
 describe('releaseRentedNumberHandler', () => {
   beforeEach(() => {
     jest.restoreAllMocks();
-    jest
-      .spyOn(numbersServiceHelper, 'getNumbersService')
-      .mockReturnValue(mockNumbersService as never);
+    jest.spyOn(numbersServiceHelper, 'getNumbersService').mockReturnValue(mockNumbersService as never);
     jest.clearAllMocks();
     resetMockEnv();
     mockEnv.PROJECT_ID = 'test-project';
