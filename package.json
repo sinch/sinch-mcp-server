@@ -49,8 +49,10 @@
     "eslint-plugin-jest-formatting": "3.1.0",
     "eslint-plugin-prettier": "5.4.1",
     "globals": "16.2.0",
+    "husky": "9.1.7",
     "jest": "29.7.0",
     "jest-extended": "4.0.2",
+    "lint-staged": "15.5.2",
     "openai": "5.12.2",
     "ts-jest": "29.4.0",
     "ts-node": "10.9.2",
@@ -65,9 +67,10 @@
     "lint": "eslint src/ tests/ --ext .ts --max-warnings 0",
     "lint:fix": "eslint src/ tests/ --ext .ts --fix",
     "prettier": "prettier './**/*.{js,ts,md}' --write",
-    "format": "npm run lint:fix && npm run prettier",
+    "format:write": "npm run lint:fix && npm run prettier",
     "test": "jest --testPathIgnorePatterns='/tests/integration/'",
-    "test:integration": "jest tests/integration/llms --runInBand"
+    "test:integration": "jest tests/integration/llms --runInBand",
+    "prepare": "husky"
   },
   "engines": {
     "node": ">=20.18.1 < 23"
