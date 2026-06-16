@@ -22,7 +22,7 @@ export const registerConversationResources = (server: McpServer, tags: Tags[]) =
     'conversation-app-setup',
     CONVERSATION_APP_SETUP_URI,
     {
-      description: 'How to create a Conversation API app and configure SMS, RCS, or WhatsApp channels.',
+      description: `Read before calling create-conversation-app or any set-*-channel-on-app tool. Covers the app setup flow, required credentials per channel (SMS, RCS, WhatsApp), region constraints, and how to handle ambiguous channel requests from the user.`,
       mimeType: 'text/markdown',
     },
     async () => ({
