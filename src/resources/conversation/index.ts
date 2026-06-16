@@ -1,9 +1,9 @@
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
-import { Tags } from '../../../types';
-import { matchesAnyTag } from '../../../utils';
+import { Tags } from '../../types';
+import { matchesAnyTag } from '../../utils';
 import { CONVERSATION_APP_SETUP_URI, conversationAppSetupGuide } from './conversation-app-setup-guide';
 
-const RESOURCE_TAGS: Tags[] = [
+const CONVERSATION_RESOURCE_TAGS: Tags[] = [
   'all',
   'conversation',
   'configuration',
@@ -14,7 +14,7 @@ const RESOURCE_TAGS: Tags[] = [
 ];
 
 export const registerConversationResources = (server: McpServer, tags: Tags[]) => {
-  if (!matchesAnyTag(tags, RESOURCE_TAGS)) {
+  if (!matchesAnyTag(tags, CONVERSATION_RESOURCE_TAGS)) {
     return;
   }
 
