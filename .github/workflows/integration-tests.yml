@@ -2,9 +2,13 @@ name: Run Integration Tests
 on:
   workflow_dispatch:
 
+permissions: {}
+
 jobs:
   integration-tests:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     strategy:
       matrix:
         include:
@@ -25,6 +29,8 @@ jobs:
             model: gemini-1.5-pro-latest
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+        with:
+          persist-credentials: false
 
       - name: Set up Node.js
         uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
