@@ -1,5 +1,6 @@
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { registerPrompts } from './prompts';
+import { registerResources } from './resources';
 import { registerVerificationTools } from './tools/verification';
 import { registerConversationTools } from './tools/conversation';
 import { registerVoiceTools } from './tools/voice';
@@ -33,6 +34,9 @@ export const registerCapabilities = (server: McpServer, tags: Tags[]) => {
 
   // Register the prompts
   registerPrompts(server, tags);
+
+  // Register the resources
+  registerResources(server, tags);
 
   // Register the tools
   registerVerificationTools(server, tags);
