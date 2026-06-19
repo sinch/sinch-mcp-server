@@ -28,13 +28,14 @@ DRAFT → IN_PROGRESS → IN_TEST → PREPARING_LAUNCH → LAUNCHING → LAUNCHE
 - **DRAFT** — Sender created, configuration in progress.
 - **IN_PROGRESS** — Sender being processed internally.
 - **IN_TEST** — Ready for testing with test numbers via Conversation API.
-- **PENDING_LAUNCH** — Launch triggered but no video URI was provided in the questionnaire. A video will be added by Sinch Service Implementation before continuing.
-- **PREPARING_LAUNCH / LAUNCHING** — Google and carrier review in progress. This is async — do not tell the user it is complete immediately.
+- **PREPARING_LAUNCH / LAUNCHING** — Launch still in progress or pending. Google and carrier review is async — do not report as complete until \`state\` is \`LAUNCHED\`.
 - **LAUNCHED** — Ready for production traffic.
 - **UNLAUNCHED** — Previously launched sender that has been unlaunched.
 - **UNKNOWN** — Unrecognised state, treat as an error.
 
 ## Setup flow
+
+The steps below are a reference sequence, not a script to execute end-to-end. Each step is independent — only perform the step the user is asking for. Do not automatically continue to the next step unless explicitly requested. A user may want to create a sender now and launch it later, check a single test number state, or just connect a channel to an existing app. Always follow the user's lead.
 
 There are two variants depending on whether all information is available upfront.
 
@@ -57,10 +58,22 @@ Use when the user does not have all information ready at creation time.
 2. **create-rcs-sender** — Required only: \`region\`, \`billingCategory\`, \`useCase\`. Sender starts in \`DRAFT\`.
 3. **update-rcs-sender** — Fill brand details, questionnaire sections, and countries via one or more PATCH calls. Pass \`null\` for \`testNumbers\` or \`countries\` to delete those values.
 4. **add-test-numbers-to-rcs-sender** — Accepts an array of E.164 numbers (max 200 total, 20 invites/day).
-5. **set-rcs-channel-on-app** — Use \`authName\` and \`authToken\` from the sender.
-6. Test messaging via Conversation API with \`channel: RCS\` on test numbers.
-7. **launch-rcs-sender** — No request body. Check launch requirements first (see below).
-8. Once \`LAUNCHED\`, reconnect \`set-rcs-channel-on-app\` on the production app if needed.
+5. **get-rcs-sender** — Check \`testNumberStates[]\` and wait until at least one number is \`VERIFIED\` before proceeding. Use \`retry-rcs-test-number-invite\` if a number is stuck in \`PENDING\` or \`UNVERIFIED\`.
+6. **set-rcs-channel-on-app** — Use \`authName\` and \`authToken\` from the sender.
+7. Test messaging via Conversation API with \`channel: RCS\` on test numbers.
+8. **launch-rcs-sender** — No request body. Check launch requirements first (see below).
+9. Once \`LAUNCHED\`, reconnect \`set-rcs-channel-on-app\` on the production app if needed.
+
+## Existing sender
+
+Use **list-rcs-senders** to find a sender by region or state, then act based on its current state:
+
+- **DRAFT** — Continue with **update-rcs-sender** to fill in missing details.
+- **IN_PROGRESS** — Sender is being processed internally. Wait and poll **get-rcs-sender**.
+- **IN_TEST** — Skip to setup flow step 5 (verify test numbers) and proceed from there.
+- **PREPARING_LAUNCH / LAUNCHING** — Launch still in progress or pending. Monitor **get-rcs-sender** \`countryStatus\`; do not report as complete until \`state\` is \`LAUNCHED\`.
+- **LAUNCHED** — Reconnect **set-rcs-channel-on-app** on the production app if needed.
+- **UNLAUNCHED** — Previously launched, now inactive. Contact support or re-initiate launch.
 
 ## Launch requirements (all must be met or 412 is returned)
 
@@ -72,7 +85,7 @@ Use when the user does not have all information ready at creation time.
 - \`details.brand.privacyPolicyUrl\` defined.
 - \`details.brand.termsOfServiceUrl\` defined.
 
-If \`videoUris\` was not provided in the questionnaire, the sender enters \`PENDING_LAUNCH\` — not a failure. Sinch Service Implementation will add a video before the review continues.
+If \`videoUris\` was not provided in the questionnaire, Sinch Service Implementation will add a video before the review continues — this is not a failure.
 
 ## Questionnaire requirements
 
@@ -135,12 +148,10 @@ Use this to verify the device can handle the message type you plan to send befor
 
 ## Message types for RCS campaigns
 
-| Goal | Tool | Key parameters |
-|------|------|----------------|
-| Plain text | \`send-text-message\` | \`channel: RCS\`, \`recipient\`, \`message\` |
-| Image or video | \`send-media-message\` | \`channel: RCS\`, \`recipient\`, \`url\` |
-| Interactive choices | \`send-choice-message\` | \`channel: RCS\`, \`text\`, \`choiceContent\` |
-| Pre-approved template | \`send-template-message\` | \`channel: RCS\`, \`templateId\`, \`language\` (BCP-47, optional), \`parameters\` (key-value map, optional) |
+- **Plain text** — \`send-text-message\` — \`channel: RCS\`, \`recipient\`, \`message\`
+- **Image or video** — \`send-media-message\` — \`channel: RCS\`, \`recipient\`, \`url\`
+- **Interactive choices** — \`send-choice-message\` — \`channel: RCS\`, \`text\`, \`choiceContent\`
+- **Pre-approved template** — \`send-template-message\` — \`channel: RCS\`, \`templateId\`, \`language\` (BCP-47, optional), \`parameters\` (key-value map, optional)
 
 Always pass \`channel: RCS\` explicitly.
 
@@ -151,6 +162,8 @@ If the user says "set up an RCS campaign" without enough context, ask:
 1. Do you have an existing RCS sender or do you need to create one?
 2. Which region — US, EU, or Brazil?
 3. What type of content — plain text, image/video, interactive choices, or a template?
+
+After completing any step, stop and report back. Do not proceed to the next step unless the user asks you to. The user may want to pause, verify results manually, or take a different direction.
 
 ## Common errors
 
