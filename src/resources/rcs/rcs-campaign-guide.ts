@@ -15,7 +15,7 @@ The RCS Provisioning API and the Conversation API are connected via two fields r
 - \`authName\` → maps to \`senderId\` in \`set-rcs-channel-on-app\`
 - \`authToken\` → maps to \`bearerToken\` in \`set-rcs-channel-on-app\`
 
-Always retrieve these from \`get-rcs-sender\` before calling \`set-rcs-channel-on-app\`.
+Always retrieve \`authName\` and \`authToken\` from \`get-rcs-sender\` before calling \`set-rcs-channel-on-app\`. 
 
 ## Sender state machine
 
@@ -129,7 +129,7 @@ After calling \`launch-rcs-sender\`, the process is async. To track progress:
 - **\`get-rcs-sender\`** — Check \`state\` (LAUNCHING → LAUNCHED) and \`countryStatus[]\` per country and operator. Each entry has a \`status\` (LAUNCHED, PENDING, REJECTED, SUSPENDED, etc.) and an optional \`remark\`.
 - **\`list-rcs-sender-activities\`** — Paginated audit log ordered newest first. Activity types: ACTIVE, COMMENT_ADDED, CREATED, DELETED, EDITED, INACTIVE, TEST. Use this when the user asks "what is happening with my sender?" or "why is it stuck?".
 
-Do not tell the user the launch is complete until \`state\` is \`LAUNCHED\`.
+Only report a successful or completed launch when state is \`LAUNCHED\`. For all other states, indicate that the launch is still in progress or pending.
 
 ## Supported countries for launch
 
@@ -148,6 +148,7 @@ Use this to verify the device can handle the message type you plan to send befor
 
 ## Message types for RCS campaigns
 
+- Goal — Tool — Key parameters
 - **Plain text** — \`send-text-message\` — \`channel: RCS\`, \`recipient\`, \`message\`
 - **Image or video** — \`send-media-message\` — \`channel: RCS\`, \`recipient\`, \`url\`
 - **Interactive choices** — \`send-choice-message\` — \`channel: RCS\`, \`text\`, \`choiceContent\`
