@@ -35,9 +35,9 @@ export const toolsConfig = defineToolsConfig({
     name: 'get-rcs-number-capabilities',
     tags: ['all', 'rcs', 'configuration', 'get-rcs-number-capabilities'],
   },
-  getRcsTestNumberStates: {
-    name: 'get-rcs-test-number-states',
-    tags: ['all', 'rcs', 'configuration', 'get-rcs-test-number-states'],
+  getRcsTestNumberState: {
+    name: 'get-rcs-test-number-state',
+    tags: ['all', 'rcs', 'configuration', 'get-rcs-test-number-state'],
   },
   launchRcsSender: {
     name: 'launch-rcs-sender',

@@ -12,6 +12,8 @@ export const formatRcsSender = (sender: RcsSender) => ({
   authName: sender.authName,
   authToken: sender.authToken,
   conversationApiApp: sender.conversationApiApp,
+  conversationApiAppDetails: sender.conversationApiAppDetails,
+  testNumberStates: sender.testNumberStates,
   created: sender.created,
   modified: sender.modified,
   launched: sender.launched,

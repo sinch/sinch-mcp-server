@@ -9,7 +9,16 @@ export type RcsBillingCategory =
 
 export type RcsUseCase = 'MULTIUSE' | 'OTP' | 'PROMOTIONAL' | 'TRANSACTIONAL';
 
-export type RcsSenderState = 'DRAFT' | 'IN_TEST' | 'PENDING_LAUNCH' | 'LAUNCHING' | 'LAUNCHED' | string;
+export type RcsSenderState =
+  | 'DRAFT'
+  | 'IN_PROGRESS'
+  | 'IN_TEST'
+  | 'PREPARING_LAUNCH'
+  | 'LAUNCHING'
+  | 'LAUNCHED'
+  | 'UNLAUNCHED'
+  | 'UNKNOWN'
+  | string;
 
 export type RcsTestNumberState = 'PENDING' | 'VERIFIED' | 'UNVERIFIED' | 'DECLINED' | 'REJECTED' | 'INVALID' | string;
 
@@ -36,6 +45,14 @@ export interface RcsSenderDetails {
   [key: string]: unknown;
 }
 
+export interface ConversationApiAppDetails {
+  id: string;
+  projectId: string;
+  region: string;
+  channelStatus?: string;
+  [key: string]: unknown;
+}
+
 export interface RcsSender {
   id: string;
   region: RcsRegion;
@@ -50,6 +67,8 @@ export interface RcsSender {
   modified?: string;
   launched?: string;
   conversationApiApp?: string;
+  conversationApiAppDetails?: ConversationApiAppDetails;
+  testNumberStates?: TestNumberStateResponse[];
   countryStatus?: Array<Record<string, unknown>>;
   supplierDetails?: Record<string, unknown>;
   [key: string]: unknown;
@@ -68,12 +87,16 @@ export type UpdateSenderRequest = Partial<Omit<CreateSenderRequest, 'region'>> &
 
 export interface ListSendersResponse {
   senders?: RcsSender[];
+  totalSize?: number;
+  pageSize?: number;
+  previousPageToken?: string;
   nextPageToken?: string;
 }
 
 export interface TestNumberStateResponse {
-  testNumber: string;
+  number: string;
   state: RcsTestNumberState;
+  submitted?: string;
   [key: string]: unknown;
 }
 

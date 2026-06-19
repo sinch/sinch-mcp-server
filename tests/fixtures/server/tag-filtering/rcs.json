@@ -9,7 +9,7 @@
     "delete-rcs-test-number",
     "resend-rcs-test-number-invite",
     "get-rcs-number-capabilities",
-    "get-rcs-test-number-states",
+    "get-rcs-test-number-state",
     "launch-rcs-sender"
   ],
   "expectedPrompts": []
