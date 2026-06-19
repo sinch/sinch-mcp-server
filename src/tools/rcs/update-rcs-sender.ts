@@ -1,4 +1,5 @@
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
+import { z } from 'zod';
 import { IPromptResponse, PromptResponse, Tags } from '../../types';
 import { matchesAnyTag } from '../../utils';
 import { RcsBillingCategory, RcsSenderDetails, RcsSenderId, RcsUseCase } from './prompt-schemas';
@@ -6,6 +7,15 @@ import { UpdateSenderRequest } from './types/rcs-api';
 import { formatRcsSender } from './utils/format-rcs-sender-response';
 import { runRcsHandler } from './utils/rcs-handler-helper';
 import { getToolName, RcsToolKey, toolsConfig } from './utils/rcs-tools-helper';
+
+const UpdateRcsSenderSchema = {
+  senderId: RcsSenderId,
+  billingCategory: RcsBillingCategory.optional(),
+  useCase: RcsUseCase.optional(),
+  details: RcsSenderDetails,
+};
+
+type UpdateRcsSender = z.infer<z.ZodObject<typeof UpdateRcsSenderSchema>>;
 
 const TOOL_KEY: RcsToolKey = 'updateRcsSender';
 const TOOL_NAME = getToolName(TOOL_KEY);
@@ -20,12 +30,7 @@ export const registerUpdateRcsSender = (server: McpServer, tags: Tags[]) => {
     {
       description:
         'Update an RCS sender. Accepts partial or full sender body — brand, questionnaire, countries, and other fields can be updated in one PATCH.',
-      inputSchema: {
-        senderId: RcsSenderId,
-        billingCategory: RcsBillingCategory.optional(),
-        useCase: RcsUseCase.optional(),
-        details: RcsSenderDetails,
-      },
+      inputSchema: UpdateRcsSenderSchema,
     },
     updateRcsSenderHandler,
   );
@@ -36,12 +41,7 @@ export const updateRcsSenderHandler = async ({
   billingCategory,
   useCase,
   details,
-}: {
-  senderId: string;
-  billingCategory?: UpdateSenderRequest['billingCategory'];
-  useCase?: UpdateSenderRequest['useCase'];
-  details?: UpdateSenderRequest['details'];
-}): Promise<IPromptResponse> =>
+}: UpdateRcsSender): Promise<IPromptResponse> =>
   runRcsHandler(TOOL_NAME, async (client) => {
     const body: UpdateSenderRequest = {
       ...(billingCategory !== undefined && { billingCategory }),

@@ -6,17 +6,17 @@ import { RcsSenderId, RcsTestNumber } from './prompt-schemas';
 import { runRcsHandler } from './utils/rcs-handler-helper';
 import { getToolName, RcsToolKey, toolsConfig } from './utils/rcs-tools-helper';
 
-const GetRcsNumberCapabilitiesSchema = {
+const GetRcsTestNumberStateSchema = {
   senderId: RcsSenderId,
   testNumber: RcsTestNumber,
 };
 
-type GetRcsNumberCapabilities = z.infer<z.ZodObject<typeof GetRcsNumberCapabilitiesSchema>>;
+type GetRcsTestNumberState = z.infer<z.ZodObject<typeof GetRcsTestNumberStateSchema>>;
 
-const TOOL_KEY: RcsToolKey = 'getRcsNumberCapabilities';
+const TOOL_KEY: RcsToolKey = 'getRcsTestNumberState';
 const TOOL_NAME = getToolName(TOOL_KEY);
 
-export const registerGetRcsNumberCapabilities = (server: McpServer, tags: Tags[]) => {
+export const registerGetRcsTestNumberState = (server: McpServer, tags: Tags[]) => {
   if (!matchesAnyTag(tags, toolsConfig[TOOL_KEY].tags)) {
     return;
   }
@@ -25,24 +25,24 @@ export const registerGetRcsNumberCapabilities = (server: McpServer, tags: Tags[]
     TOOL_NAME,
     {
       description:
-        'Get RCS capabilities for a verified test number (e.g. RICHCARD_CAROUSEL, ACTION_DIAL). Use to choose message type before testing.',
-      inputSchema: GetRcsNumberCapabilitiesSchema,
+        'Get the state of one RCS test number (PENDING, VERIFIED, UNVERIFIED, etc.). To see all test numbers at once, use get-rcs-sender.',
+      inputSchema: GetRcsTestNumberStateSchema,
     },
-    getRcsNumberCapabilitiesHandler,
+    getRcsTestNumberStateHandler,
   );
 };
 
-export const getRcsNumberCapabilitiesHandler = async ({
+export const getRcsTestNumberStateHandler = async ({
   senderId,
   testNumber,
-}: GetRcsNumberCapabilities): Promise<IPromptResponse> =>
+}: GetRcsTestNumberState): Promise<IPromptResponse> =>
   runRcsHandler(TOOL_NAME, async (client) => {
-    const capabilities = await client.getTestNumberCapabilities(senderId, testNumber);
+    const state = await client.getTestNumberState(senderId, testNumber);
 
     return new PromptResponse(
       JSON.stringify({
         success: true,
-        capabilities,
+        testNumber: state,
       }),
     ).promptResponse;
   });
