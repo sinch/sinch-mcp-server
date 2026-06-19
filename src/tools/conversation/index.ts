@@ -16,7 +16,6 @@ import { registerGetWebhook } from './get-webhook';
 import { registerCreateWebhook } from './create-webhook';
 import { registerUpdateWebhook } from './update-webhook';
 import { registerDeleteWebhook } from './delete-webhook';
-import { registerConversationResources } from './resources/register-conversation-resources';
 import { Tags } from '../../types';
 
 export const registerConversationTools = (server: McpServer, tags: Tags[]) => {
@@ -37,5 +36,4 @@ export const registerConversationTools = (server: McpServer, tags: Tags[]) => {
   registerCreateWebhook(server, tags);
   registerUpdateWebhook(server, tags);
   registerDeleteWebhook(server, tags);
-  registerConversationResources(server, tags);
 };
