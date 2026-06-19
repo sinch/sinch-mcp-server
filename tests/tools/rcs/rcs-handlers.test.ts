@@ -35,6 +35,7 @@ test('listRcsSendersHandler returns summarized senders', async () => {
       },
     ],
     nextPageToken: 'next',
+    totalSize: 7,
   });
 
   const result = await listRcsSendersHandler({});
@@ -55,7 +56,8 @@ test('listRcsSendersHandler returns summarized senders', async () => {
       },
     ],
     nextPageToken: 'next',
-    total_count: 1,
+    page_count: 1,
+    total_count: 7,
   });
   expect(parsed.senders[0]).not.toHaveProperty('authToken');
 });

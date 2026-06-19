@@ -22,6 +22,16 @@ describe('formatRcsSender', () => {
     });
   });
 
+  test('preserves testNumberStates so get-rcs-sender can surface all test numbers', () => {
+    const withTestNumbers = {
+      ...sender,
+      testNumberStates: [{ number: '+14155552671', state: 'VERIFIED' as const, submitted: '2026-06-19' }],
+    };
+    expect(formatRcsSender(withTestNumbers).testNumberStates).toEqual([
+      { number: '+14155552671', state: 'VERIFIED', submitted: '2026-06-19' },
+    ]);
+  });
+
   test('summary omits credentials', () => {
     expect(formatRcsSenderSummary(sender)).toEqual({
       id: 'sender-1',
