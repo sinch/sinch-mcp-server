@@ -1,9 +1,7 @@
 import { RcsApiError } from './rcs-provisioning-client';
 
 const LAUNCH_CHECKLIST_HINT =
-  'Launch checklist: questionnaire complete, at least one country in details.countries, ' +
-  'brand.phones or brand.emails set, brand.bannerUrl and logoUrl defined, ' +
-  'privacyPolicyUrl and termsOfServiceUrl defined.';
+  'Launch checklist — use update-rcs-sender to fill any missing items: brand.name, brand.logoUrl (224×224 px), brand.bannerUrl (1440×448 px), brand.privacyPolicyUrl, brand.termsOfServiceUrl, at least one of brand.phones or brand.emails, at least one entry in countries, questionnaire.general.answers (all fields), questionnaire.verification.answers (all fields), and the country-specific questionnaire section for each country in countries.';
 
 const ERROR_HINTS: Record<string, string> = {
   rbm_has_not_been_used: 'RCS is not enabled on this project. Contact si-richmessaging@sinch.com.',

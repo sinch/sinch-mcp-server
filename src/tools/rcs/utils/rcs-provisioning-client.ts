@@ -124,6 +124,6 @@ export class RcsProvisioningClient {
   }
 
   launchSender(senderId: string): Promise<RcsSender> {
-    return this.request<RcsSender>('POST', `/senders/${encodeURIComponent(senderId)}/launch`);
+    return this.request<RcsSender>('POST', `/senders/${encodeURIComponent(senderId)}/launch`, {});
   }
 }
