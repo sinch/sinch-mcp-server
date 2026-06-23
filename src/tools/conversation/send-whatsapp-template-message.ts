@@ -9,7 +9,7 @@ import {
   setConversationRegion,
 } from './utils/conversation-service-helper';
 import { ConversationToolKey, getToolName, toolsConfig } from './utils/conversation-tools-helper';
-import { buildMessageBase } from './utils/send-message-builder';
+import { buildMessageBase, formatSendError } from './utils/send-message-builder';
 import {
   Recipient,
   ConversationAppIdOverride,
@@ -81,7 +81,6 @@ export const sendTemplateMessageHandler = async ({
   const conversationService = maybeService;
   const usedRegion = setConversationRegion(region, conversationService);
 
-  const requestBase = await buildMessageBase(conversationService, conversationAppId, recipient, ['WHATSAPP'], sender);
   const whatsappMessage: Conversation.TemplateMessageItem = {
     channel_template: {
       WHATSAPP: {
@@ -94,19 +93,20 @@ export const sendTemplateMessageHandler = async ({
       },
     },
   };
-  const request: Conversation.SendTemplateMessageRequestData<Conversation.IdentifiedBy> = {
-    sendMessageRequestBody: {
-      ...requestBase,
-      message: {
-        template_message: {
-          ...whatsappMessage,
-        },
-      },
-      message_metadata: metadata,
-    },
-  };
 
   try {
+    const requestBase = await buildMessageBase(conversationService, conversationAppId, recipient, ['WHATSAPP'], sender);
+    const request: Conversation.SendTemplateMessageRequestData<Conversation.IdentifiedBy> = {
+      sendMessageRequestBody: {
+        ...requestBase,
+        message: {
+          template_message: {
+            ...whatsappMessage,
+          },
+        },
+        message_metadata: metadata,
+      },
+    };
     const response = await conversationService.messages.sendTemplateMessage(request);
     return new PromptResponse(
       JSON.stringify({
@@ -118,9 +118,7 @@ export const sendTemplateMessageHandler = async ({
     return new PromptResponse(
       JSON.stringify({
         success: false,
-        error:
-          (error instanceof Error ? error.message : String(error)) +
-          `. Are you sure you are using the right region to send your message? The current region is ${usedRegion}.`,
+        error: formatSendError(error, usedRegion),
       }),
     ).promptResponse;
   }

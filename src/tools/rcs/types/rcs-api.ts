@@ -24,25 +24,22 @@ export type RcsTestNumberState = 'PENDING' | 'VERIFIED' | 'UNVERIFIED' | 'DECLIN
 
 export interface RcsSenderBrand {
   name?: string;
-  emails?: Array<{ label: string; address: string }>;
-  phones?: Array<{ label: string; number: string }>;
-  websites?: Array<{ label: string; url: string }>;
+  emails?: Array<{ label: string; address: string }> | null;
+  phones?: Array<{ label: string; number: string }> | null;
+  websites?: Array<{ label: string; url: string }> | null;
   color?: string;
   description?: string;
   bannerUrl?: string;
   logoUrl?: string;
   privacyPolicyUrl?: string;
   termsOfServiceUrl?: string;
-  [key: string]: unknown;
 }
 
 export interface RcsSenderDetails {
   brand?: RcsSenderBrand;
-  countries?: string[];
+  countries?: string[] | null;
   questionnaire?: Record<string, unknown>;
-  testNumbers?: string[];
-  callbackUrl?: string;
-  [key: string]: unknown;
+  testNumbers?: string[] | null;
 }
 
 export interface ConversationApiAppDetails {
@@ -81,9 +78,11 @@ export interface CreateSenderRequest {
   details?: RcsSenderDetails;
 }
 
-export type UpdateSenderRequest = Partial<Omit<CreateSenderRequest, 'region'>> & {
-  details?: RcsSenderDetails;
-};
+// The update (PATCH) endpoint only accepts a `details` body; billingCategory,
+// useCase and region are set at creation and cannot be changed via update.
+export interface UpdateSenderRequest {
+  details: RcsSenderDetails;
+}
 
 export interface ListSendersResponse {
   senders?: RcsSender[];

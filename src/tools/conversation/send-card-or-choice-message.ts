@@ -7,7 +7,7 @@ import {
   setConversationRegion,
 } from './utils/conversation-service-helper';
 import { ConversationToolKey, getToolName, toolsConfig } from './utils/conversation-tools-helper';
-import { buildMessageBase } from './utils/send-message-builder';
+import { buildMessageBase, formatSendError } from './utils/send-message-builder';
 import { getLatitudeLongitudeFromAddress } from './utils/geocoding';
 import {
   Recipient,
@@ -148,9 +148,8 @@ export const sendCardOrChoiceMessageHandler = async ({
     }
   }
 
-  const requestBase = await buildMessageBase(conversationService, conversationAppId, recipient, channel, sender);
-
   try {
+    const requestBase = await buildMessageBase(conversationService, conversationAppId, recipient, channel, sender);
     let response: Conversation.SendMessageResponse;
     if (mediaUrl) {
       response = await conversationService.messages.sendCardMessage({
@@ -192,9 +191,7 @@ export const sendCardOrChoiceMessageHandler = async ({
     return new PromptResponse(
       JSON.stringify({
         success: false,
-        error:
-          (error instanceof Error ? error.message : String(error)) +
-          `. Are you sure you are using the right region to send your message? The current region is ${usedRegion}.`,
+        error: formatSendError(error, usedRegion),
       }),
     ).promptResponse;
   }

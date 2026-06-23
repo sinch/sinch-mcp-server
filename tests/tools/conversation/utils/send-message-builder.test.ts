@@ -50,6 +50,14 @@ test('MMS fallback switches to SMS when MMS is not configured', async () => {
   expect(result.recipient.identified_by.channel_identities[0].channel).toBe('SMS');
 });
 
+test('throws ChannelNotConfiguredError when a requested channel is not configured on the app', async () => {
+  mockGetApp.mockResolvedValue({ channel_credentials: [{ channel: 'SMS' }] });
+
+  await expect(buildMessageBase(mockConversationService as any, 'my-app-id', '+1234567890', ['RCS'])).rejects.toThrow(
+    /RCS.*not configured/,
+  );
+});
+
 test('No SMS fallback is added if already included', async () => {
   mockGetApp.mockResolvedValue(baseAppConfig);
 

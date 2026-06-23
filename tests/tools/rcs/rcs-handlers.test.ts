@@ -91,7 +91,7 @@ test('createRcsSenderHandler sends full details in one call', async () => {
 
   const details = {
     brand: { name: 'Acme', logoUrl: 'https://example.com/logo.png' },
-    countries: ['GB'],
+    countries: ['GB' as const],
   };
 
   await createRcsSenderHandler({

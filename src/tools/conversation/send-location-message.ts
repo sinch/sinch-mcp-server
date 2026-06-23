@@ -15,7 +15,7 @@ import {
   MessageSenderNumberOverride,
 } from './prompt-schemas';
 import { isPromptResponse, matchesAnyTag } from '../../utils';
-import { buildMessageBase } from './utils/send-message-builder';
+import { buildMessageBase, formatSendError } from './utils/send-message-builder';
 import { getLatitudeLongitudeFromAddress } from './utils/geocoding';
 import { IPromptResponse, PromptResponse, Tags } from '../../types';
 
@@ -92,23 +92,23 @@ export const sendLocationMessageHandler = async ({
     longitude = address.long;
     formattedAddress = address.title;
   }
-  const requestBase = await buildMessageBase(conversationService, conversationAppId, recipient, channel, sender);
-  const request: Conversation.SendLocationMessageRequestData<Conversation.IdentifiedBy> = {
-    sendMessageRequestBody: {
-      ...requestBase,
-      message: {
-        location_message: {
-          coordinates: {
-            longitude,
-            latitude,
-          },
-          title: formattedAddress,
-        },
-      },
-    },
-  };
 
   try {
+    const requestBase = await buildMessageBase(conversationService, conversationAppId, recipient, channel, sender);
+    const request: Conversation.SendLocationMessageRequestData<Conversation.IdentifiedBy> = {
+      sendMessageRequestBody: {
+        ...requestBase,
+        message: {
+          location_message: {
+            coordinates: {
+              longitude,
+              latitude,
+            },
+            title: formattedAddress,
+          },
+        },
+      },
+    };
     const response = await conversationService.messages.sendLocationMessage(request);
     return new PromptResponse(
       JSON.stringify({
@@ -120,9 +120,7 @@ export const sendLocationMessageHandler = async ({
     return new PromptResponse(
       JSON.stringify({
         success: false,
-        error:
-          (error instanceof Error ? error.message : String(error)) +
-          `. Are you sure you are using the right region to send your message? The current region is ${usedRegion}.`,
+        error: formatSendError(error, usedRegion),
       }),
     ).promptResponse;
   }

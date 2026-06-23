@@ -8,7 +8,7 @@ import {
 } from './utils/conversation-service-helper';
 import { ConversationToolKey, getToolName, toolsConfig } from './utils/conversation-tools-helper';
 import { isPromptResponse, matchesAnyTag } from '../../utils';
-import { buildMessageBase } from './utils/send-message-builder';
+import { buildMessageBase, formatSendError } from './utils/send-message-builder';
 import {
   Recipient,
   ConversationAppIdOverride,
@@ -70,19 +70,18 @@ export const sendTextMessageHandler = async ({
   const conversationService = maybeService;
   const usedRegion = setConversationRegion(region, conversationService);
 
-  const requestBase = await buildMessageBase(conversationService, conversationAppId, recipient, channel, sender);
-  const request: Conversation.SendTextMessageRequestData<Conversation.IdentifiedBy> = {
-    sendMessageRequestBody: {
-      ...requestBase,
-      message: {
-        text_message: {
-          text: message,
+  try {
+    const requestBase = await buildMessageBase(conversationService, conversationAppId, recipient, channel, sender);
+    const request: Conversation.SendTextMessageRequestData<Conversation.IdentifiedBy> = {
+      sendMessageRequestBody: {
+        ...requestBase,
+        message: {
+          text_message: {
+            text: message,
+          },
         },
       },
-    },
-  };
-
-  try {
+    };
     const response = await conversationService.messages.sendTextMessage(request);
     return new PromptResponse(
       JSON.stringify({
@@ -94,9 +93,7 @@ export const sendTextMessageHandler = async ({
     return new PromptResponse(
       JSON.stringify({
         success: false,
-        error:
-          (error instanceof Error ? error.message : String(error)) +
-          `. Are you sure you are using the right region to send your message? The current region is ${usedRegion}.`,
+        error: formatSendError(error, usedRegion),
       }),
     ).promptResponse;
   }
