@@ -1,7 +1,7 @@
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { Tags } from '../../types';
 import { matchesAnyTag } from '../../utils';
-import { RCS_CAMPAIGN_GUIDE_URI, rcsCampaignGuide } from './rcs-campaign-guide';
+import { RCS_CAMPAIGN_GUIDE_URI, rcsCampaignGuide } from './rcs-campaign-setup-guide';
 
 const RCS_RESOURCE_TAGS: Tags[] = [
   'all',

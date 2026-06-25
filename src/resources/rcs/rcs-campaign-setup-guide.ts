@@ -1,4 +1,4 @@
-export const RCS_CAMPAIGN_GUIDE_URI = 'sinch://rcs/campaign';
+export const RCS_CAMPAIGN_GUIDE_URI = 'sinch://rcs/campaign-setup-guide';
 
 export const rcsCampaignGuide = `# RCS Campaign Setup Guide
 

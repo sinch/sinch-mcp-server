@@ -25,7 +25,7 @@ export const registerGetRcsNumberCapabilities = (server: McpServer, tags: Tags[]
     TOOL_NAME,
     {
       description:
-        'Get RCS capabilities for a verified test number (e.g. RICHCARD_CAROUSEL, ACTION_DIAL). Use to choose message type before testing.',
+        'Returns the RCS features supported by a test number device. Possible features: ACTION_COMPOSE, ACTION_CREATE_CALENDAR_EVENT, ACTION_DIAL, ACTION_OPEN_URL, ACTION_OPEN_URL_IN_WEBVIEW, ACTION_SHARE_LOCATION, ACTION_VIEW_LOCATION, REVOCATION, RICHCARD_CAROUSEL, RICHCARD_STANDALONE.',
       inputSchema: GetRcsNumberCapabilitiesSchema,
     },
     getRcsNumberCapabilitiesHandler,

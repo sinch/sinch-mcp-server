@@ -41,8 +41,8 @@ export const listRcsSendersHandler = async ({ pageToken }: ListRcsSenders): Prom
         success: true,
         senders,
         nextPageToken: response.nextPageToken,
-        page_count: senders.length,
-        total_count: response.totalSize ?? senders.length,
+        pageCount: senders.length,
+        totalCount: response.totalSize ?? senders.length,
       }),
     ).promptResponse;
   });

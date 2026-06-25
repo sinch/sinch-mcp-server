@@ -2,7 +2,7 @@ export const CONVERSATION_APP_SETUP_URI = 'sinch://conversation/app-setup';
 
 export const conversationAppSetupGuide = `# Conversation API app setup
 
-For RCS sender provisioning (create, test, launch) before connecting a channel, see resource \`sinch://rcs/setup-guide\`.
+For RCS sender provisioning (create, test, launch) before connecting a channel, see resource \`sinch://rcs/campaign-setup-guide\`.
 
 ## Typical flow
 

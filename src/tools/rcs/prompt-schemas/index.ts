@@ -261,9 +261,13 @@ export const RcsSenderDetails = z
     brand: RcsBrand.optional(),
     testNumbers: z
       .array(z.string())
+      .max(200)
+      .refine((items) => new Set(items).size === items.length, { message: 'Phone numbers must be unique.' })
       .nullable()
       .optional()
-      .describe('Test phone numbers in E.164 format. Max 200 total, 20 new requests per day. Pass null to delete all.'),
+      .describe(
+        'Phone numbers for testing. An agent can send 20 tester requests each day with a total maximum of 200 tester requests. Pass null to delete all.',
+      ),
     countries: z
       .array(RcsSenderCountry)
       .nullable()

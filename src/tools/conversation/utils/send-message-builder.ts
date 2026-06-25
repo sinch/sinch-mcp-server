@@ -38,7 +38,7 @@ export const buildMessageBase = async (
     processing_strategy: 'DISPATCH_ONLY',
   };
 
-  const channel_identities: Conversation.ChannelRecipientIdentity[] = [];
+  const channelIdentities: Conversation.ChannelRecipientIdentity[] = [];
   const appConfiguration = await conversationService.app.get({ app_id: appId });
   const configuredChannels: string[] = appConfiguration.channel_credentials?.map((channel) => channel.channel) || [];
   const unconfiguredChannels: string[] = [];
@@ -52,7 +52,7 @@ export const buildMessageBase = async (
       unconfiguredChannels.push(c);
       continue;
     }
-    channel_identities.push({
+    channelIdentities.push({
       channel: c as Conversation.ConversationChannel,
       identity: recipient,
     });
@@ -62,7 +62,7 @@ export const buildMessageBase = async (
     throw new ChannelNotConfiguredError(unconfiguredChannels, configuredChannels);
   }
 
-  addSMSFallback(appConfiguration, channel, recipient, channel_identities);
+  addSMSFallback(appConfiguration, channel, recipient, channelIdentities);
 
   if (!sender) {
     sender = env.DEFAULT_SMS_ORIGINATOR;
@@ -77,23 +77,22 @@ export const buildMessageBase = async (
     ...messageBase,
     recipient: {
       identified_by: {
-        channel_identities,
+        channel_identities: channelIdentities,
       },
     },
   };
 };
 
-// This function adds an SMS fallback for RCS or WHATSAPP if the channel is RCS or WHATSAPP and SMS is not already included in the channel_identities
 const addSMSFallback = (
   appConfiguration: Conversation.AppResponse,
   channels: string[],
   recipient: string,
-  channel_identities: Conversation.ChannelRecipientIdentity[],
+  channelIdentities: Conversation.ChannelRecipientIdentity[],
 ) => {
   if (channels.includes('RCS') || channels.includes('WHATSAPP')) {
     const smsChannel = channels.find((c) => c === 'SMS');
     if (!smsChannel && isSMSChannelConfigured(appConfiguration)) {
-      channel_identities.push({
+      channelIdentities.push({
         channel: 'SMS',
         identity: recipient,
       });

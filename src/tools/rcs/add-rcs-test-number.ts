@@ -8,7 +8,14 @@ import { getToolName, RcsToolKey, toolsConfig } from './utils/rcs-tools-helper';
 
 const AddRcsTestNumberSchema = {
   senderId: RcsSenderId,
-  testNumbers: z.array(RcsTestNumber).min(1).describe('E.164 phone numbers to invite as testers.'),
+  testNumbers: z
+    .array(RcsTestNumber)
+    .min(1)
+    .max(200)
+    .refine((items) => new Set(items).size === items.length, { message: 'Phone numbers must be unique.' })
+    .describe(
+      'Phone numbers for testing. An agent can send 20 tester requests each day with a total maximum of 200 tester requests.',
+    ),
 };
 
 type AddRcsTestNumber = z.infer<z.ZodObject<typeof AddRcsTestNumberSchema>>;
@@ -24,8 +31,7 @@ export const registerAddRcsTestNumber = (server: McpServer, tags: Tags[]) => {
   server.registerTool(
     TOOL_NAME,
     {
-      description:
-        'Add test phone numbers to an RCS sender. Limit: 20 invites/day, 200 total. Re-adding a verified number resets it to unverified.',
+      description: 'Add test phone numbers to an RCS sender. Re-adding a verified number resets it to unverified.',
       inputSchema: AddRcsTestNumberSchema,
     },
     addRcsTestNumberHandler,
