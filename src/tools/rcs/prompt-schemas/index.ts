@@ -2,13 +2,7 @@ import { z } from 'zod';
 
 export const RcsRegion = z.enum(['BR', 'EU', 'US']);
 
-export const RcsBillingCategory = z.enum([
-  'CONVERSATIONAL',
-  'NON_CONVERSATIONAL',
-  'BASIC_MESSAGE',
-  'CONVERSATIONAL_LEGACY',
-  'SINGLE_MESSAGE',
-]);
+export const RcsBillingCategory = z.enum(['CONVERSATIONAL', 'NON_CONVERSATIONAL']);
 
 export const RcsUseCase = z.enum(['MULTIUSE', 'OTP', 'PROMOTIONAL', 'TRANSACTIONAL']);
 
@@ -17,9 +11,37 @@ export const RcsSenderId = z.string().describe('RCS sender ID.');
 export const RcsTestNumber = z.string().describe('Test phone number in E.164 format (e.g. +14155552671).');
 
 // ── RCS sender details schema ─────────────────────────────────────────────────
-// Mirrors the PATCH /v1/projects/{projectId}/rcs/senders/{senderId} request body
-// exactly. Only the fields listed here are accepted by the API; do not invent
-// additional fields.
+// Maintainer note: this schema mirrors the PATCH
+// /v1/projects/{projectId}/rcs/senders/{senderId} request body exactly. The API
+// rejects any field it does not recognise, so when extending this schema only
+// add fields that are documented in that request body.
+
+// Allowed sector/industry values for the US questionnaire's brandIndustry field.
+const RcsBrandIndustry = z.enum([
+  'Agriculture',
+  'Communication',
+  'Construction',
+  'Education',
+  'Energy',
+  'Entertainment',
+  'Financial',
+  'Gambling',
+  'Government',
+  'Healthcare',
+  'Hospitality',
+  'Human Resources',
+  'Insurance',
+  'Legal',
+  'Manufacturing',
+  'NGO',
+  'Political',
+  'Postal',
+  'Professional',
+  'Real Estate',
+  'Retail',
+  'Technology',
+  'Transportation',
+]);
 
 const RcsBrandEmail = z.object({
   label: z.string().describe('Human-readable label for this email address.'),
@@ -55,7 +77,7 @@ const RcsBrand = z
       .optional()
       .describe('Contact website list. Pass null to delete all existing values.'),
     color: z.string().optional().describe('Brand colour as a HEX code, e.g. "#FF5733".'),
-    description: z.string().optional().describe('Short brand description.'),
+    description: z.string().max(100).optional().describe('Short brand description. Max 100 characters.'),
     bannerUrl: z
       .string()
       .optional()
@@ -66,6 +88,11 @@ const RcsBrand = z
   })
   .describe('Brand information shown to end users.');
 
+// The API also returns per-answer `metadata` objects (review state, reviewer
+// comments, timestamps). They are deliberately omitted here: this schema is the
+// PATCH *request* body, and metadata is read-only/server-managed — accepting it
+// on input would have no effect. Review state is surfaced separately via
+// get-rcs-sender.
 const RcsQuestionnaireGeneralAnswers = z
   .object({
     optInDescription: z.string().nullable().optional().describe('How opt-in is obtained. Pass null to delete.'),
@@ -114,7 +141,6 @@ const RcsQuestionnaireGbAnswers = z
     fullCompanyAddress: z.string().nullable().optional().describe('Full company address. Pass null to delete.'),
     messagesVolume: z.string().nullable().optional().describe('Estimated messages volume. Pass null to delete.'),
     messagesFrequency: z.string().nullable().optional().describe('Estimated messages frequency. Pass null to delete.'),
-    campaignLength: z.string().nullable().optional().describe('Length of campaign. Pass null to delete.'),
   })
   .describe('Answers to the UK-specific launch questionnaire.');
 
@@ -136,13 +162,7 @@ const RcsQuestionnaireUsAnswers = z
       .optional()
       .describe('US Employer Identification Number (format XX-XXXXXXX). US companies only.'),
     taxId: z.string().nullable().optional().describe('National tax ID. Non-US companies only.'),
-    brandIndustry: z
-      .string()
-      .nullable()
-      .optional()
-      .describe(
-        'Sector or industry. Enum: Agriculture, Communication, Construction, Education, Energy, Entertainment, Financial, Gambling, Government, Healthcare, Hospitality, Human Resources, Insurance, Legal, Manufacturing, NGO, Political, Postal, Professional, Real Estate, Retail, Technology, Transportation.',
-      ),
+    brandIndustry: RcsBrandIndustry.nullable().optional().describe('Sector or industry of the business.'),
     brandName: z.string().nullable().optional().describe('Brand name / Doing Business As (DBA).'),
     legalForm: z
       .string()

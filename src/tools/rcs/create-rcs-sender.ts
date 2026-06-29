@@ -29,7 +29,7 @@ export const registerCreateRcsSender = (server: McpServer, tags: Tags[]) => {
     TOOL_NAME,
     {
       description:
-        'Create an RCS sender. Required fields: region, billingCategory, useCase. You can also pass details (brand, questionnaire, countries) in the same call to fill them upfront — all details must be complete before the sender can be launched.',
+        'Create an RCS sender. Required fields: region, billingCategory, useCase. You can also pass details (brand, questionnaire, countries) in the same call to fill them upfront, or use update-rcs-sender to add them incrementally — either way, all details must be complete before the sender can be launched.',
       inputSchema: CreateRcsSenderSchema,
     },
     createRcsSenderHandler,

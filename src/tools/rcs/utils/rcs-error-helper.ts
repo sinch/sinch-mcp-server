@@ -1,3 +1,4 @@
+import { HttpStatus } from '../../../http-status';
 import { RcsApiError } from './rcs-provisioning-client';
 
 const LAUNCH_CHECKLIST_HINT =
@@ -21,10 +22,10 @@ export const formatRcsError = (error: unknown): string => {
     if (error.resolution) {
       parts.push(error.resolution);
     }
-    if (error.status === 409) {
+    if (error.status === HttpStatus.CONFLICT) {
       parts.push('A sender may already exist. Use list-rcs-senders and get-rcs-sender instead of create.');
     }
-    if (error.status === 412) {
+    if (error.status === HttpStatus.PRECONDITION_FAILED) {
       parts.push(LAUNCH_CHECKLIST_HINT);
     }
     return parts.join(' ');

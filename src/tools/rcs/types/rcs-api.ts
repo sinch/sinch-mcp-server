@@ -1,11 +1,16 @@
+import { z } from 'zod';
+import { RcsBillingCategory as RcsBillingCategorySchema } from '../prompt-schemas';
+
+// NOTE: The types in this file are hand-written stand-ins for the RCS
+// provisioning models that @sinch/sdk-core does not expose yet. Remove this file
+// and import the models from the SDK once the dependency is bumped to a version
+// with native RCS provisioning support.
+
 export type RcsRegion = 'BR' | 'EU' | 'US';
 
-export type RcsBillingCategory =
-  | 'CONVERSATIONAL'
-  | 'NON_CONVERSATIONAL'
-  | 'BASIC_MESSAGE'
-  | 'CONVERSATIONAL_LEGACY'
-  | 'SINGLE_MESSAGE';
+// Derived from the Zod schema so the accepted billing categories stay in sync
+// with the create-rcs-sender input schema (the only place this value is set).
+export type RcsBillingCategory = z.infer<typeof RcsBillingCategorySchema>;
 
 export type RcsUseCase = 'MULTIUSE' | 'OTP' | 'PROMOTIONAL' | 'TRANSACTIONAL';
 
@@ -47,7 +52,6 @@ export interface ConversationApiAppDetails {
   projectId: string;
   region: string;
   channelStatus?: string;
-  [key: string]: unknown;
 }
 
 export interface RcsSender {
@@ -60,15 +64,10 @@ export interface RcsSender {
   details?: RcsSenderDetails;
   authName?: string;
   authToken?: string;
-  created?: string;
-  modified?: string;
-  launched?: string;
-  conversationApiApp?: string;
   conversationApiAppDetails?: ConversationApiAppDetails;
   testNumberStates?: TestNumberStateResponse[];
   countryStatus?: Array<Record<string, unknown>>;
   supplierDetails?: Record<string, unknown>;
-  [key: string]: unknown;
 }
 
 export interface CreateSenderRequest {
@@ -96,7 +95,6 @@ export interface TestNumberStateResponse {
   number: string;
   state: RcsTestNumberState;
   submitted?: string;
-  [key: string]: unknown;
 }
 
 export interface TestNumbersResponse {
@@ -105,7 +103,6 @@ export interface TestNumbersResponse {
 
 export interface CapabilitiesResponse {
   features?: string[];
-  [key: string]: unknown;
 }
 
 export interface RcsApiErrorBody {

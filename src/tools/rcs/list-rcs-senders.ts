@@ -42,7 +42,7 @@ export const listRcsSendersHandler = async ({ pageToken }: ListRcsSenders): Prom
         senders,
         nextPageToken: response.nextPageToken,
         pageCount: senders.length,
-        totalCount: response.totalSize ?? senders.length,
+        totalCount: response.totalSize,
       }),
     ).promptResponse;
   });

@@ -41,15 +41,13 @@ export const buildMessageBase = async (
   const channelIdentities: Conversation.ChannelRecipientIdentity[] = [];
   const appConfiguration = await conversationService.app.get({ app_id: appId });
   const configuredChannels: string[] = appConfiguration.channel_credentials?.map((channel) => channel.channel) || [];
-  const unconfiguredChannels: string[] = [];
   for (let c of channel) {
     if (c === 'MMS' && !configuredChannels.includes('MMS')) {
       // Fallback to SMS if MMS is not configured (the downgrade is always allowed)
       c = 'SMS';
     } else if (!configuredChannels.includes(c)) {
-      // The requested channel has no credential on the app (e.g. RCS without an
-      // assigned sender) — collect it so we can fail with an actionable error.
-      unconfiguredChannels.push(c);
+      // Skip channels with no credential on the app; the Conversation API
+      // applies its own fallback for them.
       continue;
     }
     channelIdentities.push({
@@ -58,8 +56,8 @@ export const buildMessageBase = async (
     });
   }
 
-  if (unconfiguredChannels.length > 0) {
-    throw new ChannelNotConfiguredError(unconfiguredChannels, configuredChannels);
+  if (channelIdentities.length === 0) {
+    throw new ChannelNotConfiguredError(channel, configuredChannels);
   }
 
   addSMSFallback(appConfiguration, channel, recipient, channelIdentities);

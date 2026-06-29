@@ -117,12 +117,35 @@ test('updateRcsSenderHandler rejects empty body', async () => {
   expect(mockClient.updateSender).not.toHaveBeenCalled();
 });
 
-test('launchRcsSenderHandler includes checklist hint on 412', async () => {
+test('launchRcsSenderHandler returns the missing requirements (not the HTTP status) on a precondition failure', async () => {
   mockClient.launchSender.mockRejectedValue(new RcsApiError(412, 'Precondition Failed'));
+  mockClient.getSender.mockResolvedValue({
+    id: 's1',
+    region: 'EU',
+    billingCategory: 'NON_CONVERSATIONAL',
+    useCase: 'TRANSACTIONAL',
+    state: 'DRAFT',
+    details: { brand: { name: 'Acme' } },
+  });
 
   const result = await launchRcsSenderHandler({ senderId: 's1' });
   const parsed = JSON.parse(result.content[0].text);
 
   expect(parsed.success).toBeFalse();
-  expect(parsed.error).toContain('Launch checklist');
+  expect(mockClient.getSender).toHaveBeenCalledWith('s1');
+  expect(parsed.error).toBe(
+    'The sender is not ready to launch: some required details are still missing. ' +
+      'Fill the items in missingRequirements via update-rcs-sender, then retry the launch.',
+  );
+  expect(parsed.missingRequirements).toEqual([
+    'details.brand.logoUrl (JPEG/PNG, max 50 KB, 224×224 px)',
+    'details.brand.bannerUrl (JPEG/PNG, max 200 KB, 1440×448 px)',
+    'details.brand.privacyPolicyUrl',
+    'details.brand.termsOfServiceUrl',
+    'at least one of details.brand.phones or details.brand.emails',
+    'at least one entry in details.countries',
+    'details.questionnaire.general.answers',
+    'details.questionnaire.verification.answers',
+  ]);
+  expect(parsed.sender).toMatchObject({ id: 's1', state: 'DRAFT' });
 });

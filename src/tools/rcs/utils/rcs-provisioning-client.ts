@@ -1,3 +1,4 @@
+import { HttpStatus } from '../../../http-status';
 import { formatUserAgent } from '../../../utils';
 import {
   CapabilitiesResponse,
@@ -65,7 +66,7 @@ export class RcsProvisioningClient {
       throw await this.parseError(response);
     }
 
-    if (response.status === 204) {
+    if (response.status === HttpStatus.NO_CONTENT) {
       return undefined as T;
     }
 

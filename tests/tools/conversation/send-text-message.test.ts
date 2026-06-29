@@ -72,7 +72,7 @@ test('sendTextMessageHandler returns error response on failure', async () => {
 
   const expectedResponse = JSON.stringify({
     success: false,
-    error: 'Oops If the resource cannot be found, the region parameter may be incorrect. Current region: eu.',
+    error: 'Oops. If the resource cannot be found, the region parameter may be incorrect. Current region: eu.',
   });
 
   expect(result.content[0].text).toEqual(expectedResponse);

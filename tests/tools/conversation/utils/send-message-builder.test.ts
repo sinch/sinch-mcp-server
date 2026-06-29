@@ -1,4 +1,7 @@
-import { buildMessageBase } from '../../../../src/tools/conversation/utils/send-message-builder';
+import {
+  buildMessageBase,
+  ChannelNotConfiguredError,
+} from '../../../../src/tools/conversation/utils/send-message-builder';
 import { Conversation } from '@sinch/conversation';
 import { mockEnv, resetMockEnv } from '../../../helpers/mock-env';
 
@@ -54,8 +57,17 @@ test('throws ChannelNotConfiguredError when a requested channel is not configure
   mockGetApp.mockResolvedValue({ channel_credentials: [{ channel: 'SMS' }] });
 
   await expect(buildMessageBase(mockConversationService as any, 'my-app-id', '+1234567890', ['RCS'])).rejects.toThrow(
-    /RCS.*not configured/,
+    new ChannelNotConfiguredError(['RCS'], ['SMS']),
   );
+});
+
+test('does not throw when at least one requested channel is configured (RCS+SMS, only SMS configured)', async () => {
+  mockGetApp.mockResolvedValue({ channel_credentials: [{ channel: 'SMS' }] });
+
+  const result = await buildMessageBase(mockConversationService as any, 'my-app-id', '+1234567890', ['RCS', 'SMS']);
+
+  const channels = result.recipient.identified_by.channel_identities.map((ci) => ci.channel);
+  expect(channels).toEqual(['SMS']);
 });
 
 test('No SMS fallback is added if already included', async () => {
