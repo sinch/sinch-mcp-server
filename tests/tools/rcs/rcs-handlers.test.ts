@@ -149,3 +149,40 @@ test('launchRcsSenderHandler returns the missing requirements (not the HTTP stat
   ]);
   expect(parsed.sender).toMatchObject({ id: 's1', state: 'DRAFT' });
 });
+
+test('launchRcsSenderHandler returns an actionable message when 412 but no requirements are computed as missing', async () => {
+  mockClient.launchSender.mockRejectedValue(new RcsApiError(412, 'Precondition Failed'));
+  mockClient.getSender.mockResolvedValue({
+    id: 's1',
+    region: 'EU',
+    billingCategory: 'NON_CONVERSATIONAL',
+    useCase: 'TRANSACTIONAL',
+    state: 'DRAFT',
+    details: {
+      brand: {
+        name: 'Acme',
+        logoUrl: 'https://example.com/logo.png',
+        bannerUrl: 'https://example.com/banner.png',
+        privacyPolicyUrl: 'https://example.com/privacy',
+        termsOfServiceUrl: 'https://example.com/terms',
+        phones: [{ label: 'Support', number: '+14155550000' }],
+      },
+      countries: ['DE'],
+      questionnaire: {
+        general: { answers: { optInDescription: 'opt-in' } },
+        verification: { answers: { name: 'John' } },
+      },
+    },
+  });
+
+  const result = await launchRcsSenderHandler({ senderId: 's1' });
+  const parsed = JSON.parse(result.content[0].text);
+
+  expect(parsed.success).toBeFalse();
+  expect(parsed.missingRequirements).toEqual([]);
+  expect(parsed.error).toBe(
+    'The launch was rejected but all known requirements appear to be filled. ' +
+      'The API may be enforcing a rule not covered by this check (e.g. a field format or value constraint). ' +
+      'Review the sender details carefully and contact Sinch support if the issue persists.',
+  );
+});

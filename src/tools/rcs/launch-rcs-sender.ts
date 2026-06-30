@@ -53,12 +53,21 @@ export const launchRcsSenderHandler = async ({ senderId }: LaunchRcsSender): Pro
         const sender = await client.getSender(senderId);
         const missingRequirements = getMissingLaunchRequirements(sender);
 
+        const MISSING_REQUIREMENTS_ERROR =
+          'The sender is not ready to launch: some required details are still missing. Fill the items in missingRequirements via update-rcs-sender, then retry the launch.';
+
+        const UNKNOWN_PRECONDITION_ERROR =
+          'The launch was rejected but all known requirements appear to be filled. The API may be enforcing a rule not covered by this check (e.g. a field format or value constraint). Review the sender details carefully and contact Sinch support if the issue persists.';
+
+        let errorMessage: string = UNKNOWN_PRECONDITION_ERROR;
+        if (missingRequirements.length > 0) {
+          errorMessage = MISSING_REQUIREMENTS_ERROR;
+        }
+
         return new PromptResponse(
           JSON.stringify({
             success: false,
-            error:
-              'The sender is not ready to launch: some required details are still missing. ' +
-              'Fill the items in missingRequirements via update-rcs-sender, then retry the launch.',
+            error: errorMessage,
             missingRequirements,
             sender: formatRcsSender(sender),
           }),

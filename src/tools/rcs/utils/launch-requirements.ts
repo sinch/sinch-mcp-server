@@ -7,6 +7,11 @@ const COUNTRY_QUESTIONNAIRE_SECTION: Record<string, string> = {
   FR: 'fr',
 };
 
+// An answers object must exist AND have at least one key — `{}` is treated as
+// empty because the API won't accept a questionnaire with no answers filled in.
+const hasAnswers = (answers: unknown): boolean =>
+  typeof answers === 'object' && answers !== null && Object.keys(answers).length > 0;
+
 // Returns the launch requirements not yet met by the sender, in human-readable
 // form, so the agent can fill them via update-rcs-sender before retrying.
 export const getMissingLaunchRequirements = (sender: RcsSender): string[] => {
@@ -36,15 +41,15 @@ export const getMissingLaunchRequirements = (sender: RcsSender): string[] => {
   if (countries.length === 0) {
     missing.push('at least one entry in details.countries');
   }
-  if (!questionnaire.general?.answers) {
+  if (!hasAnswers(questionnaire.general?.answers)) {
     missing.push('details.questionnaire.general.answers');
   }
-  if (!questionnaire.verification?.answers) {
+  if (!hasAnswers(questionnaire.verification?.answers)) {
     missing.push('details.questionnaire.verification.answers');
   }
   for (const code of countries) {
     const section = COUNTRY_QUESTIONNAIRE_SECTION[code];
-    if (section && !questionnaire[section]?.answers) {
+    if (section && !hasAnswers(questionnaire[section]?.answers)) {
       missing.push(`details.questionnaire.${section}.answers (required for country ${code})`);
     }
   }
