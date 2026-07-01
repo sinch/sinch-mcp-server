@@ -1,7 +1,5 @@
 import { createHash } from 'crypto';
-import { getRequestSinchOAuthCredentials } from './credential-context';
 import { env } from '../env';
-import { PromptResponse } from '../types';
 
 export const SINCH_CREDENTIALS_HEADER = 'x-sinch-credentials';
 
@@ -49,6 +47,8 @@ export const parseSinchCredentialsValue = (
     return undefined;
   }
 
+  // projectId and keyId are UUIDs (no colons); split only on the first two separators
+  // so keySecret is everything after the second colon (colons in the secret are unlikely but safe).
   const keyId = remainder.slice(0, keyIdSeparatorIndex);
   const keySecret = remainder.slice(keyIdSeparatorIndex + 1);
 
@@ -90,23 +90,4 @@ export const sinchOAuthCredentialsFromEnv = (): SinchOAuthCredentials | undefine
     keySecret,
     cacheKey: buildCredentialCacheKey(projectId, keyId, keySecret),
   };
-};
-
-export const resolveSinchOAuthCredentials = ():
-  | SinchOAuthCredentials
-  | PromptResponse => {
-  const fromRequest = getRequestSinchOAuthCredentials();
-  if (fromRequest) {
-    return fromRequest;
-  }
-
-  const fromEnv = sinchOAuthCredentialsFromEnv();
-  if (fromEnv) {
-    return fromEnv;
-  }
-
-  return new PromptResponse(
-    'Missing Sinch credentials. Set PROJECT_ID, KEY_ID, and KEY_SECRET, '
-    + `or send the ${SINCH_CREDENTIALS_HEADER} header (Base64 of projectId:keyId:keySecret).`,
-  );
 };

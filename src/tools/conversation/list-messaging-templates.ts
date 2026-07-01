@@ -1,5 +1,5 @@
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
-import { resolveSinchOAuthCredentials } from '../../auth/sinch-oauth-credentials';
+import { resolveSinchOAuthCredentials } from '../../auth/resolve-sinch-oauth-credentials';
 import { registerTracedTool } from '../../telemetry/register-traced-tool';
 import { logger } from '../../telemetry/logger';
 import { isPromptResponse, matchesAnyTag } from '../../utils';
