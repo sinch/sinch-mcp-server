@@ -56,6 +56,22 @@ Here is the list of tools available in the MCP server (all the phone numbers mus
 | **conference-callout**            | Start a voice call to one or more participants and connect them to a shared conference. <br> _Example prompt_: "Call John (+33612345678) and Lisa (+34987654321) and connect them to a conference room." | voice               |
 | **manage-conference-participant** | Mute, unmute, hold, or resume an individual participant in a conference call. <br> _Example prompt_: "Mute the caller with ID xyz789 in the conference."                                                 | voice               |
 | **close-conference**              | End a conference call by disconnecting all the participants using the ID of the conference. <br> _Example prompt_: "End the current conference call with ID abc123."                                     | voice               |
+| **get-call-information**          | Get information about a call using its ID. <br> _Example prompt_: "Get the details of call ID abc123."                                                                                                  | voice, notification |
+
+### RCS Tools
+
+| Tool                              | Description                                                                                                                                                                                                                                        | Tags               |
+| --------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------ |
+| **list-rcs-senders**              | List all RCS senders for the project, with pagination support. <br> _Example prompt_: "Show me all my RCS senders."                                                                                                                                | rcs, configuration |
+| **get-rcs-sender**                | Get a full RCS sender by ID, including credentials, state, brand details, test numbers, and country status. <br> _Example prompt_: "Get the details of my RCS sender abc123."                                                                      | rcs, configuration |
+| **create-rcs-sender**             | Create a new RCS sender. Brand details, questionnaire, and countries can be provided upfront or added incrementally via update-rcs-sender. <br> _Example prompt_: "Create an RCS sender for the EU region with a CONVERSATIONAL billing category." | rcs, configuration |
+| **update-rcs-sender**             | Update an RCS sender's brand, countries, test numbers, or questionnaire. <br> _Example prompt_: "Update my RCS sender abc123 with the brand logo URL."                                                                                             | rcs, configuration |
+| **launch-rcs-sender**             | Submit an RCS sender for Google and carrier review. All brand details, countries, and questionnaire sections must be complete before launching. <br> _Example prompt_: "Launch my RCS sender abc123."                                              | rcs, configuration |
+| **add-rcs-test-number**           | Add test phone numbers to an RCS sender (max 20 per request, 200 total per sender). <br> _Example prompt_: "Add +14155552671 as a test number to my RCS sender."                                                                                   | rcs, configuration |
+| **delete-rcs-test-number**        | Delete a test number from an RCS sender. <br> _Example prompt_: "Remove test number +14155552671 from my RCS sender."                                                                                                                              | rcs, configuration |
+| **resend-rcs-test-number-invite** | Resend a test number invite when state is PENDING or UNVERIFIED. <br> _Example prompt_: "Resend the invite for test number +14155552671 on sender abc123."                                                                                         | rcs, configuration |
+| **get-rcs-test-number-state**     | Get the verification state of a single RCS test number. <br> _Example prompt_: "What is the state of test number +14155552671 on sender abc123?"                                                                                                   | rcs, configuration |
+| **get-rcs-number-capabilities**   | Get the RCS features supported by a test number's device (actions, rich card layouts, revocation). <br> _Example prompt_: "What RCS features does +14155552671 support?"                                                                           | rcs, configuration |
 
 ### Numbers Tools
 
@@ -65,6 +81,7 @@ Here is the list of tools available in the MCP server (all the phone numbers mus
 | **list-rented-numbers**          | List all active (rented) phone numbers for the project. Can filter by region, type, pattern, and capability. <br> _Example prompt_: "Show me all my active phone numbers in the US."                     | numbers |
 | **search-for-available-numbers** | Search for phone numbers available to rent, with filters for region, type, pattern, and capabilities. <br> _Example prompt_: "Find available local numbers in the US that support SMS."                  | numbers |
 | **rent-sinch-virtual-numbers**   | Rent (activate) one or more phone numbers by providing them in E.164 format. <br> _Example prompt_: "Rent the phone number +12025551234."                                                                | numbers |
+| **release-rented-number**        | Release a rented phone number from your project. <br> _Example prompt_: "Release the phone number +12025551234."                                                                                        | numbers |
 
 ### Configuration Tools
 
@@ -83,6 +100,8 @@ Here is the list of tools available in the MCP server (all the phone numbers mus
 ### API credentials
 
 To use the APIs used by the MCP tools, you will need the following credentials:
+
+- RCS API credentials: RCS must be enabled for your Sinch project. Contact si-richmessaging@sinch.com to activate it. Once enabled, RCS uses the same `PROJECT_ID`, `KEY_ID`, and `KEY_SECRET` as the Conversation API (see below).
 
 - Conversation / Numbers API credentials:
   - (Required) `PROJECT_ID`: Select the project you want to use from your [Sinch Build dashboard](https://dashboard.sinch.com/dashboard) (Located at the left of the top toolbar)
@@ -207,6 +226,8 @@ You can combine multiple tags by separating them with commas. For example, if yo
         "conversation,verification"
       ],
 ```
+
+Available tags: `conversation`, `rcs`, `email`, `verification`, `voice`, `numbers`, `notification`, `configuration`, `all`.
 
 If you want to use all the tools, you can omit the `--tags` option, or use the tag `all`:
 
