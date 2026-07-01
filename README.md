@@ -58,7 +58,7 @@ Here is the list of tools available in the MCP server (all the phone numbers mus
 | **close-conference**              | End a conference call by disconnecting all the participants using the ID of the conference. <br> _Example prompt_: "End the current conference call with ID abc123."                                     | voice               |
 | **get-call-information**          | Get information about a call using its ID. <br> _Example prompt_: "Get the details of call ID abc123."                                                                                                  | voice, notification |
 
-### RCS Tools
+### RCS Sender Tools
 
 | Tool                              | Description                                                                                                                                                                                                                                        | Tags               |
 | --------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------ |
