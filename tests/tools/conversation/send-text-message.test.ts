@@ -15,7 +15,10 @@ jest.mock(
 );
 
 jest.mock('../../../src/tools/conversation/utils/conversation-service-helper');
-jest.mock('../../../src/tools/conversation/utils/send-message-builder');
+jest.mock('../../../src/tools/conversation/utils/send-message-builder', () => ({
+  ...jest.requireActual('../../../src/tools/conversation/utils/send-message-builder'),
+  buildMessageBase: jest.fn(),
+}));
 
 const mockSendTextMessage = jest.fn();
 const mockConversationService = {
@@ -69,7 +72,7 @@ test('sendTextMessageHandler returns error response on failure', async () => {
 
   const expectedResponse = JSON.stringify({
     success: false,
-    error: 'Oops. Are you sure you are using the right region to send your message? The current region is eu.',
+    error: 'Oops. If the resource cannot be found, the region parameter may be incorrect. Current region: eu.',
   });
 
   expect(result.content[0].text).toEqual(expectedResponse);

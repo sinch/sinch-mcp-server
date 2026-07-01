@@ -15,7 +15,7 @@ import {
 } from './utils/conversation-service-helper';
 import { ConversationToolKey, getToolName, toolsConfig } from './utils/conversation-tools-helper';
 import { isPromptResponse, matchesAnyTag } from '../../utils';
-import { buildMessageBase } from './utils/send-message-builder';
+import { buildMessageBase, formatSendError } from './utils/send-message-builder';
 import { IPromptResponse, PromptResponse, Tags } from '../../types';
 
 const SendMediaMessageSchema = {
@@ -69,19 +69,18 @@ export const sendMediaMessageHandler = async ({
   const conversationService = maybeService;
   const usedRegion = setConversationRegion(region, conversationService);
 
-  const requestBase = await buildMessageBase(conversationService, conversationAppId, recipient, channel, sender);
-  const request: Conversation.SendMediaMessageRequestData<Conversation.IdentifiedBy> = {
-    sendMessageRequestBody: {
-      ...requestBase,
-      message: {
-        media_message: {
-          url: url,
+  try {
+    const requestBase = await buildMessageBase(conversationService, conversationAppId, recipient, channel, sender);
+    const request: Conversation.SendMediaMessageRequestData<Conversation.IdentifiedBy> = {
+      sendMessageRequestBody: {
+        ...requestBase,
+        message: {
+          media_message: {
+            url: url,
+          },
         },
       },
-    },
-  };
-
-  try {
+    };
     const response = await conversationService.messages.sendMediaMessage(request);
     return new PromptResponse(
       JSON.stringify({
@@ -93,9 +92,7 @@ export const sendMediaMessageHandler = async ({
     return new PromptResponse(
       JSON.stringify({
         success: false,
-        error:
-          (error instanceof Error ? error.message : String(error)) +
-          `. Are you sure you are using the right region to send your message? The current region is ${usedRegion}.`,
+        error: formatSendError(error, usedRegion),
       }),
     ).promptResponse;
   }

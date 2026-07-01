@@ -1,0 +1,35 @@
+import { HttpStatus } from '../../../http-status';
+import { RcsApiError } from './rcs-provisioning-client';
+
+const LAUNCH_CHECKLIST_HINT =
+  'Launch checklist — use update-rcs-sender to fill any missing items: brand.name, brand.logoUrl (224×224 px), brand.bannerUrl (1440×448 px), brand.privacyPolicyUrl, brand.termsOfServiceUrl, at least one of brand.phones or brand.emails, at least one entry in countries, questionnaire.general.answers (all fields), questionnaire.verification.answers (all fields), and the country-specific questionnaire section for each country in countries.';
+
+const ERROR_HINTS: Record<string, string> = {
+  rbm_has_not_been_used: 'RCS is not enabled on this project. Contact si-richmessaging@sinch.com.',
+  rbm_too_many_requests: 'Test number invite limit reached (20/day, 200 total). Wait 24h and retry.',
+};
+
+export const formatRcsError = (error: unknown): string => {
+  if (error instanceof RcsApiError) {
+    const parts = [`HTTP ${error.status}: ${error.message}`];
+    if (error.errorCode) {
+      parts.push(`errorCode=${error.errorCode}`);
+      const hint = ERROR_HINTS[error.errorCode];
+      if (hint) {
+        parts.push(hint);
+      }
+    }
+    if (error.resolution) {
+      parts.push(error.resolution);
+    }
+    if (error.status === HttpStatus.CONFLICT) {
+      parts.push('A sender may already exist. Use list-rcs-senders and get-rcs-sender instead of create.');
+    }
+    if (error.status === HttpStatus.PRECONDITION_FAILED) {
+      parts.push(LAUNCH_CHECKLIST_HINT);
+    }
+    return parts.join(' ');
+  }
+
+  return error instanceof Error ? error.message : String(error);
+};

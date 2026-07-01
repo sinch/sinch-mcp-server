@@ -35,7 +35,17 @@
     "list-rented-numbers",
     "rent-sinch-virtual-numbers",
     "release-rented-number",
-    "search-for-available-numbers"
+    "search-for-available-numbers",
+    "list-rcs-senders",
+    "get-rcs-sender",
+    "create-rcs-sender",
+    "update-rcs-sender",
+    "add-rcs-test-number",
+    "delete-rcs-test-number",
+    "resend-rcs-test-number-invite",
+    "get-rcs-number-capabilities",
+    "get-rcs-test-number-state",
+    "launch-rcs-sender"
   ],
   "expectedPrompts": [
     "conversation-app-id"

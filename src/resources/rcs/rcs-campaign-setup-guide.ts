@@ -1,4 +1,11 @@
-export const RCS_CAMPAIGN_GUIDE_URI = 'sinch://rcs/campaign';
+// Resource URI convention: `sinch://<domain>/<resource-slug>`. The path is a
+// free-form, human-readable identifier — it is NOT tied to the folder structure
+// or the file/registration name. `<domain>` groups related resources (e.g.
+// `rcs`, `conversation`) and `<resource-slug>` describes the resource itself
+// (kebab-case). Compare `sinch://conversation/app-setup`. The slug here is
+// `campaign-setup-guide` so it reads as a self-describing guide rather than a
+// bare endpoint path.
+export const RCS_CAMPAIGN_GUIDE_URI = 'sinch://rcs/campaign-setup-guide';
 
 export const rcsCampaignGuide = `# RCS Campaign Setup Guide
 
@@ -94,7 +101,7 @@ Required sections for all senders:
 - **verification**: contact name, email, title, website.
 
 Country-specific sections:
-- **UK targets** (\`gb\`): brandIndustry, companyLegalName, companyRegistrationNumber, fullCompanyAddress, messagesVolume, messagesFrequency, campaignLength.
+- **UK targets** (\`gb\`): brandIndustry, companyLegalName, companyRegistrationNumber, fullCompanyAddress, messagesVolume, messagesFrequency.
 - **France targets** (\`fr\`): fullCompanyAddress, SIREN number.
 - **US targets** (\`us\`): ~25 fields including EIN or tax ID, brandName, legalForm, full address, contact details, useCaseDescription, sampleMessages, callToActionDescription, callToActionScreenshotUrl, opt-in/opt-out flows, and Verizon-specific fields if applicable.
 

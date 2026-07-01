@@ -1,15 +1,6 @@
 {
-  "tag": "configuration",
+  "tag": "rcs",
   "expectedTools": [
-    "create-conversation-app",
-    "create-webhook",
-    "delete-webhook",
-    "get-webhook",
-    "list-webhooks",
-    "set-rcs-channel-on-app",
-    "set-sms-channel-on-app",
-    "set-whatsapp-channel-on-app",
-    "update-webhook",
     "list-rcs-senders",
     "get-rcs-sender",
     "create-rcs-sender",
