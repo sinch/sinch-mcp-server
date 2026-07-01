@@ -6,8 +6,6 @@ import {
   type SinchOAuthCredentials,
 } from './sinch-oauth-credentials';
 
-export { SINCH_CREDENTIALS_HEADER };
-
 const credentialStorage = new AsyncLocalStorage<SinchOAuthCredentials | undefined>();
 
 export const getRequestSinchOAuthCredentials = (): SinchOAuthCredentials | undefined => {

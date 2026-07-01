@@ -1,6 +1,7 @@
 /* eslint-disable jest-extended/prefer-to-be-true, jest-extended/prefer-to-be-false */
 import type { Request, Response } from 'express';
 import {
+  buildBearerWwwAuthenticateHeader,
   createMcpApiKeyMiddleware,
   extractBearerToken,
   isValidMcpApiKey,
@@ -35,12 +36,20 @@ describe('mcp-api-key', () => {
   describe('extractBearerToken', () => {
     it('extracts token from Bearer header', () => {
       expect(extractBearerToken('Bearer my-token')).toBe('my-token');
+      expect(extractBearerToken('  Bearer my-token')).toBe('my-token');
+      expect(extractBearerToken('bearer my-token')).toBe('my-token');
+      expect(extractBearerToken('BEARER my-token')).toBe('my-token');
     });
 
     it('returns undefined for missing or invalid header', () => {
       expect(extractBearerToken(undefined)).toBeUndefined();
       expect(extractBearerToken('Basic abc')).toBeUndefined();
       expect(extractBearerToken('Bearer ')).toBeUndefined();
+    });
+
+    it('uses the first valid Bearer token when authorization is an array', () => {
+      expect(extractBearerToken(['', 'Bearer my-token'])).toBe('my-token');
+      expect(extractBearerToken(['Bearer first', 'Bearer second'])).toBe('first');
     });
   });
 
@@ -52,7 +61,25 @@ describe('mcp-api-key', () => {
     it('rejects missing or mismatched keys', () => {
       expect(isValidMcpApiKey(undefined, ['secret'])).toBe(false);
       expect(isValidMcpApiKey('wrong', ['secret'])).toBe(false);
+      expect(isValidMcpApiKey('wrong-length-token', ['secret'])).toBe(false);
       expect(isValidMcpApiKey('secret', [])).toBe(false);
+    });
+  });
+
+  describe('buildBearerWwwAuthenticateHeader', () => {
+    it('returns realm-only challenge when authentication is missing', () => {
+      expect(buildBearerWwwAuthenticateHeader()).toBe('Bearer realm="sinch-mcp"');
+    });
+
+    it('includes RFC 6750 error attributes for invalid tokens', () => {
+      expect(
+        buildBearerWwwAuthenticateHeader({
+          error: 'invalid_token',
+          errorDescription: 'The MCP API key is invalid',
+        }),
+      ).toBe(
+        'Bearer realm="sinch-mcp", error="invalid_token", error_description="The MCP API key is invalid"',
+      );
     });
   });
 
@@ -102,7 +129,27 @@ describe('mcp-api-key', () => {
       middleware(req, res, next);
 
       expect(res.statusCode).toBe(401);
+      expect(res.headers['WWW-Authenticate']).toBe(
+        'Bearer realm="sinch-mcp", error="invalid_token", error_description="The MCP API key is invalid"',
+      );
+      expect(res.body).toEqual({
+        error: 'invalid_token',
+        error_description: 'The MCP API key is invalid',
+      });
+      expect(next).not.toHaveBeenCalled();
+    });
+
+    it('returns realm-only challenge when authorization is missing', () => {
+      const middleware = createMcpApiKeyMiddleware(['expected']);
+      const req = { headers: {} } as Request;
+      const res = createMockResponse();
+      const next = jest.fn();
+
+      middleware(req, res, next);
+
+      expect(res.statusCode).toBe(401);
       expect(res.headers['WWW-Authenticate']).toBe('Bearer realm="sinch-mcp"');
+      expect(res.body).toEqual({ error: 'Unauthorized' });
       expect(next).not.toHaveBeenCalled();
     });
 

@@ -1,5 +1,5 @@
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
-import { resolveSinchOAuthCredentials } from '../../auth/sinch-oauth-credentials';
+import { resolveSinchOAuthCredentials } from '../../auth/resolve-sinch-oauth-credentials';
 import { isPromptResponse, matchesAnyTag } from '../../utils';
 import { formatListAllTemplatesResponse } from './utils/format-list-all-templates-response';
 import { getConversationService, setTemplateRegion } from './utils/conversation-service-helper';

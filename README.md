@@ -300,6 +300,126 @@ You can then configure the MCP server in the Claude configuration file as follow
 
 (Replace the `http://localhost:8000/sse` with the URL of your MCP server if it is not running locally)
 
+
+## Option 3: Native Streamable HTTP server (recommended for remote)
+
+This option runs a **native Streamable HTTP** MCP server on `/mcp`. Choose **single-tenant** or **multi-tenant** deployment — they are mutually exclusive.
+
+### Step 1: Build the MCP server
+
+```bash
+cd sinch-mcp-server
+npm install
+npm run build
+```
+
+### Step 2: Choose a deployment mode
+
+#### Single-tenant (one Sinch account per server)
+
+Use when every client of this MCP instance shares the same Sinch project. Configure credentials **on the server**; clients only authenticate to the MCP gateway.
+
+```dotenv
+MCP_API_KEY=your-secret-mcp-api-key
+PORT=8000
+PROJECT_ID=
+KEY_ID=
+KEY_SECRET=
+```
+
+Remote clients send **one header** on every request:
+
+| Header | Value |
+|--------|--------|
+| `Authorization` | `Bearer <MCP_API_KEY>` |
+
+`MCP_API_KEY` (or comma-separated `MCP_API_KEYS` for [key rotation](#mcp_api_keys-key-rotation)) authorizes access to the MCP server. `PROJECT_ID`, `KEY_ID`, and `KEY_SECRET` are read from the server environment only — **`X-Sinch-Credentials` is ignored** in this mode (no client override of server credentials).
+
+#### Multi-tenant (each client brings a Sinch account)
+
+Use when different clients must use different Sinch projects. **Do not set `MCP_API_KEY`** on the server. Each client sends its own credentials on every request.
+
+Remote clients send **one header** on every request:
+
+| Header | Value |
+|--------|--------|
+| `X-Sinch-Credentials` | Base64-encoded `projectId:keyId:keySecret` |
+
+The server does **not** read `PROJECT_ID`, `KEY_ID`, or `KEY_SECRET` from its environment for OAuth-backed tools in this mode. OAuth clients are cached in memory with **LRU eviction** (default 256 entries, configurable via `OAUTH_TOKEN_CACHE_MAX_ENTRIES`).
+
+#### `X-Sinch-Credentials` format (multi-tenant only)
+
+1. Build a UTF-8 string: `projectId:keyId:keySecret` (see [API credentials](#api-credentials)).
+2. Encode with **standard Base64** (no line breaks).
+3. Send on **each** HTTP request (including after MCP session initialization).
+
+The access key secret may contain `:` characters; only the **first two** colons separate the three fields.
+
+Example (multi-tenant):
+
+```bash
+export SINCH_CREDS=$(printf '%s' 'my-project-id:my-key-id:my-key-secret' | base64)
+
+curl -X POST "http://localhost:8000/mcp" \
+  -H "X-Sinch-Credentials: ${SINCH_CREDS}" \
+  -H "Content-Type: application/json" \
+  -H "Accept: application/json, text/event-stream" \
+  -d '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2024-11-05","capabilities":{},"clientInfo":{"name":"example","version":"1.0.0"}}}'
+```
+
+**Scope:** `X-Sinch-Credentials` applies to **Conversation**, **Numbers**, and **Number Lookup** tools. **Voice**, **Verification**, and **Mailgun** still use server environment variables for now. **Local stdio** (Option 1) always uses server environment variables.
+
+#### MCP_API_KEYS key rotation
+
+Use `MCP_API_KEYS` (comma-separated) in **single-tenant** mode to accept an old and new gateway key during rotation, then remove the retired key.
+
+### Step 3: Start the HTTP server
+
+```bash
+npm run start:http:server
+```
+
+The server listens on `http://localhost:8000/mcp` by default (override with `PORT`).
+
+#### Session limits (memory)
+
+Each MCP client session creates an in-memory `McpServer` instance (all registered tools) plus a `StreamableHTTPServerTransport`. To avoid unbounded memory growth, the server caps **concurrent sessions** at **256** by default (`MCP_MAX_SESSIONS`). When the limit is reached, new `initialize` requests receive **503 Service Unavailable** until a client closes a session (`DELETE /mcp` with `mcp-session-id`) or the transport is torn down.
+
+### Step 4: Example MCP client configuration
+
+**Single-tenant:**
+
+```json
+{
+  "mcpServers": {
+    "sinch-remote": {
+      "url": "https://your-host.example.com/mcp",
+      "headers": {
+        "Authorization": "Bearer <MCP_API_KEY>"
+      }
+    }
+  }
+}
+```
+
+**Multi-tenant:**
+
+```json
+{
+  "mcpServers": {
+    "sinch-remote": {
+      "url": "https://your-host.example.com/mcp",
+      "headers": {
+        "X-Sinch-Credentials": "<base64(projectId:keyId:keySecret)>"
+      }
+    }
+  }
+}
+```
+
+After the `initialize` response, include the `mcp-session-id` header returned by the server on subsequent requests.
+
+
 ## Contributing
 
 See [CONTRIBUTING.md](CONTRIBUTING.md) for contributor guidelines, including how to add new tools and pin GitHub Actions.

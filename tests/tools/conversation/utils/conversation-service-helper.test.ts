@@ -86,7 +86,7 @@ describe('getConversationService / getConversationTemplateService', () => {
     const result = getConversationService(TOOL_NAME);
     expect(result).toBeInstanceOf(PromptResponse);
     expect((result as PromptResponse).promptResponse.content[0].text).toContain(
-      'Missing Sinch credentials',
+      'Missing env vars: PROJECT_ID, KEY_ID, KEY_SECRET.',
     );
   });
 });

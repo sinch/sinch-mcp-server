@@ -1,7 +1,7 @@
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { z } from 'zod';
 import { PromptResponse, Tags } from '../../types';
-import { resolveSinchOAuthCredentials } from '../../auth/sinch-oauth-credentials';
+import { resolveSinchOAuthCredentials } from '../../auth/resolve-sinch-oauth-credentials';
 import { formatUserAgent, isPromptResponse, matchesAnyTag } from '../../utils';
 import { getToolName, NumbersToolKey, toolsConfig } from './utils/numbers-tools-helper';
 import { Numbers } from '@sinch/numbers';

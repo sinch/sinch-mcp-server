@@ -1,7 +1,53 @@
-import { timingSafeEqual } from 'crypto';
+import { createHash, timingSafeEqual } from 'crypto';
 import type { NextFunction, Request, Response } from 'express';
 
-const BEARER_PREFIX = 'Bearer ';
+const BEARER_SCHEME = 'bearer';
+const MCP_BEARER_REALM = 'sinch-mcp';
+
+type BearerAuthChallenge = {
+  error?: 'invalid_token';
+  errorDescription?: string;
+};
+
+export const buildBearerWwwAuthenticateHeader = (
+  challenge: BearerAuthChallenge = {},
+): string => {
+  const parts = [`Bearer realm="${MCP_BEARER_REALM}"`];
+
+  if (challenge.error) {
+    parts.push(`error="${challenge.error}"`);
+  }
+
+  if (challenge.errorDescription) {
+    parts.push(`error_description="${challenge.errorDescription}"`);
+  }
+
+  return parts.join(', ');
+};
+
+const extractTokenFromAuthorizationValue = (header: string): string | undefined => {
+  const trimmed = header.trim();
+  const schemeEnd = trimmed.indexOf(' ');
+  if (schemeEnd === -1) {
+    return undefined;
+  }
+
+  if (trimmed.slice(0, schemeEnd).toLowerCase() !== BEARER_SCHEME) {
+    return undefined;
+  }
+
+  const token = trimmed.slice(schemeEnd + 1).trim();
+  return token.length > 0 ? token : undefined;
+};
+
+const hashToken = (token: string): Buffer =>
+  createHash('sha256').update(token).digest();
+
+const tokensMatch = (provided: string, expected: string): boolean => {
+  // Compare fixed-length SHA-256 digests so timingSafeEqual never needs a
+  // length pre-check (which would leak the expected key length via timing).
+  return timingSafeEqual(hashToken(provided), hashToken(expected));
+};
 
 export const loadMcpApiKeys = (): string[] => {
   const keys: string[] = [];
@@ -24,27 +70,25 @@ export const loadMcpApiKeys = (): string[] => {
 export const extractBearerToken = (
   authorizationHeader: string | string[] | undefined,
 ): string | undefined => {
-  const header = Array.isArray(authorizationHeader)
-    ? authorizationHeader[0]
-    : authorizationHeader;
+  const headers =
+    authorizationHeader === undefined
+      ? []
+      : Array.isArray(authorizationHeader)
+        ? authorizationHeader
+        : [authorizationHeader];
 
-  if (!header?.startsWith(BEARER_PREFIX)) {
-    return undefined;
+  for (const header of headers) {
+    if (!header) {
+      continue;
+    }
+
+    const token = extractTokenFromAuthorizationValue(header);
+    if (token !== undefined) {
+      return token;
+    }
   }
 
-  const token = header.slice(BEARER_PREFIX.length).trim();
-  return token.length > 0 ? token : undefined;
-};
-
-const tokensMatch = (provided: string, expected: string): boolean => {
-  const providedBuffer = Buffer.from(provided);
-  const expectedBuffer = Buffer.from(expected);
-
-  if (providedBuffer.length !== expectedBuffer.length) {
-    return false;
-  }
-
-  return timingSafeEqual(providedBuffer, expectedBuffer);
+  return undefined;
 };
 
 export const isValidMcpApiKey = (
@@ -69,8 +113,23 @@ export const createMcpApiKeyMiddleware = (configuredKeys: string[]) => {
 
     const token = extractBearerToken(req.headers.authorization);
     if (!isValidMcpApiKey(token, configuredKeys)) {
-      res.setHeader('WWW-Authenticate', 'Bearer realm="sinch-mcp"');
-      res.status(401).json({ error: 'Unauthorized' });
+      if (token === undefined) {
+        res.setHeader('WWW-Authenticate', buildBearerWwwAuthenticateHeader());
+        res.status(401).json({ error: 'Unauthorized' });
+        return;
+      }
+
+      res.setHeader(
+        'WWW-Authenticate',
+        buildBearerWwwAuthenticateHeader({
+          error: 'invalid_token',
+          errorDescription: 'The MCP API key is invalid',
+        }),
+      );
+      res.status(401).json({
+        error: 'invalid_token',
+        error_description: 'The MCP API key is invalid',
+      });
       return;
     }
 
