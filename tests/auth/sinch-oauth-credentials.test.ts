@@ -10,20 +10,11 @@ import {
   setHttpCredentialSource,
 } from '../../src/auth/http-credential-mode';
 import { PromptResponse } from '../../src/types';
+import { mockEnv, resetMockEnv } from '../helpers/mock-env';
 
 describe('sinch-oauth-credentials', () => {
-  const originalEnv = process.env;
-
   beforeEach(() => {
-    process.env = { ...originalEnv };
-    delete process.env.PROJECT_ID;
-    delete process.env.KEY_ID;
-    delete process.env.KEY_SECRET;
-    clearHttpCredentialSourceForTests();
-  });
-
-  afterAll(() => {
-    process.env = originalEnv;
+    resetMockEnv();
     clearHttpCredentialSourceForTests();
   });
 
@@ -42,9 +33,9 @@ describe('sinch-oauth-credentials', () => {
   });
 
   it('loads credentials from environment', () => {
-    process.env.PROJECT_ID = 'p';
-    process.env.KEY_ID = 'k';
-    process.env.KEY_SECRET = 's';
+    mockEnv.PROJECT_ID = 'p';
+    mockEnv.KEY_ID = 'k';
+    mockEnv.KEY_SECRET = 's';
 
     const creds = sinchOAuthCredentialsFromEnv();
 
@@ -76,9 +67,9 @@ describe('sinch-oauth-credentials', () => {
 
   it('uses environment in single-tenant mode even when a header is present', () => {
     setHttpCredentialSource('env');
-    process.env.PROJECT_ID = 'env-project';
-    process.env.KEY_ID = 'env-key';
-    process.env.KEY_SECRET = 'env-secret';
+    mockEnv.PROJECT_ID = 'env-project';
+    mockEnv.KEY_ID = 'env-key';
+    mockEnv.KEY_SECRET = 'env-secret';
 
     const encoded = Buffer.from('hdr:hkey:hsecret').toString('base64');
     const resolved = runWithHttpCredentialHeaders(
