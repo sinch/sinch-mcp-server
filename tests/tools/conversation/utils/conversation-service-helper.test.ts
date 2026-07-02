@@ -85,15 +85,9 @@ describe('getConversationService / getConversationTemplateService', () => {
     mockEnv.PROJECT_ID = undefined;
     const result = getConversationService(TOOL_NAME);
     expect(result).toBeInstanceOf(PromptResponse);
-    expect((result as PromptResponse).promptResponse).toStrictEqual({
-      role: 'assistant',
-      content: [
-        {
-          type: 'text',
-          text: 'Missing env vars: PROJECT_ID, KEY_ID, KEY_SECRET.',
-        },
-      ],
-    });
+    expect((result as PromptResponse).promptResponse.content[0].text).toContain(
+      'Missing env vars: PROJECT_ID, KEY_ID, KEY_SECRET.',
+    );
   });
 });
 

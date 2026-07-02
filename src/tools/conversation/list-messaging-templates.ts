@@ -1,11 +1,11 @@
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
+import { resolveSinchOAuthCredentials } from '../../auth/resolve-sinch-oauth-credentials';
 import { isPromptResponse, matchesAnyTag } from '../../utils';
 import { formatListAllTemplatesResponse } from './utils/format-list-all-templates-response';
 import { getConversationService, setTemplateRegion } from './utils/conversation-service-helper';
 import { ConversationToolKey, getToolName, toolsConfig } from './utils/conversation-tools-helper';
 import { IPromptResponse, PromptResponse, Tags } from '../../types';
 import { SupportedConversationRegion } from '@sinch/sdk-client';
-import { env } from '../../env';
 
 const TOOL_KEY: ConversationToolKey = 'listMessagingTemplates';
 const TOOL_NAME = getToolName(TOOL_KEY);
@@ -32,6 +32,12 @@ export const listAllTemplatesHandler = async (): Promise<IPromptResponse> => {
   }
   const conversationService = maybeService;
 
+  const maybeCredentials = resolveSinchOAuthCredentials();
+  if (isPromptResponse(maybeCredentials)) {
+    return maybeCredentials.promptResponse;
+  }
+  const { projectId, keyId, keySecret } = maybeCredentials;
+
   try {
     const supportedRegions = Object.values(SupportedConversationRegion);
     const omniChannelTemplates: any[] = [];
@@ -51,7 +57,7 @@ export const listAllTemplatesHandler = async (): Promise<IPromptResponse> => {
       }
     }
 
-    const whatsAppTemplates = await fetchWhatsAppSpecificTemplates();
+    const whatsAppTemplates = await fetchWhatsAppSpecificTemplates(projectId, keyId, keySecret);
 
     return new PromptResponse(
       JSON.stringify({
@@ -85,12 +91,16 @@ interface WhatsAppTemplatesResponse {
   templates: WhatsAppTemplate[];
 }
 
-const fetchWhatsAppSpecificTemplates = async () => {
-  const resp = await fetch(`https://provisioning.api.sinch.com/v1/projects/${env.PROJECT_ID}/whatsapp/templates`, {
+const fetchWhatsAppSpecificTemplates = async (
+  projectId: string,
+  keyId: string,
+  keySecret: string,
+) => {
+  const resp = await fetch(`https://provisioning.api.sinch.com/v1/projects/${projectId}/whatsapp/templates`, {
     method: 'GET',
     headers: {
       'Content-Type': 'application/json',
-      Authorization: 'Basic ' + Buffer.from(`${env.KEY_ID}:${env.KEY_SECRET}`).toString('base64'),
+      Authorization: 'Basic ' + Buffer.from(`${keyId}:${keySecret}`).toString('base64'),
     },
   });
 

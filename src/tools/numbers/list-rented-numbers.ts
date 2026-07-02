@@ -1,9 +1,9 @@
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { z } from 'zod';
 import { PromptResponse, Tags } from '../../types';
-import { formatUserAgent, matchesAnyTag } from '../../utils';
+import { resolveSinchOAuthCredentials } from '../../auth/resolve-sinch-oauth-credentials';
+import { formatUserAgent, isPromptResponse, matchesAnyTag } from '../../utils';
 import { getToolName, NumbersToolKey, toolsConfig } from './utils/numbers-tools-helper';
-import { env } from '../../env';
 import { Numbers } from '@sinch/numbers';
 
 const ListRentedNumbersSchema = {
@@ -59,18 +59,11 @@ export const listRentedNumbersHandler = async ({
   capability,
   size,
 }: ListRentedNumbers) => {
-  const projectId = env.PROJECT_ID;
-  const keyId = env.KEY_ID;
-  const keySecret = env.KEY_SECRET;
-
-  if (!projectId || !keyId || !keySecret) {
-    return new PromptResponse(
-      JSON.stringify({
-        success: false,
-        error: 'Missing env vars: PROJECT_ID, KEY_ID, KEY_SECRET.',
-      }),
-    ).promptResponse;
+  const maybeCredentials = resolveSinchOAuthCredentials();
+  if (isPromptResponse(maybeCredentials)) {
+    return maybeCredentials.promptResponse;
   }
+  const { projectId, keyId, keySecret } = maybeCredentials;
 
   try {
     const queryParams = new URLSearchParams();
