@@ -56,7 +56,7 @@ Here is the list of tools available in the MCP server (all the phone numbers mus
 | **conference-callout**            | Start a voice call to one or more participants and connect them to a shared conference. <br> _Example prompt_: "Call John (+33612345678) and Lisa (+34987654321) and connect them to a conference room." | voice               |
 | **manage-conference-participant** | Mute, unmute, hold, or resume an individual participant in a conference call. <br> _Example prompt_: "Mute the caller with ID xyz789 in the conference."                                                 | voice               |
 | **close-conference**              | End a conference call by disconnecting all the participants using the ID of the conference. <br> _Example prompt_: "End the current conference call with ID abc123."                                     | voice               |
-| **get-call-information**          | Get information about a call using its ID. <br> _Example prompt_: "Get the details of call ID abc123."                                                                                                  | voice, notification |
+| **get-call-information**          | Get information about a call using its ID. <br> _Example prompt_: "Get the details of call ID abc123."                                                                                                   | voice, notification |
 
 ### RCS Sender Tools
 
@@ -81,7 +81,7 @@ Here is the list of tools available in the MCP server (all the phone numbers mus
 | **list-rented-numbers**          | List all active (rented) phone numbers for the project. Can filter by region, type, pattern, and capability. <br> _Example prompt_: "Show me all my active phone numbers in the US."                     | numbers |
 | **search-for-available-numbers** | Search for phone numbers available to rent, with filters for region, type, pattern, and capabilities. <br> _Example prompt_: "Find available local numbers in the US that support SMS."                  | numbers |
 | **rent-sinch-virtual-numbers**   | Rent (activate) one or more phone numbers by providing them in E.164 format. <br> _Example prompt_: "Rent the phone number +12025551234."                                                                | numbers |
-| **release-rented-number**        | Release a rented phone number from your project. <br> _Example prompt_: "Release the phone number +12025551234."                                                                                        | numbers |
+| **release-rented-number**        | Release a rented phone number from your project. <br> _Example prompt_: "Release the phone number +12025551234."                                                                                         | numbers |
 
 ### Configuration Tools
 
