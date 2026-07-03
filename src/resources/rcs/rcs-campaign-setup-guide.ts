@@ -19,10 +19,12 @@ Before configuring an RCS campaign you need:
 ## Integration bridge
 
 The RCS Provisioning API and the Conversation API are connected via two fields returned by the sender:
-- \`authName\` → maps to \`senderId\` in \`set-rcs-channel-on-app\`
-- \`authToken\` → maps to \`bearerToken\` in \`set-rcs-channel-on-app\`
+- sender's \`authName\` → maps to \`senderId\` in \`set-rcs-channel-on-app\`
+- sender's \`authToken\` → maps to \`bearerToken\` in \`set-rcs-channel-on-app\`
 
-Always retrieve \`authName\` and \`authToken\` from \`get-rcs-sender\` before calling \`set-rcs-channel-on-app\`. 
+Do NOT use the sender's plain \`id\` field (the RCS Provisioning API resource ID, e.g. a UUID) for \`senderId\` — it is a different identifier and is not accepted as the claimed identity for the Conversation API channel link. Confirmed by live testing: passing \`id\` as \`senderId\` (even with a correct \`bearerToken\`) makes the RCS channel disappear entirely from the app's channel list within seconds. Passing \`authName\`/\`authToken\` correctly links the channel and test messages are actually delivered to the device.
+
+Always retrieve \`authName\` and \`authToken\` from \`get-rcs-sender\` before calling \`set-rcs-channel-on-app\`.
 
 ## Sender state machine
 
@@ -52,7 +54,7 @@ Use when the user has all brand details, questionnaire answers, countries, and t
 
 1. **list-rcs-senders** — Check if a sender already exists in the target region.
 2. **create-rcs-sender** — Provide \`region\`, \`billingCategory\`, \`useCase\`, and the full \`details\` object (brand, questionnaire, countries, testNumbers) in one call. If complete, sender lands directly in \`IN_TEST\`.
-3. **set-rcs-channel-on-app** — Use \`authName\` and \`authToken\` from the created sender.
+3. **set-rcs-channel-on-app** — Use the sender's \`authName\` (\`senderId\`) and \`authToken\` (\`bearerToken\`). Do not use the sender's \`id\`.
 4. Test messaging via Conversation API with \`channel: RCS\` on test numbers.
 5. **launch-rcs-sender** — No request body. Check launch requirements first (see below).
 6. Once \`LAUNCHED\`, reconnect \`set-rcs-channel-on-app\` on the production app if needed.
@@ -66,7 +68,7 @@ Use when the user does not have all information ready at creation time.
 3. **update-rcs-sender** — Fill brand details, questionnaire sections, and countries via one or more PATCH calls. Pass \`null\` for \`testNumbers\` or \`countries\` to delete those values.
 4. **add-test-numbers-to-rcs-sender** — Accepts an array of E.164 numbers (max 200 total, 20 invites/day).
 5. **get-rcs-sender** — Check \`testNumberStates[]\` and wait until at least one number is \`VERIFIED\` before proceeding. Use \`retry-rcs-test-number-invite\` if a number is stuck in \`PENDING\` or \`UNVERIFIED\`.
-6. **set-rcs-channel-on-app** — Use \`authName\` and \`authToken\` from the sender.
+6. **set-rcs-channel-on-app** — Use the sender's \`authName\` (\`senderId\`) and \`authToken\` (\`bearerToken\`). Do not use the sender's \`id\`.
 7. Test messaging via Conversation API with \`channel: RCS\` on test numbers.
 8. **launch-rcs-sender** — No request body. Check launch requirements first (see below).
 9. Once \`LAUNCHED\`, reconnect \`set-rcs-channel-on-app\` on the production app if needed.
@@ -124,7 +126,7 @@ If the channel is not yet connected or needs updating, call \`set-rcs-channel-on
 
 - **ACTIVE** — Channel is connected and ready. Proceed to test messaging.
 - **PENDING** — Connection in progress. Wait and check again before testing.
-- **FAILING** — Credentials rejected. \`authName\` or \`authToken\` may be wrong or stale. Retrieve fresh values and retry \`set-rcs-channel-on-app\`.
+- **FAILING** (or the channel entry disappearing from the app entirely) — Credentials rejected. Check that \`senderId\` was set from the sender's \`authName\` (not the sender's \`id\`) and that \`bearerToken\` was set from the sender's \`authToken\` (not \`authName\`). Retrieve fresh values and retry \`set-rcs-channel-on-app\`.
 - **UNRECOGNIZED** — Unexpected state, treat as an error.
 
 Do not proceed to test messaging until \`channelStatus\` is \`ACTIVE\`.

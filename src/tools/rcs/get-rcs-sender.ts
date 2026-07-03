@@ -25,7 +25,7 @@ export const registerGetRcsSender = (server: McpServer, tags: Tags[]) => {
     TOOL_NAME,
     {
       description:
-        'Get an RCS sender by ID. Returns authName and authToken needed for set-rcs-channel-on-app, plus state, details, and countryStatus.',
+        "Get an RCS sender by ID. Returns authName and authToken needed for set-rcs-channel-on-app (as senderId and bearerToken respectively), plus state, details, and countryStatus. Note: the sender's `id` field must NOT be used as senderId in set-rcs-channel-on-app — use authName instead.",
       inputSchema: GetRcsSenderSchema,
     },
     getRcsSenderHandler,

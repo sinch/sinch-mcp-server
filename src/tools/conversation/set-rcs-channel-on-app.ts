@@ -10,8 +10,16 @@ import { ConversationAppId, ConversationRegionOverride } from './prompt-schemas'
 
 const SetRcsChannelOnAppSchema = {
   appId: ConversationAppId,
-  senderId: z.string().describe('RCS sender ID.'),
-  bearerToken: z.string().describe('Bearer token for the RCS channel.'),
+  senderId: z
+    .string()
+    .describe(
+      "Claimed identity for the RCS channel — use the `authName` field from get-rcs-sender/create-rcs-sender. Do NOT use the sender's `id`; that is a different identifier and will cause the channel to fail or disappear from the app.",
+    ),
+  bearerToken: z
+    .string()
+    .describe(
+      'Bearer token for the RCS channel — use the `authToken` field from get-rcs-sender/create-rcs-sender. Do NOT use `authName` here; it looks similar but belongs in `senderId`, not `bearerToken`.',
+    ),
   region: ConversationRegionOverride,
 };
 
