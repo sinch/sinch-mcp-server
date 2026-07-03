@@ -1,5 +1,4 @@
 import {
-  buildCredentialCacheKey,
   parseSinchCredentialsValue,
   sinchOAuthCredentialsFromEnv,
 } from '../../src/auth/sinch-oauth-credentials';
@@ -22,14 +21,12 @@ describe('sinch-oauth-credentials', () => {
     const encoded = Buffer.from('proj:key:secret-with:colons').toString('base64');
     const creds = parseSinchCredentialsValue(encoded);
 
-    expect(creds).toMatchObject({
+    expect(creds).toEqual({
       projectId: 'proj',
       keyId: 'key',
       keySecret: 'secret-with:colons',
+      cacheKey: '94a2565d5b7f23bc2b6eab6a5c6a5ef49b780630b72e597677ef614779b04ba3',
     });
-    expect(creds!.cacheKey).toEqual(
-      buildCredentialCacheKey(creds!.projectId, creds!.keyId, creds!.keySecret),
-    );
   });
 
   it('loads credentials from environment', () => {
@@ -39,14 +36,12 @@ describe('sinch-oauth-credentials', () => {
 
     const creds = sinchOAuthCredentialsFromEnv();
 
-    expect(creds).toMatchObject({
+    expect(creds).toEqual({
       projectId: 'p',
       keyId: 'k',
       keySecret: 's',
+      cacheKey: '18aceb6e19d3c1c0b54100a374b7458f3abf2426c8b78645fb8b7175039231a7',
     });
-    expect(creds!.cacheKey).toEqual(
-      buildCredentialCacheKey(creds!.projectId, creds!.keyId, creds!.keySecret),
-    );
   });
 
   it('uses request header in multi-tenant mode', () => {
