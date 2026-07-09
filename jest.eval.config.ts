@@ -3,7 +3,7 @@ import type { Config } from 'jest';
 /**
  * Jest config for the statistical LLM evals (tests/eval/llms). Like the
  * integration config (ESM, ts-jest), but with a long timeout since each suite
- * runs many iterations. Invoked via `npm run eval`.
+ * runs many iterations. Invoked via `npm run test:eval`.
  */
 const config: Config = {
   testEnvironment: 'node',

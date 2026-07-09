@@ -1,5 +1,19 @@
+import { AsyncLocalStorage } from 'node:async_hooks';
 import { jest } from '@jest/globals';
 import { RcsApiError } from '../../../../src/tools/rcs/utils/rcs-provisioning-client';
+
+// Scopes the fake RCS sender store per eval iteration. Eval suites run several
+// iterations concurrently against the same mocked module (see
+// tests/eval/llms/utils/workflow-eval-harness.ts, `withIsolatedSinchState`), so
+// a single shared Map would let one iteration's senders leak into another's
+// `listSenders`/`getSender` calls. Integration suites run a single sequential
+// workflow and never enter this context, so they fall back to one shared map.
+const sendersContext = new AsyncLocalStorage<Map<string, any>>();
+const sharedSenders = new Map<string, any>();
+const currentSenders = (): Map<string, any> => sendersContext.getStore() ?? sharedSenders;
+
+/** Runs `fn` with its own isolated RCS sender store — use per eval iteration. */
+export const withIsolatedSinchState = <T>(fn: () => Promise<T>): Promise<T> => sendersContext.run(new Map(), fn);
 
 /**
  * Registers in-process fakes for the Sinch service helpers via
@@ -10,18 +24,22 @@ import { RcsApiError } from '../../../../src/tools/rcs/utils/rcs-provisioning-cl
  */
 export const registerSinchMocks = (opts: { enforceLaunch?: boolean } = {}): void => {
   // RCS provisioning: stateful fake (create → id → reuse across turns).
-  const senders = new Map<string, any>();
   let seq = 0;
   const rcs = {
     createSender: async (body: any) => {
+      const senders = currentSenders();
       const id = `snd_${++seq}`;
       const sender = { id, state: 'DRAFT', authName: `${id}-auth`, authToken: 'fake-token', ...body };
       senders.set(id, sender);
       return sender;
     },
-    getSender: async (id: string) => senders.get(id) ?? { id, state: 'DRAFT' },
-    listSenders: async () => ({ senders: [...senders.values()], totalSize: senders.size }),
+    getSender: async (id: string) => currentSenders().get(id) ?? { id, state: 'DRAFT' },
+    listSenders: async () => {
+      const senders = currentSenders();
+      return { senders: [...senders.values()], totalSize: senders.size };
+    },
     updateSender: async (id: string, body: any) => {
+      const senders = currentSenders();
       const sender = senders.get(id) ?? { id, state: 'IN_PROGRESS', details: {} };
       sender.details = { ...(sender.details ?? {}), ...(body?.details ?? {}) };
       sender.state = 'IN_PROGRESS';
@@ -32,6 +50,7 @@ export const registerSinchMocks = (opts: { enforceLaunch?: boolean } = {}): void
       testNumbers: testNumbers.map((number) => ({ number, state: 'PENDING' })),
     }),
     launchSender: async (id: string) => {
+      const senders = currentSenders();
       const sender = senders.get(id) ?? { id };
       const complete =
         sender.details?.brand?.privacyPolicyUrl &&

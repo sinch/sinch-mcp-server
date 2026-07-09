@@ -9,9 +9,10 @@ const AGENT_NAME = 'SergioTestCorp';
 defineWorkflowEval({
   name: 'RCS launch recovery',
   enforceLaunch: true,
-  // Recovery is harder/more variable than happy-path routing. This is a
-  // conservative starting threshold — calibrate it from a full 30-iteration run.
-  passRate: 0.7,
+  // Calibrated from a full 30-iteration run against openai/gpt-4o: 30/30 (100%)
+  // per step. 0.9 keeps a margin below that for other models/prompt drift
+  // rather than gating on a perfect score.
+  passRate: 0.9,
   steps: [
     {
       id: 'create-sender',

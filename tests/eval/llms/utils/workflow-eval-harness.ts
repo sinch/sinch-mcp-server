@@ -1,5 +1,5 @@
 import { EvalTest, HostRunner, PromptResult } from '@mcpjam/sdk';
-import { registerSinchMocks } from '../../../integration/llms/mocks/sinch-fakes';
+import { registerSinchMocks, withIsolatedSinchState } from '../../../integration/llms/mocks/sinch-fakes';
 import { InProcessServer, startInProcessServer, toHostTools } from '../../../integration/llms/utils/in-process-server';
 import { apiKeyFor, preflight } from '../../../integration/llms/utils/provider';
 
@@ -134,21 +134,25 @@ export const defineWorkflowEval = (config: WorkflowEvalConfig): void => {
       async () => {
         const test = new EvalTest({
           name: config.name,
-          test: async (runner) => {
-            const history: PromptResult[] = [];
-            let allPassed = true;
-            for (const step of config.steps) {
-              const result = await (runner as HostRunner).run(step.prompt, { context: [...history] });
-              history.push(result);
-              const ok = stepPasses(step, result);
-              const stat = stepStats.get(step.id) ?? { ok: 0, total: 0 };
-              stepStats.set(step.id, { ok: stat.ok + (ok ? 1 : 0), total: stat.total + 1 });
-              if (!ok) {
-                allPassed = false;
+          // Iterations run concurrently against the same mocked module (see
+          // EVAL_CONCURRENCY) — isolate each iteration's fake RCS sender store so
+          // one iteration's senders can't leak into another's listSenders/getSender.
+          test: (runner) =>
+            withIsolatedSinchState(async () => {
+              const history: PromptResult[] = [];
+              let allPassed = true;
+              for (const step of config.steps) {
+                const result = await (runner as HostRunner).run(step.prompt, { context: [...history] });
+                history.push(result);
+                const ok = stepPasses(step, result);
+                const stat = stepStats.get(step.id) ?? { ok: 0, total: 0 };
+                stepStats.set(step.id, { ok: stat.ok + (ok ? 1 : 0), total: stat.total + 1 });
+                if (!ok) {
+                  allPassed = false;
+                }
               }
-            }
-            return allPassed;
-          },
+              return allPassed;
+            }),
         });
 
         await test.run(agent, {

@@ -39,7 +39,7 @@ real API calls here either.
    defineWorkflowEval({
      name: 'RCS launch recovery',
      enforceLaunch: true, // opt-in: mock returns 412 until the sender is complete
-     passRate: 0.7,
+     passRate: 0.9, // calibrate from a full-iteration run, don't guess
      steps: [
        { id: 'create', prompt: '...', accept: ['create-rcs-sender'] },
        { id: 'premature-launch', prompt: '...', responseIncludes: ['privacy'] },
