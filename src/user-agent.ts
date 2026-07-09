@@ -1,4 +1,5 @@
 import process from 'process';
-import { version as mcpServerVersion } from '../package.json';
+import pkg from '../package.json';
+const mcpServerVersion = pkg.version;
 
 export const USER_AGENT = `sinch-sdk/MCP-${mcpServerVersion} (JavaScript/${process.version}; {toolName}; {userId})`;

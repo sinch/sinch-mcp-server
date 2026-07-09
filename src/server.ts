@@ -8,7 +8,8 @@ import { registerEmailTools } from './tools/email';
 import { registerNumbersTools } from './tools/numbers';
 import { registerRcsTools } from './tools/rcs';
 import { Tags } from './types';
-import { version as mcpServerVersion } from '../package.json';
+import pkg from '../package.json';
+const mcpServerVersion = pkg.version;
 
 export const instantiateMcpServer = () => {
   return new McpServer({
