@@ -37,6 +37,7 @@
     "@eslint/compat": "1.3.0",
     "@eslint/js": "9.26.0",
     "@google/genai": "1.15.0",
+    "@mcpjam/sdk": "1.28.0",
     "@types/express": "5.0.3",
     "@types/jest": "29.5.14",
     "@typescript-eslint/eslint-plugin": "8.32.0",
@@ -68,8 +69,9 @@
     "lint:fix": "eslint src/ tests/ --ext .ts --fix",
     "prettier": "prettier './**/*.{js,ts,md}' --write",
     "format:write": "npm run lint:fix && npm run prettier",
-    "test": "jest --testPathIgnorePatterns='/tests/integration/'",
-    "test:integration": "jest tests/integration/llms --runInBand",
+    "test": "jest --testPathIgnorePatterns='/tests/(integration|eval)/'",
+    "test:integration": "NODE_OPTIONS=--experimental-vm-modules jest --config jest.integration.config.ts --runInBand",
+    "test:eval": "NODE_OPTIONS=--experimental-vm-modules jest --config jest.eval.config.ts --runInBand",
     "prepare": "husky"
   },
   "engines": {
