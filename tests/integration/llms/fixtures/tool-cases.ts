@@ -2,15 +2,32 @@ export interface ToolTestCase {
   prompt: string;
   expectedToolName?: string;
   expectedArguments?: Record<string, any>;
+  /**
+   * Alternative tool names that also count as correct routing, for prompts with
+   * genuine ambiguity (e.g. "open rates" → analytics-metrics OR list-email-events).
+   * When set, the test passes if ANY listed tool is called and skips the exact
+   * argument check (args differ per tool).
+   */
+  accept?: string[];
 }
 
-// Improvement: use types from the tools input schema
-export const toolTestCases: ToolTestCase[] = [
+// Cases grouped by MCP scope so it's clear which tools belong together. Tool
+// names are guarded against the live server in tool-names.int.test.ts.
+
+// No tool should be called — the model answers in text.
+const generalCases: ToolTestCase[] = [
   {
     prompt: 'Which tools are available in the MCP server?',
-    expectedToolName: 'sinch-mcp-configuration',
-    expectedArguments: undefined,
+    expectedToolName: undefined,
   },
+  {
+    prompt: 'Just say hi',
+    expectedToolName: undefined,
+  },
+];
+
+// Conversation API: messages, apps, channels, templates, webhooks.
+const messagingCases: ToolTestCase[] = [
   {
     prompt: "Send a text message to +33612345678 saying 'Hello there!'",
     expectedToolName: 'send-text-message',
@@ -33,12 +50,11 @@ export const toolTestCases: ToolTestCase[] = [
   {
     prompt:
       "Send a whatsapp message to +33612345678 with the template 'appt_reminder' in Spanish, with the parameter 'name' set to 'Mr. Smith'.",
-    expectedToolName: 'send-template-message',
+    expectedToolName: 'send-whatsapp-template-message',
     expectedArguments: {
       recipient: '+33612345678',
-      whatsAppTemplateName: 'appt_reminder',
-      whatsAppTemplateLanguage: 'es',
-      channel: ['WHATSAPP'],
+      templateName: 'appt_reminder',
+      templateLanguage: 'es',
       parameters: {
         name: 'Mr. Smith',
       },
@@ -115,6 +131,10 @@ export const toolTestCases: ToolTestCase[] = [
       triggers: [],
     },
   },
+];
+
+// Verification & number lookup.
+const verificationCases: ToolTestCase[] = [
   {
     prompt: 'Lookup for the following phone number capabilities: +33612345678',
     expectedToolName: 'number-lookup',
@@ -133,6 +153,10 @@ export const toolTestCases: ToolTestCase[] = [
       oneTimePassword: '1234',
     },
   },
+];
+
+// Email (Mailgun): send, templates, delivery info, events, analytics.
+const emailCases: ToolTestCase[] = [
   {
     prompt: "Send an email to test@example.com saying 'Hello there!' with subject 'Hello'",
     expectedToolName: 'send-email',
@@ -163,14 +187,16 @@ export const toolTestCases: ToolTestCase[] = [
     },
   },
   {
+    // "open rates" is genuinely ambiguous: the analytics metric (opened_rate)
+    // or the raw email events with event=opened. Accept either routing.
     prompt: 'What are the open rates between Mon, 18 Aug 2025 00:00:00 +0100 and Thu, 21 Aug 2025 00:00:00 +0100?',
     expectedToolName: 'analytics-metrics',
-    expectedArguments: {
-      beginSearchPeriod: 'Mon, 18 Aug 2025 00:00:00 +0100',
-      endSearchPeriod: 'Thu, 21 Aug 2025 00:00:00 +0100',
-      metrics: ['opened_rate'],
-    },
+    accept: ['analytics-metrics', 'list-email-events'],
   },
+];
+
+// Voice: text-to-speech and conference control.
+const voiceCases: ToolTestCase[] = [
   {
     prompt: "Call the phone number +33612345678 and say: 'Your appointment is tomorrow at 10 AM.'",
     expectedToolName: 'tts-callout',
@@ -202,8 +228,12 @@ export const toolTestCases: ToolTestCase[] = [
       conferenceId: 'abc123',
     },
   },
-  {
-    prompt: 'Just say hi',
-    expectedToolName: undefined,
-  },
+];
+
+export const toolTestCases: ToolTestCase[] = [
+  ...generalCases,
+  ...messagingCases,
+  ...verificationCases,
+  ...emailCases,
+  ...voiceCases,
 ];
