@@ -37,10 +37,12 @@ jobs:
           GITLAB_REPO_URL: ${{ secrets.GITLAB_REPO_URL }}
         run: |
           set -euo pipefail
+          export GIT_TERMINAL_PROMPT=0
           if [ -z "${GITLAB_PUSH_TOKEN}" ] || [ -z "${GITLAB_REPO_URL}" ]; then
             echo "Missing GITLAB_PUSH_TOKEN and/or GITLAB_REPO_URL secrets" >&2
             exit 1
           fi
-          git remote add gitlab "https://oauth2:${GITLAB_PUSH_TOKEN}@${GITLAB_REPO_URL}"
-          git fetch gitlab main
-          git push gitlab HEAD:main --force-with-lease
+          git remote add gitlab "https://${GITLAB_REPO_URL}"
+          credential_helper='!f() { printf "%s\n" "username=oauth2" "password=${GITLAB_PUSH_TOKEN}"; }; f'
+          git -c "credential.helper=${credential_helper}" fetch gitlab main
+          git -c "credential.helper=${credential_helper}" push gitlab HEAD:main --force-with-lease
