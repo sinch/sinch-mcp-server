@@ -1,9 +1,6 @@
 name: CI
 
-on:
-  push:
-    branches: [ main ]
-  pull_request:
+on: [ push, pull_request ]
 
 permissions: {}
 
@@ -42,6 +39,7 @@ jobs:
 
   sonarqube:
     name: SonarQube
+    if: github.event_name == 'pull_request' || github.ref != 'refs/heads/main'
     needs: build-and-test
     runs-on: ubuntu-latest
     permissions:
