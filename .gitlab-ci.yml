@@ -1,0 +1,19 @@
+workflow:
+  rules:
+    - if: $CI_COMMIT_BRANCH == "main"
+
+include:
+  - project: '$SINCH_SECURITY_PIPELINE_PROJECT'
+    ref: v1-latest
+    file: 'auto_security.yml'
+
+default:
+  tags: [default]
+
+variables:
+  SINCH_GLOBAL_SECURITY_STAGE_SAST_DEEP_CLONE: "true"
+
+stages:
+  - security-scan-third-parties
+  - security-scan-consolidation
+  - security-scan-sonar
