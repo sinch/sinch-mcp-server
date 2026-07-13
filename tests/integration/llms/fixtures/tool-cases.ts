@@ -12,7 +12,7 @@ export interface ToolTestCase {
 }
 
 // Cases grouped by MCP scope so it's clear which tools belong together. Tool
-// names are guarded against the live server in tool-names.int.test.ts.
+// names are guarded against the live server in tool-invocation.int.test.ts.
 
 // No tool should be called — the model answers in text.
 const generalCases: ToolTestCase[] = [
@@ -190,7 +190,6 @@ const emailCases: ToolTestCase[] = [
     // "open rates" is genuinely ambiguous: the analytics metric (opened_rate)
     // or the raw email events with event=opened. Accept either routing.
     prompt: 'What are the open rates between Mon, 18 Aug 2025 00:00:00 +0100 and Thu, 21 Aug 2025 00:00:00 +0100?',
-    expectedToolName: 'analytics-metrics',
     accept: ['analytics-metrics', 'list-email-events'],
   },
 ];
