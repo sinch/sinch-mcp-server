@@ -68,20 +68,24 @@ export const registerSinchMocks = (opts: { enforceLaunch?: boolean } = {}): void
     getRcsProvisioningClient: () => rcs,
   }));
 
-  // Conversation API: enough for set-sms-channel-on-app (get app, then update).
+  // Conversation API: enough for set-sms-channel-on-app (get app, then update)
+  // and send-text-message (get app for channel check, then send).
   const conversation = {
     app: {
       list: async () => ({ apps: [] }),
       get: async ({ app_id }: { app_id: string }) => ({
         id: app_id,
         display_name: 'Mock App',
-        channel_credentials: [],
+        channel_credentials: [{ channel: 'SMS' }],
       }),
       update: async ({ app_id, appUpdateRequestBody }: any) => ({
         id: app_id,
         display_name: 'Mock App',
         channel_credentials: appUpdateRequestBody?.channel_credentials ?? [{ channel: 'SMS' }],
       }),
+    },
+    messages: {
+      sendTextMessage: async () => ({ message_id: 'msg_mock_1' }),
     },
   };
   // Must mirror ALL exports of the real module — a whole-module mock replaces it,

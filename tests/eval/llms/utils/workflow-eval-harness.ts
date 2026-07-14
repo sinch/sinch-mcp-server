@@ -30,6 +30,8 @@ export interface WorkflowEvalConfig {
   iterations?: number;
   passRate?: number;
   concurrency?: number;
+  /** Logs the raw prompt/response/messages for the first iteration only — for debugging what the model actually saw. */
+  debugFirstIteration?: boolean;
 }
 
 const DEFAULT_MODEL = process.env.WORKFLOW_MODEL ?? process.env.TARGET_MODEL ?? 'openai/gpt-4o';
@@ -111,6 +113,7 @@ export const defineWorkflowEval = (config: WorkflowEvalConfig): void => {
     let server: InProcessServer;
     let agent: HostRunner;
     const stepStats = new Map<string, { ok: number; total: number }>();
+    let debugLogged = !config.debugFirstIteration;
 
     beforeAll(async () => {
       server = await startInProcessServer();
@@ -141,9 +144,18 @@ export const defineWorkflowEval = (config: WorkflowEvalConfig): void => {
             withIsolatedSinchState(async () => {
               const history: PromptResult[] = [];
               let allPassed = true;
+              const shouldLog = !debugLogged;
+              if (shouldLog) {
+                debugLogged = true;
+              }
               for (const step of config.steps) {
                 const result = await (runner as HostRunner).run(step.prompt, { context: [...history] });
                 history.push(result);
+                if (shouldLog) {
+                  console.log(
+                    `\n[debug] step "${step.id}"\n  prompt: ${step.prompt}\n  toolsCalled: ${JSON.stringify(result.toolsCalled())}\n  response: ${finalAssistantText(result)}\n  messages: ${JSON.stringify(result.getMessages(), null, 2)}\n`,
+                  );
+                }
                 const ok = stepPasses(step, result);
                 const stat = stepStats.get(step.id) ?? { ok: 0, total: 0 };
                 stepStats.set(step.id, { ok: stat.ok + (ok ? 1 : 0), total: stat.total + 1 });

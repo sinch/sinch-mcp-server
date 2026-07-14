@@ -49,7 +49,7 @@ export const registerListEmailEvents = (server: McpServer, tags: Tags[]) => {
     TOOL_NAME,
     {
       description:
-        'Get a list of email events from Mailgun for a specific domain. You can filter by event type and limit the number of results.',
+        'Get a raw log of individual email events from Mailgun for a specific domain, not aggregated rates or totals — for those, use analytics-metrics instead. You can filter by event type and limit the number of results.',
       inputSchema: ListEmailEventsSchema,
     },
     listEmailEventsHandler,

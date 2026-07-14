@@ -187,10 +187,13 @@ const emailCases: ToolTestCase[] = [
     },
   },
   {
-    // "open rates" is genuinely ambiguous: the analytics metric (opened_rate)
-    // or the raw email events with event=opened. Accept either routing.
     prompt: 'What are the open rates between Mon, 18 Aug 2025 00:00:00 +0100 and Thu, 21 Aug 2025 00:00:00 +0100?',
-    accept: ['analytics-metrics', 'list-email-events'],
+    expectedToolName: 'analytics-metrics',
+    expectedArguments: {
+      metrics: ['opened_count', 'opened_rate'],
+      beginSearchPeriod: '2025-08-18T00:00:00+01:00',
+      endSearchPeriod: '2025-08-21T00:00:00+01:00',
+    },
   },
 ];
 

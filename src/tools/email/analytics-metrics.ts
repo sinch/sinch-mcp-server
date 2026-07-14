@@ -44,10 +44,11 @@ const metricsTypes = [
   'delivered_subsequent_count',
   'delivered_two_plus_attempts_count',
   // Rates
-  'bounced_rate',
+  'bounce_rate',
   'clicked_rate',
   'complained_rate',
   'delayed_rate',
+  'delayed_first_attempt_rate',
   'delivered_rate',
   'fail_rate',
   'opened_rate',
@@ -96,7 +97,7 @@ export const registerAnalyticsMetrics = (server: McpServer, tags: Tags[]) => {
     TOOL_NAME,
     {
       description:
-        'Get email analytics metrics from Mailgun for an account. All parameters are optional. You can filter by domain, metrics type and specify a time range. By default, it will return all metrics for all your domains for the last 7 days.',
+        'Get aggregated email analytics from Mailgun for an account, such as rates and counts, computed over a time range. Use this for questions about rates, percentages, or totals. For a raw log of individual email events, use list-email-events instead. All parameters are optional. You can filter by domain, metrics type and specify a time range. By default, it will return all metrics for all your domains for the last 7 days.',
       inputSchema: AnalyticsMetricsSchema,
     },
     analyticsMetricsHandler,
