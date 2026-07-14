@@ -1,15 +1,11 @@
 import { context, trace } from '@opentelemetry/api';
 import pino from 'pino';
-import { isTelemetryEnabled } from './config';
+import { env } from '../env';
 
-const baseLogger = pino({
-  level: process.env.LOG_LEVEL ?? 'info',
-  ...(isTelemetryEnabled()
-    ? {}
-    : {
-        transport: undefined,
-      }),
-});
+const baseLogger = pino(
+  { level: env.LOG_LEVEL ?? 'info' },
+  pino.destination(2),
+);
 
 const traceFields = (): Record<string, string> => {
   const span = trace.getSpan(context.active());
