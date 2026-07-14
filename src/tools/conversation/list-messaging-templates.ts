@@ -17,7 +17,8 @@ export const registerListAllTemplates = (server: McpServer, tags: Tags[]) => {
     return;
   }
 
-  registerTracedTool(server,
+  registerTracedTool(
+    server,
     TOOL_NAME,
     {
       description:
@@ -97,10 +98,7 @@ const fetchWhatsAppSpecificTemplates = async () => {
   });
 
   if (!resp.ok) {
-    logger.error(
-      { status: resp.status, statusText: resp.statusText },
-      'Failed to fetch WhatsApp templates',
-    );
+    logger.error({ status: resp.status, statusText: resp.statusText }, 'Failed to fetch WhatsApp templates');
     return [];
   }
 

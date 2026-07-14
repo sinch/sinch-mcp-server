@@ -28,10 +28,7 @@ export const initTelemetry = (): NodeSDK | undefined => {
     metricReader: new PeriodicExportingMetricReader({
       exporter: new OTLPMetricExporter(),
     }),
-    instrumentations: [
-      new HttpInstrumentation(),
-      new UndiciInstrumentation(),
-    ],
+    instrumentations: [new HttpInstrumentation(), new UndiciInstrumentation()],
   });
 
   sdk.start();

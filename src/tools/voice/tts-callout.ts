@@ -23,7 +23,8 @@ export const registerTtsCallout = (server: McpServer, tags: Tags[]) => {
     return;
   }
 
-  registerTracedTool(server,
+  registerTracedTool(
+    server,
     TOOL_NAME,
     {
       description: 'Make a callout with a Text-To-Speech prompt',

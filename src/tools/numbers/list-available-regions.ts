@@ -23,7 +23,8 @@ export const registerListAvailableRegions = (server: McpServer, tags: Tags[]) =>
     return;
   }
 
-  registerTracedTool(server,
+  registerTracedTool(
+    server,
     TOOL_NAME,
     {
       description: 'Lists all regions for numbers provided for the project ID.',

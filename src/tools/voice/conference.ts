@@ -24,7 +24,8 @@ export const registerConferenceCallout = (server: McpServer, tags: Tags[]) => {
     return;
   }
 
-  registerTracedTool(server,
+  registerTracedTool(
+    server,
     TOOL_NAME,
     {
       description: 'Call a phone number and connects it to a conference room when answered',

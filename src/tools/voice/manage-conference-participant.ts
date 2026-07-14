@@ -22,7 +22,8 @@ export const registerManageConferenceParticipant = (server: McpServer, tags: Tag
     return;
   }
 
-  registerTracedTool(server,
+  registerTracedTool(
+    server,
     TOOL_NAME,
     {
       description:

@@ -49,7 +49,8 @@ export const registerSendWhatsAppTemplateMessage = (server: McpServer, tags: Tag
     return;
   }
 
-  registerTracedTool(server,
+  registerTracedTool(
+    server,
     TOOL_NAME,
     {
       description: 'Send a template message to a contact (phone number in E.164 format) on the WhatsApp channel.',

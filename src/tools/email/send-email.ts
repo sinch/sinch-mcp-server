@@ -36,7 +36,8 @@ export const registerSendEmail = (server: McpServer, tags: Tags[]) => {
     return;
   }
 
-  registerTracedTool(server,
+  registerTracedTool(
+    server,
     TOOL_NAME,
     {
       description: 'Send an email to a recipient with a subject and body.',

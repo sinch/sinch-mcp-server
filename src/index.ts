@@ -2,11 +2,7 @@ import './env';
 import './telemetry';
 
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
-import {
-  instantiateMcpServer,
-  parseArgs,
-  registerCapabilities,
-} from './server';
+import { instantiateMcpServer, parseArgs, registerCapabilities } from './server';
 import { shutdownTelemetry } from './telemetry';
 import { logger } from './telemetry/logger';
 

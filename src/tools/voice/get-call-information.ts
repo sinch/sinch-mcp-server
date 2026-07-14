@@ -20,7 +20,8 @@ export const registerGetCallInformation = (server: McpServer, tags: Tags[]) => {
     return;
   }
 
-  registerTracedTool(server,
+  registerTracedTool(
+    server,
     TOOL_NAME,
     {
       description: 'Get information about a call using its ID',

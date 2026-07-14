@@ -21,7 +21,8 @@ export const registerCloseConference = (server: McpServer, tags: Tags[]) => {
     return;
   }
 
-  registerTracedTool(server,
+  registerTracedTool(
+    server,
     TOOL_NAME,
     {
       description: 'Close a conference callout',

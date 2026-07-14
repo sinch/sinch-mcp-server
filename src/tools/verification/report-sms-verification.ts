@@ -21,7 +21,8 @@ export const registerReportSmsVerification = (server: McpServer, tags: Tags[]) =
     return;
   }
 
-  registerTracedTool(server,
+  registerTracedTool(
+    server,
     TOOL_NAME,
     {
       description: 'Report the received verification code to verify it, using the phone number of the user',

@@ -39,7 +39,8 @@ export const registerRetrieveEmailInfo = (server: McpServer, tags: Tags[]) => {
     return;
   }
 
-  registerTracedTool(server,
+  registerTracedTool(
+    server,
     TOOL_NAME,
     {
       description: 'Retrieve the content of an email and the events that happened thanks to its ID',

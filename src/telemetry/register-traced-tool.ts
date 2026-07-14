@@ -1,17 +1,7 @@
-import {
-  McpServer,
-  RegisteredTool,
-  ToolCallback,
-} from '@modelcontextprotocol/sdk/server/mcp.js';
+import { McpServer, RegisteredTool, ToolCallback } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { SpanStatusCode, trace } from '@opentelemetry/api';
 import { ZodRawShape } from 'zod';
-import {
-  ATTR_AUTH_METHOD,
-  ATTR_PROJECT_ID,
-  ATTR_TOOL_NAME,
-  SPAN_TOOL_PREFIX,
-  TRACER_NAME,
-} from './constants';
+import { ATTR_AUTH_METHOD, ATTR_PROJECT_ID, ATTR_TOOL_NAME, SPAN_TOOL_PREFIX, TRACER_NAME } from './constants';
 import { env } from '../env';
 import { getToolMetrics } from './metrics';
 
@@ -30,10 +20,7 @@ const resolveAuthMethod = (): string => {
   return 'unconfigured';
 };
 
-const runWithTracing = async <T>(
-  toolName: string,
-  handler: () => T | Promise<T>,
-): Promise<T> => {
+const runWithTracing = async <T>(toolName: string, handler: () => T | Promise<T>): Promise<T> => {
   const metrics = getToolMetrics();
   const start = performance.now();
 
@@ -55,9 +42,7 @@ const runWithTracing = async <T>(
       });
       return result;
     } catch (error) {
-      span.recordException(
-        error instanceof Error ? error : new Error(String(error)),
-      );
+      span.recordException(error instanceof Error ? error : new Error(String(error)));
       span.setStatus({ code: SpanStatusCode.ERROR });
       metrics.toolCallsTotal.add(1, {
         'tool.name': toolName,
@@ -91,9 +76,5 @@ export const registerTracedTool = <InputArgs extends ZodRawShape>(
   config: ToolConfig<InputArgs>,
   cb: ToolCallback<InputArgs>,
 ): RegisteredTool =>
-  server.registerTool(
-    name,
-    config,
-    ((args, extra) =>
-      runWithTracing(name, () => cb(args, extra))) as ToolCallback<InputArgs>,
-  );
+  server.registerTool(name, config, ((args, extra) =>
+    runWithTracing(name, () => cb(args, extra))) as ToolCallback<InputArgs>);

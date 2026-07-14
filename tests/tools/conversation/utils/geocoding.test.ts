@@ -68,10 +68,7 @@ test('returns fallback when API status is not OK', async () => {
     formattedAddress: 'Unknown',
   });
 
-  expect(mockedLogger.error).toHaveBeenCalledWith(
-    { status: 'ZERO_RESULTS' },
-    'Geocoding failed',
-  );
+  expect(mockedLogger.error).toHaveBeenCalledWith({ status: 'ZERO_RESULTS' }, 'Geocoding failed');
 });
 
 test('returns fallback when axios throws', async () => {
@@ -85,10 +82,7 @@ test('returns fallback when axios throws', async () => {
     formattedAddress: 'Unknown',
   });
 
-  expect(mockedLogger.error).toHaveBeenCalledWith(
-    { err: expect.any(Error) },
-    'Geocoding request failed',
-  );
+  expect(mockedLogger.error).toHaveBeenCalledWith({ err: expect.any(Error) }, 'Geocoding request failed');
 });
 
 test('includes GEOCODING_API_KEY in query params', async () => {
@@ -129,8 +123,5 @@ test('returns fallback when GEOCODING_API_KEY is not set', async () => {
     }),
   );
 
-  expect(mockedLogger.error).toHaveBeenCalledWith(
-    { err: mockError },
-    'Geocoding request failed',
-  );
+  expect(mockedLogger.error).toHaveBeenCalledWith({ err: mockError }, 'Geocoding request failed');
 });

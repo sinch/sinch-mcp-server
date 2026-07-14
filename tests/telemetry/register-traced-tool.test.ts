@@ -3,9 +3,13 @@ import { SpanStatusCode } from '@opentelemetry/api';
 import { ATTR_AUTH_METHOD, ATTR_TOOL_NAME } from '../../src/telemetry/constants';
 import { mockEnv, resetMockEnv } from '../helpers/mock-env';
 
-jest.mock('@sinch/sdk-core/package.json', () => ({
-  version: '1.0.0',
-}), { virtual: true });
+jest.mock(
+  '@sinch/sdk-core/package.json',
+  () => ({
+    version: '1.0.0',
+  }),
+  { virtual: true },
+);
 
 declare global {
   var __otelTestMocks: {
@@ -25,9 +29,7 @@ jest.mock('@opentelemetry/api', () => {
     setStatus: jest.fn(),
     recordException: jest.fn(),
   };
-  const mockStartActiveSpan = jest.fn(
-    (_name: string, fn: (span: typeof mockSpan) => unknown) => fn(mockSpan),
-  );
+  const mockStartActiveSpan = jest.fn((_name: string, fn: (span: typeof mockSpan) => unknown) => fn(mockSpan));
 
   globalThis.__otelTestMocks = {
     mockEnd: mockSpan.end,
@@ -61,8 +63,10 @@ jest.mock('../../src/telemetry/metrics', () => ({
   }),
 }));
 
-// eslint-disable-next-line @typescript-eslint/no-require-imports
-const { registerTracedTool } = require('../../src/telemetry/register-traced-tool') as typeof import('../../src/telemetry/register-traced-tool');
+/* eslint-disable @typescript-eslint/no-require-imports -- load after jest mocks are registered */
+const { registerTracedTool } =
+  require('../../src/telemetry/register-traced-tool') as typeof import('../../src/telemetry/register-traced-tool');
+/* eslint-enable @typescript-eslint/no-require-imports */
 
 const otelMocks = () => globalThis.__otelTestMocks;
 
@@ -81,21 +85,17 @@ test('registerTracedTool wraps handler with span attributes and records success 
 
   registerTracedTool(server, 'test-tool', { description: 'A test tool' }, handler);
 
-  const registeredTool = (server as unknown as {
-    _registeredTools: Record<string, { callback: (...args: unknown[]) => unknown }>;
-  })._registeredTools['test-tool'];
+  const registeredTool = (
+    server as unknown as {
+      _registeredTools: Record<string, { callback: (...args: unknown[]) => unknown }>;
+    }
+  )._registeredTools['test-tool'];
   const result = await registeredTool.callback({}, {} as never);
 
   expect(result).toEqual({ content: [{ type: 'text', text: 'ok' }] });
-  expect(otelMocks().mockStartActiveSpan).toHaveBeenCalledWith(
-    'mcp.tool/test-tool',
-    expect.any(Function),
-  );
+  expect(otelMocks().mockStartActiveSpan).toHaveBeenCalledWith('mcp.tool/test-tool', expect.any(Function));
   expect(otelMocks().mockSetAttribute).toHaveBeenCalledWith(ATTR_TOOL_NAME, 'test-tool');
-  expect(otelMocks().mockSetAttribute).toHaveBeenCalledWith(
-    ATTR_AUTH_METHOD,
-    'oauth2_project_credentials',
-  );
+  expect(otelMocks().mockSetAttribute).toHaveBeenCalledWith(ATTR_AUTH_METHOD, 'oauth2_project_credentials');
   expect(otelMocks().mockSetAttribute).toHaveBeenCalledWith('project.id', 'project-123');
   expect(otelMocks().mockSetStatus).toHaveBeenCalledWith({ code: SpanStatusCode.OK });
   expect(mockToolCallsAdd).toHaveBeenCalledWith(1, {
@@ -112,9 +112,11 @@ test('registerTracedTool records error metrics when handler throws', async () =>
 
   registerTracedTool(server, 'failing-tool', { description: 'Fails' }, handler);
 
-  const registeredTool = (server as unknown as {
-    _registeredTools: Record<string, { callback: (...args: unknown[]) => unknown }>;
-  })._registeredTools['failing-tool'];
+  const registeredTool = (
+    server as unknown as {
+      _registeredTools: Record<string, { callback: (...args: unknown[]) => unknown }>;
+    }
+  )._registeredTools['failing-tool'];
 
   await expect(registeredTool.callback({} as never, {} as never)).rejects.toThrow('boom');
 

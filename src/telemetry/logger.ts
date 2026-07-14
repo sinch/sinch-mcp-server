@@ -2,10 +2,7 @@ import { context, trace } from '@opentelemetry/api';
 import pino from 'pino';
 import { env } from '../env';
 
-const baseLogger = pino(
-  { level: env.LOG_LEVEL ?? 'info' },
-  pino.destination(2),
-);
+const baseLogger = pino({ level: env.LOG_LEVEL ?? 'info' }, pino.destination(2));
 
 const traceFields = (): Record<string, string> => {
   const span = trace.getSpan(context.active());
@@ -16,15 +13,13 @@ const traceFields = (): Record<string, string> => {
   return { trace_id: traceId, span_id: spanId };
 };
 
-const log =
-  (level: 'info' | 'warn' | 'error' | 'debug') =>
-  (obj: object | string, msg?: string) => {
-    if (typeof obj === 'string') {
-      baseLogger[level]({ ...traceFields() }, obj);
-      return;
-    }
-    baseLogger[level]({ ...traceFields(), ...obj }, msg);
-  };
+const log = (level: 'info' | 'warn' | 'error' | 'debug') => (obj: object | string, msg?: string) => {
+  if (typeof obj === 'string') {
+    baseLogger[level]({ ...traceFields() }, obj);
+    return;
+  }
+  baseLogger[level]({ ...traceFields(), ...obj }, msg);
+};
 
 export const logger = {
   info: log('info'),
