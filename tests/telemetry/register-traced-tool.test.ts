@@ -1,6 +1,7 @@
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { SpanStatusCode } from '@opentelemetry/api';
 import { ATTR_AUTH_METHOD, ATTR_TOOL_NAME } from '../../src/telemetry/constants';
+import { mockEnv, resetMockEnv } from '../helpers/mock-env';
 
 jest.mock('@sinch/sdk-core/package.json', () => ({
   version: '1.0.0',
@@ -67,18 +68,13 @@ const otelMocks = () => globalThis.__otelTestMocks;
 
 beforeEach(() => {
   jest.clearAllMocks();
-  delete process.env.PROJECT_ID;
-  delete process.env.KEY_ID;
-  delete process.env.KEY_SECRET;
-  delete process.env.APPLICATION_KEY;
-  delete process.env.APPLICATION_SECRET;
-  delete process.env.MAILGUN_API_KEY;
+  resetMockEnv();
 });
 
 test('registerTracedTool wraps handler with span attributes and records success metrics', async () => {
-  process.env.PROJECT_ID = 'project-123';
-  process.env.KEY_ID = 'key-id';
-  process.env.KEY_SECRET = 'key-secret';
+  mockEnv.PROJECT_ID = 'project-123';
+  mockEnv.KEY_ID = 'key-id';
+  mockEnv.KEY_SECRET = 'key-secret';
 
   const server = new McpServer({ name: 'test', version: '1.0.0' });
   const handler = jest.fn().mockResolvedValue({ content: [{ type: 'text', text: 'ok' }] });
@@ -135,16 +131,15 @@ test('registerTracedTool records error metrics when handler throws', async () =>
 });
 
 test('isTelemetryEnabled returns false without OTEL_EXPORTER_OTLP_ENDPOINT', () => {
-  delete process.env.OTEL_EXPORTER_OTLP_ENDPOINT;
+  mockEnv.OTEL_EXPORTER_OTLP_ENDPOINT = undefined;
   // eslint-disable-next-line @typescript-eslint/no-require-imports
   const { isTelemetryEnabled } = require('../../src/telemetry/config');
   expect(isTelemetryEnabled()).not.toBeTruthy();
 });
 
 test('isTelemetryEnabled returns true when OTEL_EXPORTER_OTLP_ENDPOINT is set', () => {
-  process.env.OTEL_EXPORTER_OTLP_ENDPOINT = 'http://collector:4317';
+  mockEnv.OTEL_EXPORTER_OTLP_ENDPOINT = 'http://collector:4317';
   // eslint-disable-next-line @typescript-eslint/no-require-imports
   const { isTelemetryEnabled } = require('../../src/telemetry/config');
   expect(isTelemetryEnabled()).toBeTruthy();
-  delete process.env.OTEL_EXPORTER_OTLP_ENDPOINT;
 });

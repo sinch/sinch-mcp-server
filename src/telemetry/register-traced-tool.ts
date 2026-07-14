@@ -12,18 +12,19 @@ import {
   SPAN_TOOL_PREFIX,
   TRACER_NAME,
 } from './constants';
+import { env } from '../env';
 import { getToolMetrics } from './metrics';
 
 const tracer = trace.getTracer(TRACER_NAME);
 
 const resolveAuthMethod = (): string => {
-  if (process.env.PROJECT_ID && process.env.KEY_ID && process.env.KEY_SECRET) {
+  if (env.PROJECT_ID && env.KEY_ID && env.KEY_SECRET) {
     return 'oauth2_project_credentials';
   }
-  if (process.env.APPLICATION_KEY && process.env.APPLICATION_SECRET) {
+  if (env.APPLICATION_KEY && env.APPLICATION_SECRET) {
     return 'application_signing';
   }
-  if (process.env.MAILGUN_API_KEY) {
+  if (env.MAILGUN_API_KEY) {
     return 'mailgun_api_key';
   }
   return 'unconfigured';
@@ -40,7 +41,7 @@ const runWithTracing = async <T>(
     span.setAttribute(ATTR_TOOL_NAME, toolName);
     span.setAttribute(ATTR_AUTH_METHOD, resolveAuthMethod());
 
-    const projectId = process.env.PROJECT_ID;
+    const projectId = env.PROJECT_ID;
     if (projectId) {
       span.setAttribute(ATTR_PROJECT_ID, projectId);
     }

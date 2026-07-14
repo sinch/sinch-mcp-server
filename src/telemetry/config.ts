@@ -1,2 +1,4 @@
+import { env } from '../env';
+
 export const isTelemetryEnabled = (): boolean =>
-  Boolean(process.env.OTEL_EXPORTER_OTLP_ENDPOINT);
+  Boolean(env.OTEL_EXPORTER_OTLP_ENDPOINT);
