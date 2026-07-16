@@ -1,9 +1,11 @@
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
+import { registerTracedTool } from '../../telemetry/register-traced-tool';
 import { z } from 'zod';
 import { isPromptResponse, matchesAnyTag } from '../../utils';
 import { IPromptResponse, PromptResponse, Tags } from '../../types';
 import { getVoiceService } from './utils/voice-service-helper';
 import { getToolName, VoiceToolKey, voiceToolsConfig } from './utils/voice-tools-helper';
+import { logger } from '../../telemetry/logger';
 
 const CloseConferenceSchema = {
   conferenceId: z.string().describe('The conference ID to close'),
@@ -19,7 +21,8 @@ export const registerCloseConference = (server: McpServer, tags: Tags[]) => {
     return;
   }
 
-  server.registerTool(
+  registerTracedTool(
+    server,
     TOOL_NAME,
     {
       description: 'Close a conference callout',
@@ -47,7 +50,7 @@ export const closeConferenceHandler = async ({ conferenceId }: CloseConference):
       }),
     ).promptResponse;
   } catch (error) {
-    console.error(`Error closing conference ${conferenceId}:`, error);
+    logger.error({ err: error, conferenceId }, 'Error closing conference');
     return new PromptResponse(
       JSON.stringify({
         success: false,

@@ -1,4 +1,5 @@
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
+import { registerTracedTool } from '../../telemetry/register-traced-tool';
 import { isPromptResponse, matchesAnyTag } from '../../utils';
 import { formatListAllTemplatesResponse } from './utils/format-list-all-templates-response';
 import { getConversationService, setTemplateRegion } from './utils/conversation-service-helper';
@@ -6,6 +7,7 @@ import { ConversationToolKey, getToolName, toolsConfig } from './utils/conversat
 import { IPromptResponse, PromptResponse, Tags } from '../../types';
 import { SupportedConversationRegion } from '@sinch/sdk-client';
 import { env } from '../../env';
+import { logger } from '../../telemetry/logger';
 
 const TOOL_KEY: ConversationToolKey = 'listMessagingTemplates';
 const TOOL_NAME = getToolName(TOOL_KEY);
@@ -15,7 +17,8 @@ export const registerListAllTemplates = (server: McpServer, tags: Tags[]) => {
     return;
   }
 
-  server.registerTool(
+  registerTracedTool(
+    server,
     TOOL_NAME,
     {
       description:
@@ -95,7 +98,7 @@ const fetchWhatsAppSpecificTemplates = async () => {
   });
 
   if (!resp.ok) {
-    console.error(`Failed to fetch WhatsApp templates: ${resp.status} ${resp.statusText}`);
+    logger.error({ status: resp.status, statusText: resp.statusText }, 'Failed to fetch WhatsApp templates');
     return [];
   }
 

@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
+import { registerTracedTool } from '../../telemetry/register-traced-tool';
 import { IPromptResponse, PromptResponse, Tags } from '../../types';
 import { getMailgunApiKey } from './utils/mailgun-service-helper';
 import { EmailToolKey, getToolName, sha256, toolsConfig } from './utils/mailgun-tools-helper';
@@ -92,7 +93,8 @@ export const registerAnalyticsMetrics = (server: McpServer, tags: Tags[]) => {
     return;
   }
 
-  server.registerTool(
+  registerTracedTool(
+    server,
     TOOL_NAME,
     {
       description:
