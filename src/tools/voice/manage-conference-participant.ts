@@ -1,4 +1,5 @@
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
+import { registerTracedTool } from '../../telemetry/register-traced-tool';
 import { z } from 'zod';
 import { getVoiceService } from './utils/voice-service-helper';
 import { getToolName, VoiceToolKey, voiceToolsConfig } from './utils/voice-tools-helper';
@@ -21,7 +22,8 @@ export const registerManageConferenceParticipant = (server: McpServer, tags: Tag
     return;
   }
 
-  server.registerTool(
+  registerTracedTool(
+    server,
     TOOL_NAME,
     {
       description:
