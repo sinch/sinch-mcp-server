@@ -17,6 +17,7 @@ const config: Config = {
   testMatch: ['**/*.int.test.ts'],
   moduleFileExtensions: ['ts', 'mjs', 'js', 'json', 'node'],
   setupFilesAfterEnv: ['jest-extended/all'],
+  verbose: true,
   // No test should hang the run: cap each test, and force-exit so a lingering
   // MCP stdio child process can't keep the Jest process alive after teardown.
   testTimeout: 120_000,

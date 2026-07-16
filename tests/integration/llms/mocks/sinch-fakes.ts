@@ -15,6 +15,20 @@ const currentSenders = (): Map<string, any> => sendersContext.getStore() ?? shar
 /** Runs `fn` with its own isolated RCS sender store — use per eval iteration. */
 export const withIsolatedSinchState = <T>(fn: () => Promise<T>): Promise<T> => sendersContext.run(new Map(), fn);
 
+const isPlainObject = (value: unknown): value is Record<string, unknown> =>
+  typeof value === 'object' && value !== null && !Array.isArray(value);
+
+// Mirrors real PATCH semantics: nested objects merge key-by-key (so filling
+// `questionnaire.general` in one call and `questionnaire.verification` in the
+// next doesn't wipe the first), arrays and primitives are replaced wholesale.
+const deepMerge = (base: Record<string, unknown>, patch: Record<string, unknown>): Record<string, unknown> => {
+  const merged = { ...base };
+  for (const [key, value] of Object.entries(patch)) {
+    merged[key] = isPlainObject(value) && isPlainObject(merged[key]) ? deepMerge(merged[key], value) : value;
+  }
+  return merged;
+};
+
 /**
  * Registers in-process fakes for the Sinch service helpers via
  * `jest.unstable_mockModule`, so the real MCP tool handlers run without any real
@@ -41,7 +55,7 @@ export const registerSinchMocks = (opts: { enforceLaunch?: boolean } = {}): void
     updateSender: async (id: string, body: any) => {
       const senders = currentSenders();
       const sender = senders.get(id) ?? { id, state: 'IN_PROGRESS', details: {} };
-      sender.details = { ...(sender.details ?? {}), ...(body?.details ?? {}) };
+      sender.details = deepMerge(sender.details ?? {}, body?.details ?? {});
       sender.state = 'IN_PROGRESS';
       senders.set(id, sender);
       return sender;

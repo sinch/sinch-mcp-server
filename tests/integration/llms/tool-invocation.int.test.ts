@@ -1,6 +1,12 @@
-import { HostRunner, matchToolCallWithArgs } from '@mcpjam/sdk';
+import { HostRunner, matchToolCallWithPartialArgs } from '@mcpjam/sdk';
 import { toolTestCases } from './fixtures/tool-cases';
-import { TEMPERATURE, TIMEOUT } from './fixtures/config';
+import {
+  DEFAULT_ANTHROPIC_MODEL,
+  DEFAULT_GEMINI_MODEL,
+  DEFAULT_OPENAI_MODEL,
+  TEMPERATURE,
+  TIMEOUT,
+} from './fixtures/config';
 import { InProcessServer, startInProcessServer } from './utils/in-process-server';
 import { apiKeyFor, preflight } from './utils/provider';
 
@@ -10,6 +16,19 @@ import { apiKeyFor, preflight } from './utils/provider';
 // stubbing means no service mocks and no real API calls.
 const STUB_TOOL_RESULT = { content: [{ type: 'text', text: JSON.stringify({ success: true, stubbed: true }) }] };
 
+// Resolves a dot-path (e.g. "address.title") against a tool call's arguments.
+const getPath = (obj: unknown, path: string): unknown =>
+  path
+    .split('.')
+    .reduce<unknown>(
+      (acc, key) => (acc && typeof acc === 'object' ? (acc as Record<string, unknown>)[key] : undefined),
+      obj,
+    );
+
+// RegExp for model-phrased text; anything else is an exact match.
+const pathMatches = (expected: RegExp | string | number | boolean, actual: unknown): boolean =>
+  expected instanceof RegExp ? typeof actual === 'string' && expected.test(actual) : actual === expected;
+
 interface Provider {
   name: string;
   model: string;
@@ -17,9 +36,9 @@ interface Provider {
 }
 
 const PROVIDERS: Provider[] = [
-  { name: 'Anthropic', model: process.env.ANTHROPIC_MODEL ?? 'anthropic/claude-3-7-sonnet-latest' },
-  { name: 'OpenAI', model: process.env.OPENAI_MODEL ?? 'openai/gpt-4o-mini' },
-  { name: 'Gemini', model: process.env.GEMINI_MODEL ?? 'google/gemini-2.0-flash' },
+  { name: 'Anthropic', model: process.env.ANTHROPIC_MODEL ?? DEFAULT_ANTHROPIC_MODEL },
+  { name: 'OpenAI', model: process.env.OPENAI_MODEL ?? DEFAULT_OPENAI_MODEL },
+  { name: 'Gemini', model: process.env.GEMINI_MODEL ?? DEFAULT_GEMINI_MODEL },
 ]
   .map((p) => ({ ...p, apiKey: apiKeyFor(p.model) }))
   .filter((p): p is Provider => Boolean(p.apiKey));
@@ -53,7 +72,7 @@ describe.each(PROVIDERS)('Tool invocation — $name ($model)', ({ model, apiKey 
 
   it.each(toolTestCases)(
     'handles "$prompt"',
-    async ({ prompt, expectedToolName, expectedArguments, accept }) => {
+    async ({ prompt, expectedToolName, expectedArguments, pathMatchers, accept }) => {
       const result = await agent.run(prompt);
       if (result.hasError()) {
         throw new Error(`${model} run failed: ${result.getError()}`);
@@ -67,7 +86,29 @@ describe.each(PROVIDERS)('Tool invocation — $name ($model)', ({ model, apiKey 
       expect(acceptedTools.some((tool) => result.hasToolCall(tool))).toBeTrue();
 
       if (expectedToolName && expectedArguments) {
-        expect(matchToolCallWithArgs(expectedToolName, expectedArguments, result.getToolCalls())).toBeTrue();
+        const calls = result.getToolCalls();
+        const matched = matchToolCallWithPartialArgs(expectedToolName, expectedArguments, calls);
+        if (!matched) {
+          console.log(
+            `[DEBUG] "${prompt}"\n  expected: ${expectedToolName} ${JSON.stringify(expectedArguments)}\n  actual:   ${JSON.stringify(calls)}`,
+          );
+        }
+        expect(matched).toBeTrue();
+      }
+
+      if (expectedToolName && pathMatchers && Object.keys(pathMatchers).length > 0) {
+        const call = result.getToolCalls().find((c) => c.toolName === expectedToolName);
+        expect(call).toBeDefined();
+        for (const path in pathMatchers) {
+          const expected = pathMatchers[path];
+          const actual = getPath(call!.arguments, path);
+          if (!pathMatches(expected, actual)) {
+            console.log(
+              `[DEBUG] "${prompt}"\n  field: ${path}\n  expected: ${expected}\n  actual:   ${JSON.stringify(actual)}`,
+            );
+          }
+          expect(pathMatches(expected, actual)).toBeTrue();
+        }
       }
     },
     TIMEOUT,

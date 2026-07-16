@@ -16,10 +16,13 @@ jobs:
           # OpenAI
           - llm: openai
             provider: openai
-            model: gpt-4o-mini
+            model: gpt-5-mini
           - llm: openai
             provider: openai
-            model: gpt-4.1
+            model: gpt-5.6-terra
+          - llm: openai
+            provider: openai
+            model: gpt-5.6-luna
           # Anthropic
           - llm: anthropic
             provider: anthropic
@@ -30,7 +33,13 @@ jobs:
           # Gemini
           - llm: gemini
             provider: google
-            model: gemini-2.0-flash
+            model: gemini-3.1-pro
+          - llm: gemini
+            provider: google
+            model: gemini-3.5-flash
+          - llm: gemini
+            provider: google
+            model: gemini-2.5-pro
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
         with:
@@ -46,15 +55,14 @@ jobs:
 
       # Only the matrix leg's own provider key is set, so tool-invocation.int.test.ts
       # (which runs every provider that has a key) exercises exactly this leg's
-      # provider, and the onboarding workflow suite picks it up via TARGET_MODEL.
+      # provider, and the onboarding workflow suite picks it up via WORKFLOW_MODEL.
       - name: Run LLM integration tests for ${{ matrix.llm }} (${{ matrix.model }})
         env:
           OPENAI_API_KEY: ${{ matrix.llm == 'openai' && secrets.OPENAI_API_KEY || '' }}
           ANTHROPIC_API_KEY: ${{ matrix.llm == 'anthropic' && secrets.ANTHROPIC_API_KEY || '' }}
           GEMINI_API_KEY: ${{ matrix.llm == 'gemini' && secrets.GEMINI_API_KEY || '' }}
-          OPENAI_MODEL: openai/${{ matrix.model }}
-          ANTHROPIC_MODEL: anthropic/${{ matrix.model }}
-          GEMINI_MODEL: google/${{ matrix.model }}
-          TARGET_MODEL: ${{ matrix.provider }}/${{ matrix.model }}
+          OPENAI_MODEL: ${{ matrix.llm == 'openai' && format('openai/{0}', matrix.model) || '' }}
+          ANTHROPIC_MODEL: ${{ matrix.llm == 'anthropic' && format('anthropic/{0}', matrix.model) || '' }}
+          GEMINI_MODEL: ${{ matrix.llm == 'gemini' && format('google/{0}', matrix.model) || '' }}
           WORKFLOW_MODEL: ${{ matrix.provider }}/${{ matrix.model }}
         run: npm run test:integration

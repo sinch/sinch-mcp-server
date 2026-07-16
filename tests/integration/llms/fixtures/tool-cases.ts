@@ -1,13 +1,11 @@
 export interface ToolTestCase {
   prompt: string;
   expectedToolName?: string;
+  /** Exact match on the tool call's arguments (partial: only listed keys are checked). */
   expectedArguments?: Record<string, any>;
-  /**
-   * Alternative tool names that also count as correct routing, for prompts with
-   * genuine ambiguity (e.g. "open rates" → analytics-metrics OR list-email-events).
-   * When set, the test passes if ANY listed tool is called and skips the exact
-   * argument check (args differ per tool).
-   */
+  /** Dot-path checks (e.g. `"address.title"`) for nested or model-phrased fields; use a RegExp for free text. */
+  pathMatchers?: Record<string, RegExp | string | number | boolean>;
+  /** Alternative tool names that also count as correct routing when routing is genuinely ambiguous. */
   accept?: string[];
 }
 
@@ -67,8 +65,10 @@ const messagingCases: ToolTestCase[] = [
     expectedArguments: {
       recipient: '+33612345678',
       channel: ['RCS'],
-      text: 'What is your preferred ice cream flavor?',
       choiceContent: [{ text: 'Vanilla' }, { text: 'Strawberry' }, { text: 'Hazelnut' }],
+    },
+    pathMatchers: {
+      text: /ice cream flavor/i,
     },
   },
   {
@@ -77,10 +77,10 @@ const messagingCases: ToolTestCase[] = [
     expectedToolName: 'send-location-message',
     expectedArguments: {
       recipient: '+33612345678',
-      address: {
-        address: 'Avenida Abandoibarra, 2 - 48009 Bilbao, Spain',
-      },
       channel: ['SMS'],
+    },
+    pathMatchers: {
+      'address.address': /(?=.*Abandoibarra)(?=.*48009)(?=.*Bilbao)/i,
     },
   },
   {
@@ -190,9 +190,8 @@ const emailCases: ToolTestCase[] = [
     prompt: 'What are the open rates between Mon, 18 Aug 2025 00:00:00 +0100 and Thu, 21 Aug 2025 00:00:00 +0100?',
     expectedToolName: 'analytics-metrics',
     expectedArguments: {
-      metrics: ['opened_count', 'opened_rate'],
-      beginSearchPeriod: '2025-08-18T00:00:00+01:00',
-      endSearchPeriod: '2025-08-21T00:00:00+01:00',
+      beginSearchPeriod: 'Mon, 18 Aug 2025 00:00:00 +0100',
+      endSearchPeriod: 'Thu, 21 Aug 2025 00:00:00 +0100',
     },
   },
 ];

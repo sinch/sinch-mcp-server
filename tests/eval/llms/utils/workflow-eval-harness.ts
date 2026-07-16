@@ -1,5 +1,6 @@
 import { EvalTest, HostRunner, PromptResult } from '@mcpjam/sdk';
 import { registerSinchMocks, withIsolatedSinchState } from '../../../integration/llms/mocks/sinch-fakes';
+import { DEFAULT_WORKFLOW_MODEL } from '../../../integration/llms/fixtures/config';
 import { InProcessServer, startInProcessServer, toHostTools } from '../../../integration/llms/utils/in-process-server';
 import { apiKeyFor, preflight } from '../../../integration/llms/utils/provider';
 
@@ -34,7 +35,7 @@ export interface WorkflowEvalConfig {
   debugFirstIteration?: boolean;
 }
 
-const DEFAULT_MODEL = process.env.WORKFLOW_MODEL ?? process.env.TARGET_MODEL ?? 'openai/gpt-4o';
+const DEFAULT_MODEL = process.env.WORKFLOW_MODEL ?? DEFAULT_WORKFLOW_MODEL;
 const ITERATIONS = Number(process.env.EVAL_ITERATIONS ?? 30);
 const CONCURRENCY = Number(process.env.EVAL_CONCURRENCY ?? 3);
 const PASS_RATE = Number(process.env.EVAL_PASS_RATE ?? 0.9);

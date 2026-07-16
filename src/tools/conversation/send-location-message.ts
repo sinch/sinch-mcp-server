@@ -20,10 +20,16 @@ import { getLatitudeLongitudeFromAddress } from './utils/geocoding';
 import { IPromptResponse, PromptResponse, Tags } from '../../types';
 
 const location = z.object({
-  lat: z.number().optional(),
-  long: z.number().optional(),
-  title: z.string().optional(),
-  address: z.string().optional(),
+  lat: z.number().optional().describe('Latitude; used only when long and title are also provided.'),
+  long: z.number().optional().describe('Longitude; used only when lat and title are also provided.'),
+  title: z
+    .string()
+    .optional()
+    .describe(
+      'Shown close to the button or link that leads to a map showing the location; used only when lat and long are also provided (the geocoded address is used instead when the address field is set).',
+    ),
+  label: z.string().optional().describe('Label or name for the position.'),
+  address: z.string().optional().describe('Address to geocode into latitude/longitude coordinates.'),
 });
 
 const LocationMessageSchema = {
@@ -109,6 +115,11 @@ export const sendLocationMessageHandler = async ({
         },
       },
     };
+
+    if (address.label) {
+      request.sendMessageRequestBody.message.location_message.label = address.label;
+    }
+
     const response = await conversationService.messages.sendLocationMessage(request);
     return new PromptResponse(
       JSON.stringify({

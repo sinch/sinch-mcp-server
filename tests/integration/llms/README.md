@@ -107,7 +107,7 @@ Provider keys are read from the environment or `.env`:
 
 | Env var                                             | Default               | Purpose                                          |
 | --------------------------------------------------- | --------------------- | ------------------------------------------------ |
-| `WORKFLOW_MODEL` / `TARGET_MODEL`                   | `openai/gpt-4o`       | Model for the workflow suites (`provider/model`) |
+| `WORKFLOW_MODEL`                                    | `openai/gpt-5-mini`   | Model for the workflow suites (`provider/model`) |
 | `ANTHROPIC_MODEL` / `OPENAI_MODEL` / `GEMINI_MODEL` | per-provider defaults | Model per provider in the single-turn matrix     |
 | `WORKFLOW_TIMEOUT_MS`                               | `300000`              | Per-workflow timeout (a full run is ~30–90s)     |
 

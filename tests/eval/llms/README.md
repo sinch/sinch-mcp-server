@@ -61,13 +61,13 @@ Step assertions (all optional, combine as needed):
 
 Keys: `OPENAI_API_KEY` / `ANTHROPIC_API_KEY` / `GEMINI_API_KEY` (env or `.env`).
 
-| Env var                           | Default         | Purpose                                       |
-| --------------------------------- | --------------- | --------------------------------------------- |
-| `EVAL_ITERATIONS`                 | `30`            | Iterations per suite                          |
-| `EVAL_PASS_RATE`                  | `0.9`           | Default threshold (per-suite `passRate` wins) |
-| `EVAL_CONCURRENCY`                | `3`             | Parallel iterations                           |
-| `WORKFLOW_MODEL` / `TARGET_MODEL` | `openai/gpt-4o` | Model                                         |
-| `EVAL_ITERATION_TIMEOUT_MS`       | `240000`        | Per-iteration timeout                         |
+| Env var                     | Default             | Purpose                                       |
+| --------------------------- | ------------------- | --------------------------------------------- |
+| `EVAL_ITERATIONS`           | `30`                | Iterations per suite                          |
+| `EVAL_PASS_RATE`            | `0.9`               | Default threshold (per-suite `passRate` wins) |
+| `EVAL_CONCURRENCY`          | `3`                 | Parallel iterations                           |
+| `WORKFLOW_MODEL`            | `openai/gpt-5-mini` | Model                                         |
+| `EVAL_ITERATION_TIMEOUT_MS` | `240000`            | Per-iteration timeout                         |
 
 ## The recovery example
 

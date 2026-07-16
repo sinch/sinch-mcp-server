@@ -1,5 +1,6 @@
 import { HostRunner, PromptResult } from '@mcpjam/sdk';
 import { registerSinchMocks } from '../mocks/sinch-fakes';
+import { DEFAULT_WORKFLOW_MODEL, TEMPERATURE } from '../fixtures/config';
 import { InProcessServer, startInProcessServer, toHostTools } from './in-process-server';
 import { apiKeyFor, preflight } from './provider';
 
@@ -24,7 +25,7 @@ export interface WorkflowSuiteConfig {
   systemPrompt?: string;
 }
 
-const DEFAULT_MODEL = process.env.WORKFLOW_MODEL ?? process.env.TARGET_MODEL ?? 'openai/gpt-4o';
+const DEFAULT_MODEL = process.env.WORKFLOW_MODEL ?? DEFAULT_WORKFLOW_MODEL;
 const TIMEOUT_MS = Number(process.env.WORKFLOW_TIMEOUT_MS ?? 5 * 60 * 1000);
 const DEFAULT_SYSTEM_PROMPT =
   'You manage Sinch products using ONLY the provided tools. ' +
@@ -36,18 +37,23 @@ interface StepOutcome {
   ok: boolean;
   called: string[];
   error?: string;
+  text?: string;
 }
 
 const evaluateStep = (step: WorkflowStep, result: PromptResult): StepOutcome => {
   const called = result.toolsCalled();
   const error = result.hasError() ? result.getError() : undefined;
-  return { id: step.id, ok: !error && step.accept.some((tool) => called.includes(tool)), called, error };
+  const ok = !error && step.accept.some((tool) => called.includes(tool));
+  // No tool call is the confusing failure mode — surface what the model said
+  // instead, so a failure doesn't need a re-run just to see its reasoning.
+  return { id: step.id, ok, called, error, text: !ok && called.length === 0 ? result.text : undefined };
 };
 
 const formatRouting = (name: string, model: string, outcomes: StepOutcome[]): string => {
-  const rows = outcomes.map(
-    (o) => `  ${o.ok ? '✓' : '✗'} ${o.id.padEnd(18)} [${o.called.join(', ')}]${o.error ? ` ERROR: ${o.error}` : ''}`,
-  );
+  const rows = outcomes.map((o) => {
+    const line = `  ${o.ok ? '✓' : '✗'} ${o.id.padEnd(18)} [${o.called.join(', ')}]${o.error ? ` ERROR: ${o.error}` : ''}`;
+    return o.text ? `${line}\n      said: ${o.text.replace(/\n/g, ' ')}` : line;
+  });
   return `\n${name} workflow routing (${model}):\n${rows.join('\n')}\n`;
 };
 
@@ -81,7 +87,7 @@ export const defineWorkflowSuite = (config: WorkflowSuiteConfig): void => {
         tools: toHostTools(server) as never,
         model,
         apiKey,
-        temperature: 0.1,
+        temperature: TEMPERATURE,
         maxSteps: 4,
         systemPrompt: config.systemPrompt ?? DEFAULT_SYSTEM_PROMPT,
       });
