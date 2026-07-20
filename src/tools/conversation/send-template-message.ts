@@ -55,7 +55,7 @@ export const registerSendTemplateMessage = (server: McpServer, tags: Tags[]) => 
     TOOL_NAME,
     {
       description:
-        'Send a template message to a contact on the specified channel. The contact can be a phone number in E.164 format, or the identifier for the specified channel.',
+        'Send an omni-template message (referred by template ID, ULID) to a contact on the specified channel. The contact can be a phone number in E.164 format, or the identifier for the specified channel.',
       inputSchema: SendTemplateMessageSchema,
     },
     sendTemplateMessageHandler,

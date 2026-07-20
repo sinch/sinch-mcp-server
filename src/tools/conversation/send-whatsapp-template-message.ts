@@ -53,7 +53,8 @@ export const registerSendWhatsAppTemplateMessage = (server: McpServer, tags: Tag
     server,
     TOOL_NAME,
     {
-      description: 'Send a template message to a contact (phone number in E.164 format) on the WhatsApp channel.',
+      description:
+        'Send a WhatsApp-native template message (referred by template name) to a contact (phone number in E.164 format) on the WhatsApp channel. For omni-channel templates use send-template-message instead.',
       inputSchema: SendWhatsAppTemplateMessageSchema,
     },
     sendTemplateMessageHandler,

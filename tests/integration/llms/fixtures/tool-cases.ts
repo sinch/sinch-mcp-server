@@ -59,6 +59,16 @@ const messagingCases: ToolTestCase[] = [
     },
   },
   {
+    prompt: 'Send a message to +33612345678 on SMS using the template 01ARZ3NDEKTSV4RRFFQ69G5FAV in English.',
+    expectedToolName: 'send-template-message',
+    expectedArguments: {
+      recipient: '+33612345678',
+      templateId: '01ARZ3NDEKTSV4RRFFQ69G5FAV',
+      language: 'en',
+      channel: ['SMS'],
+    },
+  },
+  {
     prompt:
       'Send a RCS survey about preferred ice cream flavor to +33612345678 with the following choices: Vanilla, Strawberry, Hazelnut',
     expectedToolName: 'send-choice-message',
