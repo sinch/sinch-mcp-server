@@ -10,23 +10,36 @@ jobs:
     permissions:
       contents: read
     strategy:
+      fail-fast: false
       matrix:
         include:
           # OpenAI
           - llm: openai
-            model: gpt-4o-mini
+            provider: openai
+            model: gpt-5-mini
           - llm: openai
-            model: gpt-4.1
+            provider: openai
+            model: gpt-5.6-terra
+          - llm: openai
+            provider: openai
+            model: gpt-5.6-luna
           # Anthropic
           - llm: anthropic
+            provider: anthropic
             model: claude-3-7-sonnet-latest
           - llm: anthropic
+            provider: anthropic
             model: claude-3-5-haiku-latest
           # Gemini
           - llm: gemini
-            model: gemini-1.5-flash-latest
+            provider: google
+            model: gemini-3.1-pro
           - llm: gemini
-            model: gemini-1.5-pro-latest
+            provider: google
+            model: gemini-3.5-flash
+          - llm: gemini
+            provider: google
+            model: gemini-2.5-pro
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
         with:
@@ -40,12 +53,16 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Run integration tests for ${{ matrix.llm }}
+      # Only the matrix leg's own provider key is set, so tool-invocation.int.test.ts
+      # (which runs every provider that has a key) exercises exactly this leg's
+      # provider, and the onboarding workflow suite picks it up via WORKFLOW_MODEL.
+      - name: Run LLM integration tests for ${{ matrix.llm }} (${{ matrix.model }})
         env:
-          RUN_INTEGRATION_TESTS: true
-          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
-          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
-          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
-          TARGET_LLM: ${{ matrix.llm }}
-          TARGET_MODEL: ${{ matrix.model }}
-        run: npx jest tests/integration/llms/${{ matrix.llm }}.int.test.ts --runInBand
+          OPENAI_API_KEY: ${{ matrix.llm == 'openai' && secrets.OPENAI_API_KEY || '' }}
+          ANTHROPIC_API_KEY: ${{ matrix.llm == 'anthropic' && secrets.ANTHROPIC_API_KEY || '' }}
+          GEMINI_API_KEY: ${{ matrix.llm == 'gemini' && secrets.GEMINI_API_KEY || '' }}
+          OPENAI_MODEL: ${{ matrix.llm == 'openai' && format('openai/{0}', matrix.model) || '' }}
+          ANTHROPIC_MODEL: ${{ matrix.llm == 'anthropic' && format('anthropic/{0}', matrix.model) || '' }}
+          GEMINI_MODEL: ${{ matrix.llm == 'gemini' && format('google/{0}', matrix.model) || '' }}
+          WORKFLOW_MODEL: ${{ matrix.provider }}/${{ matrix.model }}
+        run: npm run test:integration

@@ -1,0 +1,14 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "noEmit": true,
+    "composite": false,
+    "declaration": false,
+    "rootDir": ".",
+    "allowJs": false,
+    "types": ["jest", "jest-extended", "node"]
+  },
+  "include": ["tests/integration/llms/**/*.ts", "tests/eval/llms/**/*.ts"]
+}
