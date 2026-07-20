@@ -40,7 +40,7 @@ const choiceMessage = z
       Number(!!data.text) +
         Number(!!data.url) +
         Number(!!data.phone_number) +
-        Number((!!data.lat && !!data.long) || !!data.address) ===
+        Number((typeof data.lat === 'number' && typeof data.long === 'number') || !!data.address) ===
       1,
     { message: 'Must provide exactly one type of choice: call, location, text, or URL' },
   )
