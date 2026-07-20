@@ -1,5 +1,4 @@
 import './env';
-import './telemetry';
 
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import { instantiateMcpServer, parseArgs, registerCapabilities } from './server';
