@@ -64,6 +64,7 @@ const messagingCases: ToolTestCase[] = [
     expectedArguments: {
       recipient: '+33612345678',
       templateId: '01ARZ3NDEKTSV4RRFFQ69G5FAV',
+      language: 'en',
       channel: ['SMS'],
     },
   },
