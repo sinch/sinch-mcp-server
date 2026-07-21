@@ -95,7 +95,7 @@ export const sendLocationMessageHandler = async ({
     latitude = geocodingAddress.latitude;
     longitude = geocodingAddress.longitude;
     formattedAddress = geocodingAddress.formattedAddress;
-  } else if (address.lat && address.long && address.title) {
+  } else if (typeof address.lat === 'number' && typeof address.long === 'number' && address.title) {
     latitude = address.lat;
     longitude = address.long;
     formattedAddress = address.title;
