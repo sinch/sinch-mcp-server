@@ -1,9 +1,4 @@
-import {
-  AdditionalHeadersRequest,
-  ApiFetchClient,
-  buildHeader,
-  NUMBERS_HOSTNAME,
-} from '@sinch/sdk-client';
+import { AdditionalHeadersRequest, ApiFetchClient, buildHeader, NUMBERS_HOSTNAME } from '@sinch/sdk-client';
 import { NumbersService } from '@sinch/numbers';
 import { getSharedOauth2TokenRequest } from '../../../auth/oauth-token-cache';
 import { resolveSinchOAuthCredentials } from '../../../auth/resolve-sinch-oauth-credentials';

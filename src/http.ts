@@ -8,11 +8,7 @@ import { setHttpCredentialSource } from './auth/http-credential-mode';
 import { createMcpApiKeyMiddleware, loadMcpApiKeys } from './auth/mcp-api-key';
 import { getMaxMcpSessions, isMcpSessionCapacityReached } from './auth/http-session-limits';
 import { buildJsonRpcErrorResponse } from './json-rpc';
-import {
-  instantiateMcpServer,
-  parseArgs,
-  registerCapabilities,
-} from './server';
+import { instantiateMcpServer, parseArgs, registerCapabilities } from './server';
 
 dotenv.config();
 
@@ -110,44 +106,30 @@ export const createHttpApp = () => {
     if (sessionId) {
       const entry = sessions.get(sessionId);
       if (!entry) {
-        res.status(404).json(
-          buildJsonRpcErrorResponse(-32001, 'Session not found', req.body),
-        );
+        res.status(404).json(buildJsonRpcErrorResponse(-32001, 'Session not found', req.body));
         return;
       }
 
-      await runWithCredentials(req, () =>
-        entry.transport.handleRequest(req, res, req.body),
-      );
+      await runWithCredentials(req, () => entry.transport.handleRequest(req, res, req.body));
       return;
     }
 
     if (!isInitializationBody(req.body)) {
-      res.status(400).json(
-        buildJsonRpcErrorResponse(
-          -32000,
-          'Bad Request: No valid session ID provided',
-          req.body,
-        ),
-      );
+      res.status(400).json(buildJsonRpcErrorResponse(-32000, 'Bad Request: No valid session ID provided', req.body));
       return;
     }
 
     if (isMcpSessionCapacityReached(sessions.size)) {
-      res.status(503).json(
-        buildJsonRpcErrorResponse(
-          -32000,
-          'Service Unavailable: maximum number of MCP sessions reached',
-          req.body,
-        ),
-      );
+      res
+        .status(503)
+        .json(
+          buildJsonRpcErrorResponse(-32000, 'Service Unavailable: maximum number of MCP sessions reached', req.body),
+        );
       return;
     }
 
     const entry = await createSession();
-    await runWithCredentials(req, () =>
-      entry.transport.handleRequest(req, res, req.body),
-    );
+    await runWithCredentials(req, () => entry.transport.handleRequest(req, res, req.body));
   };
 
   const app = express();
@@ -161,9 +143,7 @@ export const createHttpApp = () => {
     void handleMcpRequest(req, res).catch((error) => {
       console.error(`Error handling MCP ${req.method} request:`, error);
       if (!res.headersSent) {
-        res.status(500).json(
-          buildJsonRpcErrorResponse(-32603, 'Internal server error', req.body),
-        );
+        res.status(500).json(buildJsonRpcErrorResponse(-32603, 'Internal server error', req.body));
       }
     });
   };

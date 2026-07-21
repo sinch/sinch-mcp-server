@@ -7,16 +7,12 @@ import {
 } from './sinch-oauth-credentials';
 import { PromptResponse } from '../types';
 
-export const resolveSinchOAuthCredentials = ():
-  | SinchOAuthCredentials
-  | PromptResponse => {
+export const resolveSinchOAuthCredentials = (): SinchOAuthCredentials | PromptResponse => {
   // Multi-tenant HTTP: credentials come only from X-Sinch-Credentials (no server env).
   if (getHttpCredentialSource() === 'request-header') {
     const fromRequest = getRequestSinchOAuthCredentials();
     if (!fromRequest) {
-      return new PromptResponse(
-        `Missing ${SINCH_CREDENTIALS_HEADER} header (Base64 of projectId:keyId:keySecret).`,
-      );
+      return new PromptResponse(`Missing ${SINCH_CREDENTIALS_HEADER} header (Base64 of projectId:keyId:keySecret).`);
     }
     return fromRequest;
   }
@@ -28,7 +24,5 @@ export const resolveSinchOAuthCredentials = ():
     return fromEnv;
   }
 
-  return new PromptResponse(
-    'Missing env vars: PROJECT_ID, KEY_ID, KEY_SECRET.',
-  );
+  return new PromptResponse('Missing env vars: PROJECT_ID, KEY_ID, KEY_SECRET.');
 };

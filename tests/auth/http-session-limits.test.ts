@@ -29,7 +29,7 @@ describe('http-session-limits', () => {
 
   it('reports capacity when active sessions reach the limit', () => {
     setMaxMcpSessionsForTests(2);
-    expect(isMcpSessionCapacityReached(1)).toBe(false);
-    expect(isMcpSessionCapacityReached(2)).toBe(true);
+    expect(isMcpSessionCapacityReached(1)).toBeFalse();
+    expect(isMcpSessionCapacityReached(2)).toBeTrue();
   });
 });

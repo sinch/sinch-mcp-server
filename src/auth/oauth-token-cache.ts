@@ -9,9 +9,7 @@ let maxEntries = readMaxEntriesFromEnv();
 
 function readMaxEntriesFromEnv(): number {
   const configured = Number(process.env.OAUTH_TOKEN_CACHE_MAX_ENTRIES ?? DEFAULT_MAX_ENTRIES);
-  return Number.isFinite(configured) && configured > 0
-    ? Math.floor(configured)
-    : DEFAULT_MAX_ENTRIES;
+  return Number.isFinite(configured) && configured > 0 ? Math.floor(configured) : DEFAULT_MAX_ENTRIES;
 }
 
 const touchCacheEntry = (cacheKey: string, plugin: Oauth2TokenRequest): void => {
@@ -26,9 +24,7 @@ const evictOldestEntry = (): void => {
   }
 };
 
-export const getSharedOauth2TokenRequest = (
-  credentials: SinchOAuthCredentials,
-): Oauth2TokenRequest => {
+export const getSharedOauth2TokenRequest = (credentials: SinchOAuthCredentials): Oauth2TokenRequest => {
   const existing = oauthPluginsByCacheKey.get(credentials.cacheKey);
   if (existing) {
     touchCacheEntry(credentials.cacheKey, existing);

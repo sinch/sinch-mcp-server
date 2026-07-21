@@ -12,10 +12,7 @@ export const getRequestSinchOAuthCredentials = (): SinchOAuthCredentials | undef
   return credentialStorage.getStore();
 };
 
-export const runWithHttpCredentialHeaders = <T>(
-  headers: IncomingHttpHeaders,
-  fn: () => T,
-): T => {
+export const runWithHttpCredentialHeaders = <T>(headers: IncomingHttpHeaders, fn: () => T): T => {
   const credentials = parseSinchCredentialsHeader(headers[SINCH_CREDENTIALS_HEADER]);
   return credentialStorage.run(credentials, fn);
 };

@@ -1,13 +1,7 @@
-import {
-  parseSinchCredentialsValue,
-  sinchOAuthCredentialsFromEnv,
-} from '../../src/auth/sinch-oauth-credentials';
+import { parseSinchCredentialsValue, sinchOAuthCredentialsFromEnv } from '../../src/auth/sinch-oauth-credentials';
 import { resolveSinchOAuthCredentials } from '../../src/auth/resolve-sinch-oauth-credentials';
 import { runWithHttpCredentialHeaders } from '../../src/auth/credential-context';
-import {
-  clearHttpCredentialSourceForTests,
-  setHttpCredentialSource,
-} from '../../src/auth/http-credential-mode';
+import { clearHttpCredentialSourceForTests, setHttpCredentialSource } from '../../src/auth/http-credential-mode';
 import { PromptResponse } from '../../src/types';
 import { mockEnv, resetMockEnv } from '../helpers/mock-env';
 
@@ -48,9 +42,8 @@ describe('sinch-oauth-credentials', () => {
     setHttpCredentialSource('request-header');
 
     const encoded = Buffer.from('hdr:hkey:hsecret').toString('base64');
-    const resolved = runWithHttpCredentialHeaders(
-      { 'x-sinch-credentials': encoded },
-      () => resolveSinchOAuthCredentials(),
+    const resolved = runWithHttpCredentialHeaders({ 'x-sinch-credentials': encoded }, () =>
+      resolveSinchOAuthCredentials(),
     );
 
     expect(resolved).not.toBeInstanceOf(PromptResponse);
@@ -67,9 +60,8 @@ describe('sinch-oauth-credentials', () => {
     mockEnv.KEY_SECRET = 'env-secret';
 
     const encoded = Buffer.from('hdr:hkey:hsecret').toString('base64');
-    const resolved = runWithHttpCredentialHeaders(
-      { 'x-sinch-credentials': encoded },
-      () => resolveSinchOAuthCredentials(),
+    const resolved = runWithHttpCredentialHeaders({ 'x-sinch-credentials': encoded }, () =>
+      resolveSinchOAuthCredentials(),
     );
 
     expect(resolved).not.toBeInstanceOf(PromptResponse);

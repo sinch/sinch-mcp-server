@@ -9,9 +9,7 @@ type BearerAuthChallenge = {
   errorDescription?: string;
 };
 
-export const buildBearerWwwAuthenticateHeader = (
-  challenge: BearerAuthChallenge = {},
-): string => {
+export const buildBearerWwwAuthenticateHeader = (challenge: BearerAuthChallenge = {}): string => {
   const parts = [`Bearer realm="${MCP_BEARER_REALM}"`];
 
   if (challenge.error) {
@@ -40,8 +38,7 @@ const extractTokenFromAuthorizationValue = (header: string): string | undefined 
   return token.length > 0 ? token : undefined;
 };
 
-const hashToken = (token: string): Buffer =>
-  createHash('sha256').update(token).digest();
+const hashToken = (token: string): Buffer => createHash('sha256').update(token).digest();
 
 const tokensMatch = (provided: string, expected: string): boolean => {
   // Compare fixed-length SHA-256 digests so timingSafeEqual never needs a
@@ -67,9 +64,7 @@ export const loadMcpApiKeys = (): string[] => {
   return [...new Set(keys)];
 };
 
-export const extractBearerToken = (
-  authorizationHeader: string | string[] | undefined,
-): string | undefined => {
+export const extractBearerToken = (authorizationHeader: string | string[] | undefined): string | undefined => {
   const headers =
     authorizationHeader === undefined
       ? []
@@ -91,10 +86,7 @@ export const extractBearerToken = (
   return undefined;
 };
 
-export const isValidMcpApiKey = (
-  providedToken: string | undefined,
-  configuredKeys: string[],
-): boolean => {
+export const isValidMcpApiKey = (providedToken: string | undefined, configuredKeys: string[]): boolean => {
   if (!providedToken || configuredKeys.length === 0) {
     return false;
   }

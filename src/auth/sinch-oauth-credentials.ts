@@ -10,19 +10,11 @@ export type SinchOAuthCredentials = {
   cacheKey: string;
 };
 
-export const buildCredentialCacheKey = (
-  projectId: string,
-  keyId: string,
-  keySecret: string,
-): string => {
-  return createHash('sha256')
-    .update(`${projectId}:${keyId}:${keySecret}`)
-    .digest('hex');
+export const buildCredentialCacheKey = (projectId: string, keyId: string, keySecret: string): string => {
+  return createHash('sha256').update(`${projectId}:${keyId}:${keySecret}`).digest('hex');
 };
 
-export const parseSinchCredentialsValue = (
-  encodedValue: string,
-): SinchOAuthCredentials | undefined => {
+export const parseSinchCredentialsValue = (encodedValue: string): SinchOAuthCredentials | undefined => {
   const trimmed = encodedValue.trim();
   if (!trimmed) {
     return undefined;

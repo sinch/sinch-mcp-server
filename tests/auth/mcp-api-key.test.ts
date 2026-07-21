@@ -77,9 +77,7 @@ describe('mcp-api-key', () => {
           error: 'invalid_token',
           errorDescription: 'The MCP API key is invalid',
         }),
-      ).toBe(
-        'Bearer realm="sinch-mcp", error="invalid_token", error_description="The MCP API key is invalid"',
-      );
+      ).toBe('Bearer realm="sinch-mcp", error="invalid_token", error_description="The MCP API key is invalid"');
     });
   });
 

@@ -4,9 +4,7 @@ describe('json-rpc', () => {
   describe('getJsonRpcResponseId', () => {
     it('returns the request id when present', () => {
       expect(getJsonRpcResponseId({ jsonrpc: '2.0', method: 'initialize', id: 1 })).toBe(1);
-      expect(getJsonRpcResponseId({ jsonrpc: '2.0', method: 'initialize', id: 'req-1' })).toBe(
-        'req-1',
-      );
+      expect(getJsonRpcResponseId({ jsonrpc: '2.0', method: 'initialize', id: 'req-1' })).toBe('req-1');
     });
 
     it('returns null for notifications, batch requests, and unparsed bodies', () => {
