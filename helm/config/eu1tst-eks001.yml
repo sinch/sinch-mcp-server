@@ -1,0 +1,17 @@
+# Staging (Messaging cluster) — first deploy target.
+# Confirm namespace name against flux/applications MR !3834.
+
+replicaCount: 1
+
+image:
+  pullPolicy: Always
+
+resources:
+  requests:
+    cpu: 100m
+    memory: 256Mi
+  limits:
+    cpu: 500m
+    memory: 512Mi
+
+existingSecret: sinch-mcp-server

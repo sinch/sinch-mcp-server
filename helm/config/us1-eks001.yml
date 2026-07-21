@@ -1,0 +1,16 @@
+# Production overlay — disabled in CI until Production Checklist + GKA us1 access land.
+
+replicaCount: 2
+
+image:
+  pullPolicy: IfNotPresent
+
+resources:
+  requests:
+    cpu: 200m
+    memory: 512Mi
+  limits:
+    cpu: 1000m
+    memory: 1Gi
+
+existingSecret: sinch-mcp-server

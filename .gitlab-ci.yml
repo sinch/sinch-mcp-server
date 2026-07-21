@@ -1,16 +1,96 @@
+# GitLab CI for Sinch MCP server (Remote HTTP) on Messaging cluster.
+#
+# Assumptions (confirm with #msg-devops / MR !3834):
+#   namespace: mcp-messaging
+#   first site: eu1tst-eks001
+#   cg_product: mcp_messaging (must be allow-listed in kyverno-policies)
+#
+# deploy-helm-gka site boolean inputs vary by component version — verify against
+# https://gitlab.com/sinch/sinch-projects/sinch-platform/infra/pipeline/deploy-helm-gka
+
 include:
   - project: '$SINCH_SECURITY_PIPELINE_PROJECT'
     ref: v1-latest
     file: 'auto_security.yml'
-    
+  - component: gitlab.com/sinch/sinch-projects/sinch-platform/infra/pipeline/deploy-helm-gka/deploy-helm-gka@4.9.0
+    inputs:
+      deploymentName: sinch-mcp-server
+      autoDeployOnDefaultBranch: true
+      helmChart: helm
+      helmConfigPath: helm/config
+      namespaceName: mcp-messaging
+      dependencies: [publish-image]
+      # Messaging staging — confirm flag name with #msg-devops if job is skipped.
+      eu1tst: true
+      us1: false
+
 default:
   tags: [default]
-  
+
 variables:
-  SINCH_GLOBAL_SECURITY_STAGE_SAST_DEEP_CLONE: "true"
-  SECURITY_STEPS_FORCE_RUN: "true"
-  
+  SINCH_GLOBAL_SECURITY_STAGE_SAST_DEEP_CLONE: 'true'
+  SECURITY_STEPS_FORCE_RUN: 'true'
+  NODE_IMAGE: node:20.19.4-bookworm-slim
+  # Overridden by GKA/image publish to the digest/tag built in this pipeline.
+  DOCKER_IMAGE: $CI_REGISTRY_IMAGE
+
 stages:
+  - test
+  - build
+  - publish
+  - deploy
   - security-scan-third-parties
   - security-scan-consolidation
   - security-scan-sonar
+
+.node_job:
+  image: $NODE_IMAGE
+  before_script:
+    - node --version
+    - npm ci
+
+lint:
+  extends: .node_job
+  stage: test
+  script:
+    - npm run lint
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+
+unit-test:
+  extends: .node_job
+  stage: test
+  script:
+    - npm test
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+
+# Build and push the container image to the GitLab project registry.
+# Image tag is used by deploy-helm-gka (confirm variable wiring with #msg-devops).
+publish-image:
+  stage: publish
+  image:
+    name: gcr.io/kaniko-project/executor:v1.23.2-debug
+    entrypoint: ['']
+  script:
+    - |
+      set -euo pipefail
+      IMAGE_TAG="${CI_COMMIT_TAG:-$CI_COMMIT_SHORT_SHA}"
+      DEST="${CI_REGISTRY_IMAGE}:${IMAGE_TAG}"
+      echo "Building ${DEST}"
+      /kaniko/executor \
+        --context "${CI_PROJECT_DIR}" \
+        --dockerfile "${CI_PROJECT_DIR}/Dockerfile" \
+        --destination "${DEST}" \
+        --destination "${CI_REGISTRY_IMAGE}:latest" \
+        --build-arg "BUILDKIT_INLINE_CACHE=1"
+  rules:
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+    - if: $CI_COMMIT_TAG
+  needs:
+    - job: unit-test
+      optional: true
+    - job: lint
+      optional: true

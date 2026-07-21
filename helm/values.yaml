@@ -1,0 +1,86 @@
+replicaCount: 2
+
+nameOverride: ""
+fullnameOverride: ""
+
+image:
+  repository: registry.gitlab.com/sinch/sinch-projects/product/agent-experience/sinch-mcp-server
+  tag: ""
+  pullPolicy: IfNotPresent
+
+imagePullSecrets: []
+
+serviceAccount:
+  create: false
+  name: ""
+
+podAnnotations: {}
+
+# Cost-governance labels required by Kyverno on Messaging clusters.
+# Confirm cg_product with #msg-devops / Christoffer Jonsson (must be allow-listed).
+costGovernance:
+  cg_product: mcp_messaging
+  cg_product2: mcp_server
+  cg_product_id: "0"
+  cg_team: platform
+  cg_business_unit: enterprise_messaging
+  cg_release_state: alpha
+
+service:
+  type: ClusterIP
+  port: 80
+  targetPort: 8000
+
+resources:
+  requests:
+    cpu: 100m
+    memory: 256Mi
+  limits:
+    cpu: 500m
+    memory: 512Mi
+
+# Existing K8s Secret with MCP_API_KEY and Sinch/Mailgun credentials.
+# Create manually or via ExternalSecrets before first deploy.
+existingSecret: sinch-mcp-server
+
+env:
+  - name: PORT
+    value: "8000"
+  - name: NODE_ENV
+    value: production
+  - name: LOG_LEVEL
+    value: info
+
+# Keys loaded from existingSecret into the container env.
+secretKeys:
+  - MCP_API_KEY
+  - PROJECT_ID
+  - KEY_ID
+  - KEY_SECRET
+  - CONVERSATION_REGION
+  - APPLICATION_KEY
+  - APPLICATION_SECRET
+  - MAILGUN_DOMAIN
+  - MAILGUN_API_KEY
+  - MAILGUN_SENDER_ADDRESS
+
+probes:
+  liveness:
+    path: /health/live
+    initialDelaySeconds: 10
+    periodSeconds: 10
+    failureThreshold: 3
+  readiness:
+    path: /health/ready
+    initialDelaySeconds: 5
+    periodSeconds: 5
+    failureThreshold: 3
+
+autoscaling:
+  enabled: false
+
+terminationGracePeriodSeconds: 30
+
+nodeSelector: {}
+tolerations: []
+affinity: {}

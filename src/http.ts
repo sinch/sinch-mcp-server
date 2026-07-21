@@ -13,7 +13,11 @@ import { instantiateMcpServer, parseArgs, registerCapabilities } from './server'
 dotenv.config();
 
 const MCP_PATH = '/mcp';
+const HEALTH_LIVE_PATH = '/health/live';
+const HEALTH_READY_PATH = '/health/ready';
 const DEFAULT_PORT = 8000;
+
+const startedAtMs = Date.now();
 
 type SessionEntry = {
   transport: StreamableHTTPServerTransport;
@@ -135,6 +139,18 @@ export const createHttpApp = () => {
   const app = express();
   app.use(express.json({ limit: '4mb' }));
 
+  // Unauthenticated probes for Kubernetes (must stay outside MCP auth middleware).
+  app.get(HEALTH_LIVE_PATH, (_req, res) => {
+    res.status(200).json({
+      status: 'ok',
+      uptimeSeconds: Math.floor((Date.now() - startedAtMs) / 1000),
+    });
+  });
+
+  app.get(HEALTH_READY_PATH, (_req, res) => {
+    res.status(200).json({ status: 'ready' });
+  });
+
   if (isSingleTenant) {
     app.use(MCP_PATH, createMcpApiKeyMiddleware(mcpApiKeys));
   }
@@ -166,6 +182,20 @@ export const main = async (): Promise<void> => {
       );
       resolve();
     });
+
+    const shutdown = (signal: string) => {
+      console.error(`Received ${signal}, shutting down HTTP server`);
+      server.close((error) => {
+        if (error) {
+          console.error('Error during HTTP server shutdown:', error);
+          process.exit(1);
+        }
+        process.exit(0);
+      });
+    };
+
+    process.on('SIGTERM', () => shutdown('SIGTERM'));
+    process.on('SIGINT', () => shutdown('SIGINT'));
 
     server.on('error', reject);
   });
