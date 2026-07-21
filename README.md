@@ -73,6 +73,12 @@ Here is the list of tools available in the MCP server (all the phone numbers mus
 | **get-rcs-test-number-state**     | Get the verification state of a single RCS test number. <br> _Example prompt_: "What is the state of test number +14155552671 on sender abc123?"                                                                                                   | rcs, configuration |
 | **get-rcs-number-capabilities**   | Get the RCS features supported by a test number's device (actions, rich card layouts, revocation). <br> _Example prompt_: "What RCS features does +14155552671 support?"                                                                           | rcs, configuration |
 
+### WhatsApp Template Tools
+
+| Tool                          | Description                                                                                                                                                                    | Tags     |
+| ----------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------- |
+| **create-whatsapp-template**  | Create a WhatsApp message template, as a draft or submitted for review. <br> _Example prompt_: "Create a WhatsApp UTILITY template named order_confirmation in English with body text 'Your order {{1}} has shipped.'" | whatsapp |
+
 ### Numbers Tools
 
 | Tool                             | Description                                                                                                                                                                                              | Tags    |
@@ -102,6 +108,8 @@ Here is the list of tools available in the MCP server (all the phone numbers mus
 To use the APIs used by the MCP tools, you will need the following credentials:
 
 - RCS API credentials: RCS must be enabled for your Sinch project. Contact si-richmessaging@sinch.com to activate it. Once enabled, RCS uses the same `PROJECT_ID`, `KEY_ID`, and `KEY_SECRET` as the Conversation API (see below).
+
+- WhatsApp Template API credentials: uses the same `PROJECT_ID`, `KEY_ID`, and `KEY_SECRET` as the Conversation API (see below).
 
 - Conversation / Numbers API credentials:
   - (Required) `PROJECT_ID`: Select the project you want to use from your [Sinch Build dashboard](https://dashboard.sinch.com/dashboard) (Located at the left of the top toolbar)
@@ -227,7 +235,7 @@ You can combine multiple tags by separating them with commas. For example, if yo
       ],
 ```
 
-Available tags: `conversation`, `rcs`, `email`, `verification`, `voice`, `numbers`, `notification`, `configuration`, `all`.
+Available tags: `conversation`, `rcs`, `whatsapp`, `email`, `verification`, `voice`, `numbers`, `notification`, `configuration`, `all`.
 
 If you want to use all the tools, you can omit the `--tags` option, or use the tag `all`:
 

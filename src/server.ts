@@ -7,6 +7,7 @@ import { registerVoiceTools } from './tools/voice';
 import { registerEmailTools } from './tools/email';
 import { registerNumbersTools } from './tools/numbers';
 import { registerRcsTools } from './tools/rcs';
+import { registerWhatsAppTools } from './tools/whatsapp';
 import { Tags } from './types';
 import pkg from '../package.json';
 const mcpServerVersion = pkg.version;
@@ -46,4 +47,5 @@ export const registerCapabilities = (server: McpServer, tags: Tags[]) => {
   registerEmailTools(server, tags);
   registerNumbersTools(server, tags);
   registerRcsTools(server, tags);
+  registerWhatsAppTools(server, tags);
 };
