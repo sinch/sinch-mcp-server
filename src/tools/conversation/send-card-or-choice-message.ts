@@ -20,7 +20,7 @@ import {
 import { isPromptResponse, matchesAnyTag } from '../../utils';
 import { IPromptResponse, PromptResponse, Tags } from '../../types';
 
-const choiceMessage = z
+export const choiceMessage = z
   .object({
     // Call
     phone_number: z.string().optional().describe('E.164 format'),
