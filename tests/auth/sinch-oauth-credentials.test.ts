@@ -1,0 +1,78 @@
+import { parseSinchCredentialsValue, sinchOAuthCredentialsFromEnv } from '../../src/auth/sinch-oauth-credentials';
+import { resolveSinchOAuthCredentials } from '../../src/auth/resolve-sinch-oauth-credentials';
+import { runWithHttpCredentialHeaders } from '../../src/auth/credential-context';
+import { clearHttpCredentialSourceForTests, setHttpCredentialSource } from '../../src/auth/http-credential-mode';
+import { PromptResponse } from '../../src/types';
+import { mockEnv, resetMockEnv } from '../helpers/mock-env';
+
+describe('sinch-oauth-credentials', () => {
+  beforeEach(() => {
+    resetMockEnv();
+    clearHttpCredentialSourceForTests();
+  });
+
+  it('parses Base64 projectId:keyId:keySecret', () => {
+    const encoded = Buffer.from('proj:key:secret-with:colons').toString('base64');
+    const creds = parseSinchCredentialsValue(encoded);
+
+    expect(creds).toEqual({
+      projectId: 'proj',
+      keyId: 'key',
+      keySecret: 'secret-with:colons',
+      cacheKey: '94a2565d5b7f23bc2b6eab6a5c6a5ef49b780630b72e597677ef614779b04ba3',
+    });
+  });
+
+  it('loads credentials from environment', () => {
+    mockEnv.PROJECT_ID = 'p';
+    mockEnv.KEY_ID = 'k';
+    mockEnv.KEY_SECRET = 's';
+
+    const creds = sinchOAuthCredentialsFromEnv();
+
+    expect(creds).toEqual({
+      projectId: 'p',
+      keyId: 'k',
+      keySecret: 's',
+      cacheKey: '18aceb6e19d3c1c0b54100a374b7458f3abf2426c8b78645fb8b7175039231a7',
+    });
+  });
+
+  it('uses request header in multi-tenant mode', () => {
+    setHttpCredentialSource('request-header');
+
+    const encoded = Buffer.from('hdr:hkey:hsecret').toString('base64');
+    const resolved = runWithHttpCredentialHeaders({ 'x-sinch-credentials': encoded }, () =>
+      resolveSinchOAuthCredentials(),
+    );
+
+    expect(resolved).not.toBeInstanceOf(PromptResponse);
+    if (resolved instanceof PromptResponse) {
+      throw new Error('expected credentials');
+    }
+    expect(resolved.projectId).toBe('hdr');
+  });
+
+  it('uses environment in single-tenant mode even when a header is present', () => {
+    setHttpCredentialSource('env');
+    mockEnv.PROJECT_ID = 'env-project';
+    mockEnv.KEY_ID = 'env-key';
+    mockEnv.KEY_SECRET = 'env-secret';
+
+    const encoded = Buffer.from('hdr:hkey:hsecret').toString('base64');
+    const resolved = runWithHttpCredentialHeaders({ 'x-sinch-credentials': encoded }, () =>
+      resolveSinchOAuthCredentials(),
+    );
+
+    expect(resolved).not.toBeInstanceOf(PromptResponse);
+    if (resolved instanceof PromptResponse) {
+      throw new Error('expected credentials');
+    }
+    expect(resolved.projectId).toBe('env-project');
+  });
+
+  it('returns PromptResponse when credentials are missing', () => {
+    const result = resolveSinchOAuthCredentials();
+    expect(result).toBeInstanceOf(PromptResponse);
+  });
+});
