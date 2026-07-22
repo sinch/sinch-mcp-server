@@ -12,6 +12,9 @@ export interface ProvisioningErrorBody {
 
 // Base REST client for Sinch provisioning APIs (Basic auth, project-scoped
 // paths). Subclasses set the resource segment and their own ApiError type.
+//
+// RcsProvisioningClient still duplicates this logic rather than extending it —
+// migrating it is deferred to a follow-up PR: https://sinchenterprise.atlassian.net/browse/DEVEXP-1514
 export abstract class BaseProvisioningClient {
   protected constructor(
     private readonly resource: string,

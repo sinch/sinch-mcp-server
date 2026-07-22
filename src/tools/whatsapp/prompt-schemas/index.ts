@@ -125,7 +125,7 @@ const WhatsAppMediaHeader = z.object({
 });
 
 const WhatsAppHeaderComponent = z
-  .union([WhatsAppLocationHeader, WhatsAppTextHeader, WhatsAppMediaHeader])
+  .discriminatedUnion('format', [WhatsAppLocationHeader, WhatsAppTextHeader, WhatsAppMediaHeader])
   .describe('Template header. A LOCATION header takes no other fields; TEXT and media formats add their own.');
 
 // ── body / footer components ───────────────────────────────────────────────
@@ -225,7 +225,7 @@ const WhatsAppOtpButton = z.object({
   signatureHash: z.string().optional().describe('Your app signing key hash.'),
 });
 
-const WhatsAppButton = z.union([
+const WhatsAppButton = z.discriminatedUnion('type', [
   WhatsAppFlowButton,
   WhatsAppOtpButton,
   WhatsAppPhoneNumberButton,
@@ -243,9 +243,7 @@ const WhatsAppButtonsComponent = z.object({
     .array(WhatsAppButton)
     .refine(uniqueTypeAndText, { message: 'Each button must have a unique type/text combination.' })
     .optional()
-    .describe(
-      'Buttons. Can only have one entry of each type, except URL, PHONE_NUMBER and QUICK_REPLY. Not required for draft.',
-    ),
+    .describe('Buttons. Not required for draft.'),
 });
 
 // ── carousel ─────────────────────────────────────────────────────────────
@@ -267,7 +265,11 @@ const WhatsAppCardBody = z.object({
     .describe('Examples for the body variables. Requires one example for each variable in the body text.'),
 });
 
-const WhatsAppCardButton = z.union([WhatsAppUrlButton, WhatsAppQuickReplyButton, WhatsAppPhoneNumberButton]);
+const WhatsAppCardButton = z.discriminatedUnion('type', [
+  WhatsAppUrlButton,
+  WhatsAppQuickReplyButton,
+  WhatsAppPhoneNumberButton,
+]);
 
 const WhatsAppCardButtonsComponent = z.object({
   type: z.literal('BUTTONS'),
@@ -278,7 +280,11 @@ const WhatsAppCardButtonsComponent = z.object({
     .describe('Card buttons. Can be a mix of quick reply, phone number, and URL buttons. Not required for draft.'),
 });
 
-const WhatsAppCardComponent = z.union([WhatsAppCardHeader, WhatsAppCardBody, WhatsAppCardButtonsComponent]);
+const WhatsAppCardComponent = z.discriminatedUnion('type', [
+  WhatsAppCardHeader,
+  WhatsAppCardBody,
+  WhatsAppCardButtonsComponent,
+]);
 
 const WhatsAppCard = z.object({
   components: z

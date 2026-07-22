@@ -1,21 +1,25 @@
 import { createWhatsAppTemplateHandler } from '../../../src/tools/whatsapp/create-whatsapp-template';
 import { getWhatsAppProvisioningClient } from '../../../src/tools/whatsapp/utils/whatsapp-service-helper';
-import { WhatsAppApiError } from '../../../src/tools/whatsapp/utils/whatsapp-provisioning-client';
+import {
+  WhatsAppApiError,
+  WhatsAppProvisioningClient,
+} from '../../../src/tools/whatsapp/utils/whatsapp-provisioning-client';
 import { PromptResponse } from '../../../src/types';
 
 jest.mock('../../../src/tools/whatsapp/utils/whatsapp-service-helper');
 
-const mockClient = {
-  createTemplate: jest.fn(),
-};
+const mockClient = new WhatsAppProvisioningClient('project-id', 'key-id', 'key-secret', 'test-tool');
+const mockCreateTemplate = jest.spyOn(mockClient, 'createTemplate');
+
+const mockedGetClient = jest.mocked(getWhatsAppProvisioningClient);
 
 beforeEach(() => {
   jest.clearAllMocks();
-  (getWhatsAppProvisioningClient as jest.Mock).mockReturnValue(mockClient);
+  mockedGetClient.mockReturnValue(mockClient);
 });
 
 test('createWhatsAppTemplateHandler sends the built body and returns the template on success', async () => {
-  mockClient.createTemplate.mockResolvedValue({
+  mockCreateTemplate.mockResolvedValue({
     name: 'order_confirmation',
     language: 'EN',
     category: 'UTILITY',
@@ -36,7 +40,7 @@ test('createWhatsAppTemplateHandler sends the built body and returns the templat
   });
   const parsed = JSON.parse(result.content[0].text);
 
-  expect(mockClient.createTemplate).toHaveBeenCalledWith({
+  expect(mockCreateTemplate).toHaveBeenCalledWith({
     name: 'order_confirmation',
     language: 'EN',
     category: 'UTILITY',
@@ -56,7 +60,7 @@ test('createWhatsAppTemplateHandler sends the built body and returns the templat
 });
 
 test('createWhatsAppTemplateHandler surfaces a WhatsAppApiError as a formatted failure', async () => {
-  mockClient.createTemplate.mockRejectedValue(
+  mockCreateTemplate.mockRejectedValue(
     new WhatsAppApiError(409, 'Conflict', 'template_exists', 'Templates must have unique name and language.'),
   );
 
@@ -78,7 +82,7 @@ test('createWhatsAppTemplateHandler returns the guard response when credentials 
   const guard = new PromptResponse(
     JSON.stringify({ success: false, error: 'Missing env vars: PROJECT_ID, KEY_ID, KEY_SECRET.' }),
   );
-  (getWhatsAppProvisioningClient as jest.Mock).mockReturnValue(guard);
+  mockedGetClient.mockReturnValue(guard);
 
   const result = await createWhatsAppTemplateHandler({
     name: 'order_confirmation',
@@ -88,5 +92,5 @@ test('createWhatsAppTemplateHandler returns the guard response when credentials 
   const parsed = JSON.parse(result.content[0].text);
 
   expect(parsed).toEqual({ success: false, error: 'Missing env vars: PROJECT_ID, KEY_ID, KEY_SECRET.' });
-  expect(mockClient.createTemplate).not.toHaveBeenCalled();
+  expect(mockCreateTemplate).not.toHaveBeenCalled();
 });

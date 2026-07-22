@@ -75,9 +75,9 @@ Here is the list of tools available in the MCP server (all the phone numbers mus
 
 ### WhatsApp Template Tools
 
-| Tool                          | Description                                                                                                                                                                    | Tags     |
-| ----------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------- |
-| **create-whatsapp-template**  | Create a WhatsApp message template, as a draft or submitted for review. <br> _Example prompt_: "Create a WhatsApp UTILITY template named order_confirmation in English with body text 'Your order {{1}} has shipped.'" | whatsapp |
+| Tool                         | Description                                                                                                                                                                                                            | Tags                    |
+| ---------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------- |
+| **create-whatsapp-template** | Create a WhatsApp message template, as a draft or submitted for review. <br> _Example prompt_: "Create a WhatsApp UTILITY template named order_confirmation in English with body text 'Your order {{1}} has shipped.'" | whatsapp, configuration |
 
 ### Numbers Tools
 
@@ -329,7 +329,6 @@ You can then configure the MCP server in the Claude configuration file as follow
 
 (Replace the `http://localhost:8000/sse` with the URL of your MCP server if it is not running locally)
 
-
 ## Option 3: Native Streamable HTTP server (recommended for remote)
 
 This option runs a **native Streamable HTTP** MCP server on `/mcp`. Choose **single-tenant** or **multi-tenant** deployment — they are mutually exclusive.
@@ -358,8 +357,8 @@ KEY_SECRET=
 
 Remote clients send **one header** on every request:
 
-| Header | Value |
-|--------|--------|
+| Header          | Value                  |
+| --------------- | ---------------------- |
 | `Authorization` | `Bearer <MCP_API_KEY>` |
 
 `MCP_API_KEY` (or comma-separated `MCP_API_KEYS` for [key rotation](#mcp_api_keys-key-rotation)) authorizes access to the MCP server. `PROJECT_ID`, `KEY_ID`, and `KEY_SECRET` are read from the server environment only — **`X-Sinch-Credentials` is ignored** in this mode (no client override of server credentials).
@@ -370,8 +369,8 @@ Use when different clients must use different Sinch projects. **Do not set `MCP_
 
 Remote clients send **one header** on every request:
 
-| Header | Value |
-|--------|--------|
+| Header                | Value                                      |
+| --------------------- | ------------------------------------------ |
 | `X-Sinch-Credentials` | Base64-encoded `projectId:keyId:keySecret` |
 
 The server does **not** read `PROJECT_ID`, `KEY_ID`, or `KEY_SECRET` from its environment for OAuth-backed tools in this mode. OAuth clients are cached in memory with **LRU eviction** (default 256 entries, configurable via `OAUTH_TOKEN_CACHE_MAX_ENTRIES`).
@@ -447,7 +446,6 @@ Each MCP client session creates an in-memory `McpServer` instance (all registere
 ```
 
 After the `initialize` response, include the `mcp-session-id` header returned by the server on subsequent requests.
-
 
 ## Contributing
 

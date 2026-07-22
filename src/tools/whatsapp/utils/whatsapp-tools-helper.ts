@@ -5,7 +5,7 @@ const defineToolsConfig = <T extends Record<string, ToolsConfig>>(config: T) => 
 export const toolsConfig = defineToolsConfig({
   createWhatsAppTemplate: {
     name: 'create-whatsapp-template',
-    tags: ['all', 'whatsapp', 'create-whatsapp-template'],
+    tags: ['all', 'whatsapp', 'configuration', 'create-whatsapp-template'],
   },
 });
 
