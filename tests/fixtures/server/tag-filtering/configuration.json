@@ -2,6 +2,8 @@
   "tag": "configuration",
   "expectedTools": [
     "create-conversation-app",
+    "update-conversation-app",
+    "delete-conversation-app",
     "create-webhook",
     "delete-webhook",
     "get-webhook",
