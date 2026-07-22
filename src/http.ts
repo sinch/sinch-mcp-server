@@ -18,12 +18,32 @@ const HEALTH_READY_PATH = '/health/ready';
 const DEFAULT_PORT = 8000;
 
 const startedAtMs = Date.now();
+let isShuttingDown = false;
 
 type SessionEntry = {
   transport: StreamableHTTPServerTransport;
 };
 
 const sessions = new Map<string, SessionEntry>();
+
+/** Exposed for unit tests. */
+export const setShuttingDownForTests = (value: boolean): void => {
+  isShuttingDown = value;
+};
+
+/** Exposed for unit tests — inserts a placeholder session entry. */
+export const seedSessionForTests = (sessionId = 'test-session'): void => {
+  sessions.set(sessionId, {
+    transport: {} as StreamableHTTPServerTransport,
+  });
+};
+
+/** Exposed for unit tests. */
+export const clearSessionsForTests = (): void => {
+  sessions.clear();
+};
+
+export const getActiveSessionCount = (): number => sessions.size;
 
 const isInitializationBody = (body: unknown): boolean => {
   if (!body || typeof body !== 'object') {
@@ -148,7 +168,26 @@ export const createHttpApp = () => {
   });
 
   app.get(HEALTH_READY_PATH, (_req, res) => {
-    res.status(200).json({ status: 'ready' });
+    if (isShuttingDown) {
+      res.status(503).json({ status: 'not_ready', reason: 'shutting_down' });
+      return;
+    }
+
+    if (isMcpSessionCapacityReached(sessions.size)) {
+      res.status(503).json({
+        status: 'not_ready',
+        reason: 'session_capacity_reached',
+        activeSessions: sessions.size,
+        maxSessions: getMaxMcpSessions(),
+      });
+      return;
+    }
+
+    res.status(200).json({
+      status: 'ready',
+      activeSessions: sessions.size,
+      maxSessions: getMaxMcpSessions(),
+    });
   });
 
   if (isSingleTenant) {
@@ -185,6 +224,7 @@ export const main = async (): Promise<void> => {
 
     const shutdown = (signal: string) => {
       console.error(`Received ${signal}, shutting down HTTP server`);
+      isShuttingDown = true;
       server.close((error) => {
         if (error) {
           console.error('Error during HTTP server shutdown:', error);

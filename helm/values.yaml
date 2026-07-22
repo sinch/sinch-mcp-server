@@ -5,7 +5,8 @@ fullnameOverride: ""
 
 image:
   repository: registry.gitlab.com/sinch/sinch-projects/product/agent-experience/sinch-mcp-server
-  tag: ""
+  # Default matches Chart.appVersion; CI/GKA overrides with the built image tag.
+  tag: "0.0.1-alpha.6"
   pullPolicy: IfNotPresent
 
 imagePullSecrets: []

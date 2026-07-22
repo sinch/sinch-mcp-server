@@ -7,8 +7,7 @@
 #   cg_product:       mcp_messaging  (BLOCKED until allow-listed)
 #
 # App chart lives in this repo under `helm/`.
-# Shared infra (DB/Kafka/ingress) would go in:
-#   https://gitlab.com/sinch/sinch-projects/product/agent-experience/k8s-manifests-mcp-messaging/
+# GKA / namespace DevOps checklist lives in Confluence under Platform Foundation → MCPs.
 #
 # Runtime: Streamable HTTP on port 8000, path `/mcp`.
 # Probes: `/health/live`, `/health/ready` (no auth).

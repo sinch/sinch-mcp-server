@@ -52,7 +52,6 @@ spec:
                 secretKeyRef:
                   name: {{ $.Values.existingSecret }}
                   key: {{ . }}
-                  optional: true
             {{- end }}
             {{- end }}
           volumeMounts:
