@@ -8,6 +8,8 @@ const CONVERSATION_RESOURCE_TAGS: Tags[] = [
   'conversation',
   'configuration',
   'create-conversation-app',
+  'update-conversation-app',
+  'delete-conversation-app',
   'set-sms-channel-on-app',
   'set-rcs-channel-on-app',
   'set-whatsapp-channel-on-app',
@@ -22,7 +24,7 @@ export const registerConversationResources = (server: McpServer, tags: Tags[]) =
     'conversation-app-setup',
     CONVERSATION_APP_SETUP_URI,
     {
-      description: `Read before calling create-conversation-app or any set-*-channel-on-app tool. Covers the app setup flow, required credentials per channel (SMS, RCS, WhatsApp), region constraints, and how to handle ambiguous channel requests from the user.`,
+      description: `Read before calling create-conversation-app, update-conversation-app, delete-conversation-app, or any set-*-channel-on-app tool. Covers the app setup flow, rename/delete, required credentials per channel (SMS, RCS, WhatsApp), region constraints, and how to handle ambiguous channel requests from the user.`,
       mimeType: 'text/markdown',
     },
     async () => ({

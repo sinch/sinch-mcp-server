@@ -29,7 +29,7 @@ export const registerSetSmsChannelOnApp = (server: McpServer, tags: Tags[]) => {
     TOOL_NAME,
     {
       description:
-        'Set (create or replace) the SMS channel on a Conversation API app. Requires the SMS service plan ID and API token. The app must be in the same region as the SMS service plan. For vague requests such as "add messaging", ask whether the user means SMS, RCS, or WhatsApp and collect the required credentials before calling a tool.',
+        'Set (create or replace) the SMS channel on a Conversation API app. Requires the SMS service plan ID and API token. The app must be in the same region as the SMS service plan. To rename an app, use update-conversation-app instead. For vague requests such as "add messaging", ask whether the user means SMS, RCS, or WhatsApp and collect the required credentials before calling a tool.',
       inputSchema: SetSmsChannelOnAppSchema,
     },
     setSmsChannelOnAppHandler,
