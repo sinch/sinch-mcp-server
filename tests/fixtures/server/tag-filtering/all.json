@@ -8,6 +8,8 @@
     "send-email",
     "list-conversation-apps",
     "create-conversation-app",
+    "update-conversation-app",
+    "delete-conversation-app",
     "set-sms-channel-on-app",
     "set-rcs-channel-on-app",
     "set-whatsapp-channel-on-app",

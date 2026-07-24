@@ -13,6 +13,14 @@ export const toolsConfig = defineToolsConfig({
     name: 'create-conversation-app',
     tags: ['all', 'conversation', 'configuration', 'create-conversation-app'],
   },
+  updateConversationApp: {
+    name: 'update-conversation-app',
+    tags: ['all', 'conversation', 'configuration', 'update-conversation-app'],
+  },
+  deleteConversationApp: {
+    name: 'delete-conversation-app',
+    tags: ['all', 'conversation', 'configuration', 'delete-conversation-app'],
+  },
   setSmsChannelOnApp: {
     name: 'set-sms-channel-on-app',
     tags: ['all', 'conversation', 'configuration', 'set-sms-channel-on-app'],

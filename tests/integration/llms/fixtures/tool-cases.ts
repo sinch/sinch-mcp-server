@@ -116,6 +116,21 @@ const messagingCases: ToolTestCase[] = [
     },
   },
   {
+    prompt: 'Rename Conversation app app-abc123 to My Support Bot.',
+    expectedToolName: 'update-conversation-app',
+    expectedArguments: {
+      appId: 'app-abc123',
+      displayName: 'My Support Bot',
+    },
+  },
+  {
+    prompt: 'Delete Conversation app app-abc123.',
+    expectedToolName: 'delete-conversation-app',
+    expectedArguments: {
+      appId: 'app-abc123',
+    },
+  },
+  {
     prompt: 'Show me all message templates in my account.',
     expectedToolName: 'list-messaging-templates',
     expectedArguments: undefined,

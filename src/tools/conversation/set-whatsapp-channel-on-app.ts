@@ -29,7 +29,7 @@ export const registerSetWhatsAppChannelOnApp = (server: McpServer, tags: Tags[])
     TOOL_NAME,
     {
       description:
-        'Set (create or replace) the WhatsApp channel on a Conversation API app. Requires the WhatsApp sender ID and bearer token. For vague requests such as "add messaging", ask whether the user means SMS, RCS, or WhatsApp and collect the required credentials before calling a tool.',
+        'Set (create or replace) the WhatsApp channel on a Conversation API app. Requires the WhatsApp sender ID and bearer token. To rename an app, use update-conversation-app instead. For vague requests such as "add messaging", ask whether the user means SMS, RCS, or WhatsApp and collect the required credentials before calling a tool.',
       inputSchema: SetWhatsAppChannelOnAppSchema,
     },
     setWhatsAppChannelOnAppHandler,
