@@ -21,7 +21,8 @@
     "resend-rcs-test-number-invite",
     "get-rcs-number-capabilities",
     "get-rcs-test-number-state",
-    "launch-rcs-sender"
+    "launch-rcs-sender",
+    "create-whatsapp-template"
   ],
   "expectedPrompts": []
 }
