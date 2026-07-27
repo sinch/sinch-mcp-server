@@ -241,7 +241,7 @@ const WhatsAppButtonsComponent = z.object({
   type: z.literal('BUTTONS'),
   buttons: z
     .array(WhatsAppButton)
-    .refine(uniqueTypeAndText, { message: 'Each card button must have a unique type/text combination.' })
+    .refine(uniqueTypeAndText, { message: 'Each button must have a unique type/text combination.' })
     .optional()
     .describe('Buttons. Not required for draft.'),
 });
