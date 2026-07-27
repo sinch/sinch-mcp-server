@@ -241,7 +241,7 @@ const WhatsAppButtonsComponent = z.object({
   type: z.literal('BUTTONS'),
   buttons: z
     .array(WhatsAppButton)
-    .refine(uniqueTypeAndText, { message: 'Each button must have a unique type/text combination.' })
+    .refine(uniqueTypeAndText, { message: 'Each card button must have a unique type/text combination.' })
     .optional()
     .describe('Buttons. Not required for draft.'),
 });
@@ -275,7 +275,7 @@ const WhatsAppCardButtonsComponent = z.object({
   type: z.literal('BUTTONS'),
   buttons: z
     .array(WhatsAppCardButton)
-    .refine(uniqueTypeAndText, { message: 'Card buttons must not all share the same type/text combination.' })
+    .refine(uniqueTypeAndText, { message: 'Each card button must have a unique type/text combination.' })
     .optional()
     .describe('Card buttons. Can be a mix of quick reply, phone number, and URL buttons. Not required for draft.'),
 });
@@ -336,9 +336,11 @@ export const WhatsAppTemplateDetails = z
       .number()
       .optional()
       .describe(
-        'Template message delivery retry time-to-live override, in seconds. Defaults and valid ranges depend on category: ' +
-          'AUTHENTICATION defaults to 600 (10 min), range 10-900; MARKETING defaults to 2592000 (30 days), range 43200-2592000; ' +
-          'UTILITY defaults to 2592000 (30 days), range 30-43200. Authentication templates created before 2024-10-23 default to a 30-day TTL.',
+        'Template message delivery retry time-to-live override, in seconds. If unset, the message is retried for the ' +
+          "category's default period before being dropped: AUTHENTICATION 600s (10 min), MARKETING 2592000s (30 days), " +
+          'UTILITY 2592000s (30 days). If overriding, valid ranges differ from the defaults: AUTHENTICATION 10-900 ' +
+          '(10 sec-15 min), MARKETING 43200-2592000 (12 hours-30 days), UTILITY 30-43200 (30 sec-12 hours). ' +
+          'Authentication templates created before 2024-10-23 default to a 30-day TTL.',
       ),
   })
   .optional()

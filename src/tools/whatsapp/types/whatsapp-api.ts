@@ -166,10 +166,3 @@ export interface WhatsAppTemplateResponse {
   changes?: WhatsAppTemplateChanges;
   details?: WhatsAppTemplateDetailsResponse;
 }
-
-export interface WhatsAppApiErrorBody {
-  errorCode?: string;
-  message?: string;
-  resolution?: string;
-  additionalInformation?: Record<string, unknown>;
-}
