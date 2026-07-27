@@ -1,9 +1,6 @@
 import { z } from 'zod';
 
-// ── create-whatsapp-template request schema ───────────────────────────────────
-// Mirrors POST /v1/projects/{projectId}/whatsapp/templates exactly — the API
-// rejects unknown fields. Fields required-but-exempt-for-drafts are modelled
-// as optional; the live API enforces that rule, not this schema.
+// Reused by create-whatsapp-template and update-whatsapp-template below.
 
 export const WhatsAppTemplateLanguage = z.enum([
   'AF',
@@ -346,7 +343,8 @@ export const WhatsAppTemplateDetails = z
   .optional()
   .describe('Template input details and information. Not required for draft.');
 
-// ── top-level request ──────────────────────────────────────────────────────
+// ── create-whatsapp-template ─────────────────────────────────────────────────
+// POST /v1/projects/{projectId}/whatsapp/templates
 
 export const CreateWhatsAppTemplateSchema = {
   name: z.string().describe('Template name.'),
@@ -364,4 +362,23 @@ export const CreateWhatsAppTemplateSchema = {
     .describe(
       'Allow Meta to change the category if they determine it is wrong; if false, Meta might reject the template instead. Defaults to false.',
     ),
+};
+
+// ── update-whatsapp-template ─────────────────────────────────────────────────
+// PATCH /v1/projects/{projectId}/whatsapp/templates/{templateName}/languages/{languageCode}
+
+export const UpdateWhatsAppTemplateSchema = {
+  templateName: z.string().describe('The unique name of the template.'),
+  languageCode: WhatsAppTemplateLanguage.describe('The language code of the specific template.'),
+  status: WhatsAppTemplateStatus.optional().describe('Update as draft or submit for review. Defaults to draft.'),
+  category: WhatsAppTemplateCategory.optional().describe(
+    'New template category. Only applied if the template is a draft, or was rejected due to an incorrect category.',
+  ),
+  allowCategoryChange: z
+    .boolean()
+    .optional()
+    .describe(
+      'Allow Meta to change the category if they determine it is wrong; if false, Meta might reject the template instead. Only applied if the template is a draft, or was rejected due to an incorrect category. Defaults to false.',
+    ),
+  details: WhatsAppTemplateDetails,
 };

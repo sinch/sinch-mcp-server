@@ -48,7 +48,8 @@
     "get-rcs-number-capabilities",
     "get-rcs-test-number-state",
     "launch-rcs-sender",
-    "create-whatsapp-template"
+    "create-whatsapp-template",
+    "update-whatsapp-template"
   ],
   "expectedPrompts": [
     "conversation-app-id"

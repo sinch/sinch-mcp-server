@@ -80,6 +80,7 @@ Here is the list of tools available in the MCP server (all the phone numbers mus
 | Tool                         | Description                                                                                                                                                                                                            | Tags                    |
 | ---------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------- |
 | **create-whatsapp-template** | Create a WhatsApp message template, as a draft or submitted for review. <br> _Example prompt_: "Create a WhatsApp UTILITY template named order_confirmation in English with body text 'Your order {{1}} has shipped.'" | whatsapp, configuration |
+| **update-whatsapp-template** | Update a WhatsApp message template draft (or reset an approved/rejected/paused/disabled template to draft) by name and language. <br> _Example prompt_: "Update the order_confirmation EN WhatsApp template's body text to 'Your order {{1}} has shipped today.' and submit it for review." | whatsapp, configuration |
 
 ### Numbers Tools
 
