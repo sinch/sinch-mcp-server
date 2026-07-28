@@ -25,7 +25,7 @@ export const registerStartVerificationWithSms = (server: McpServer, tags: Tags[]
     TOOL_NAME,
     {
       description:
-        'Start new phone number verification requests. If the request is successful, you should ask the user to enter the OTP they received on the phone number we are verifying.',
+        'Start an SMS OTP verification for a phone number (E.164). Use when the user wants to *verify* ownership of a number via a one-time code. After success, ask them for the OTP and call report-sms-verification. Do NOT use number-lookup (carrier/line info) or send-text-message (arbitrary SMS content) for verification flows.',
       inputSchema: StartSmsVerificationSchema,
     },
     startSmsVerificationHandler,
