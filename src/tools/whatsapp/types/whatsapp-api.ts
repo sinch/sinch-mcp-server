@@ -106,6 +106,13 @@ export interface CreateWhatsAppTemplateRequest {
   allowCategoryChange?: boolean;
 }
 
+export interface UpdateWhatsAppTemplateRequest {
+  status?: WhatsAppTemplateStatus;
+  category?: WhatsAppTemplateCategory;
+  allowCategoryChange?: boolean;
+  details?: WhatsAppTemplateDetailsRequest;
+}
+
 // ── response ─────────────────────────────────────────────────────────────
 // Nested component/button variants stay Record<string, unknown>, matching
 // how RcsSenderDetails.questionnaire/countryStatus/supplierDetails are typed.

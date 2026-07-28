@@ -1,5 +1,10 @@
 import { BaseProvisioningClient } from '../../../provisioning-client';
-import { CreateWhatsAppTemplateRequest, WhatsAppTemplateResponse } from '../types/whatsapp-api';
+import {
+  CreateWhatsAppTemplateRequest,
+  UpdateWhatsAppTemplateRequest,
+  WhatsAppTemplateLanguage,
+  WhatsAppTemplateResponse,
+} from '../types/whatsapp-api';
 
 export class WhatsAppApiError extends Error {
   constructor(
@@ -29,5 +34,17 @@ export class WhatsAppProvisioningClient extends BaseProvisioningClient {
 
   createTemplate(body: CreateWhatsAppTemplateRequest): Promise<WhatsAppTemplateResponse> {
     return this.request<WhatsAppTemplateResponse>('POST', '/templates', body);
+  }
+
+  updateTemplate(
+    templateName: string,
+    languageCode: WhatsAppTemplateLanguage,
+    body: UpdateWhatsAppTemplateRequest,
+  ): Promise<WhatsAppTemplateResponse> {
+    return this.request<WhatsAppTemplateResponse>(
+      'PATCH',
+      `/templates/${encodeURIComponent(templateName)}/languages/${encodeURIComponent(languageCode)}`,
+      body,
+    );
   }
 }

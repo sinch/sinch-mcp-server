@@ -7,6 +7,10 @@ export const toolsConfig = defineToolsConfig({
     name: 'create-whatsapp-template',
     tags: ['all', 'whatsapp', 'configuration', 'create-whatsapp-template'],
   },
+  updateWhatsAppTemplate: {
+    name: 'update-whatsapp-template',
+    tags: ['all', 'whatsapp', 'configuration', 'update-whatsapp-template'],
+  },
 });
 
 export type WhatsAppToolKey = keyof typeof toolsConfig;
