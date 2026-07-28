@@ -55,7 +55,7 @@ export const listAllTemplatesHandler = async (): Promise<IPromptResponse> => {
       }
     }
 
-    const whatsAppTemplates = await fetchWhatsAppSpecificTemplates();
+    const whatsAppTemplates = await fetchWhatsAppSpecificTemplates(errors);
 
     return new PromptResponse(
       JSON.stringify({
@@ -78,10 +78,12 @@ export const listAllTemplatesHandler = async (): Promise<IPromptResponse> => {
   }
 };
 
-const fetchWhatsAppSpecificTemplates = async () => {
+const fetchWhatsAppSpecificTemplates = async (errors: { region: string; error: string }[]) => {
   const maybeClient = getWhatsAppProvisioningClient(TOOL_NAME);
   if (isPromptResponse(maybeClient)) {
-    logger.error({ error: maybeClient.promptResponse }, 'Failed to resolve WhatsApp credentials');
+    const error = maybeClient.promptResponse.content.map((c) => c.text).join(' ');
+    logger.error({ error }, 'Failed to resolve WhatsApp credentials');
+    errors.push({ region: 'whatsapp', error });
     return [];
   }
 
@@ -96,7 +98,9 @@ const fetchWhatsAppSpecificTemplates = async () => {
       state: template.state,
     }));
   } catch (error) {
-    logger.error({ error: formatWhatsAppError(error) }, 'Failed to fetch WhatsApp templates');
+    const formattedError = formatWhatsAppError(error);
+    logger.error({ error: formattedError }, 'Failed to fetch WhatsApp templates');
+    errors.push({ region: 'whatsapp', error: formattedError });
     return [];
   }
 };
