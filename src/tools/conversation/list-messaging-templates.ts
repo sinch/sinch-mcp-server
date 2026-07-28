@@ -1,11 +1,12 @@
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
-import { resolveSinchOAuthCredentials } from '../../auth/resolve-sinch-oauth-credentials';
 import { registerTracedTool } from '../../telemetry/register-traced-tool';
 import { logger } from '../../telemetry/logger';
 import { isPromptResponse, matchesAnyTag } from '../../utils';
 import { formatListAllTemplatesResponse } from './utils/format-list-all-templates-response';
 import { getConversationService, setTemplateRegion } from './utils/conversation-service-helper';
 import { ConversationToolKey, getToolName, toolsConfig } from './utils/conversation-tools-helper';
+import { getWhatsAppProvisioningClient } from '../whatsapp/utils/whatsapp-service-helper';
+import { formatWhatsAppError } from '../whatsapp/utils/whatsapp-error-helper';
 import { IPromptResponse, PromptResponse, Tags } from '../../types';
 import { SupportedConversationRegion } from '@sinch/sdk-client';
 
@@ -35,12 +36,6 @@ export const listAllTemplatesHandler = async (): Promise<IPromptResponse> => {
   }
   const conversationService = maybeService;
 
-  const maybeCredentials = resolveSinchOAuthCredentials();
-  if (isPromptResponse(maybeCredentials)) {
-    return maybeCredentials.promptResponse;
-  }
-  const { projectId, keyId, keySecret } = maybeCredentials;
-
   try {
     const supportedRegions = Object.values(SupportedConversationRegion);
     const omniChannelTemplates: any[] = [];
@@ -60,7 +55,7 @@ export const listAllTemplatesHandler = async (): Promise<IPromptResponse> => {
       }
     }
 
-    const whatsAppTemplates = await fetchWhatsAppSpecificTemplates(projectId, keyId, keySecret);
+    const whatsAppTemplates = await fetchWhatsAppSpecificTemplates();
 
     return new PromptResponse(
       JSON.stringify({
@@ -83,38 +78,25 @@ export const listAllTemplatesHandler = async (): Promise<IPromptResponse> => {
   }
 };
 
-interface WhatsAppTemplate {
-  name: string;
-  language: string;
-  category: string;
-  state: string;
-}
-
-interface WhatsAppTemplatesResponse {
-  templates: WhatsAppTemplate[];
-}
-
-const fetchWhatsAppSpecificTemplates = async (projectId: string, keyId: string, keySecret: string) => {
-  const resp = await fetch(`https://provisioning.api.sinch.com/v1/projects/${projectId}/whatsapp/templates`, {
-    method: 'GET',
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: 'Basic ' + Buffer.from(`${keyId}:${keySecret}`).toString('base64'),
-    },
-  });
-
-  if (!resp.ok) {
-    logger.error({ status: resp.status, statusText: resp.statusText }, 'Failed to fetch WhatsApp templates');
+const fetchWhatsAppSpecificTemplates = async () => {
+  const maybeClient = getWhatsAppProvisioningClient(TOOL_NAME);
+  if (isPromptResponse(maybeClient)) {
+    logger.error({ error: maybeClient.promptResponse }, 'Failed to resolve WhatsApp credentials');
     return [];
   }
 
-  const data = (await resp.json()) as WhatsAppTemplatesResponse;
+  try {
+    const { templates } = await maybeClient.listTemplates();
 
-  return data.templates.map((template) => ({
-    channel: 'WhatsApp' as const,
-    name: template.name,
-    language: template.language,
-    category: template.category,
-    state: template.state,
-  }));
+    return templates.map((template) => ({
+      channel: 'WhatsApp' as const,
+      name: template.name,
+      language: template.language,
+      category: template.category,
+      state: template.state,
+    }));
+  } catch (error) {
+    logger.error({ error: formatWhatsAppError(error) }, 'Failed to fetch WhatsApp templates');
+    return [];
+  }
 };
