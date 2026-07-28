@@ -23,7 +23,7 @@ export const registerUpdateWhatsAppTemplate = (server: McpServer, tags: Tags[]) 
     TOOL_NAME,
     {
       description:
-        'Update a DRAFT WhatsApp message template, identified by templateName and languageCode. Approved, Rejected, Paused, or Disabled templates can also be updated, and are reset to draft. Not every field can be changed this way — unsupported changes require deleting the draft and creating a new one.',
+        'Update a DRAFT WhatsApp message template, identified by templateName and languageCode. APPROVED, REJECTED, PAUSED, or DISABLED templates can also be updated, and are reset to draft. Not every field can be changed this way — unsupported changes require deleting the draft and creating a new one.',
       inputSchema: UpdateWhatsAppTemplateSchema,
     },
     updateWhatsAppTemplateHandler,
