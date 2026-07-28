@@ -36,6 +36,7 @@ is no next turn), needing no service mocks at all.
 
 ```
 tests/integration/llms/
+├── tool-coverage.int.test.ts             every tools/list name appears in LLM fixtures
 ├── tool-invocation.int.test.ts          single-turn tool-selection matrix (all providers)
 ├── rcs-onboarding-workflow.int.test.ts   multi-turn workflow (just declares its steps)
 ├── utils/
@@ -46,11 +47,39 @@ tests/integration/llms/
 │   └── sinch-fakes.ts                    registerSinchMocks — jest-mocked service clients
 └── fixtures/
     ├── tool-cases.ts                     single-turn prompt → expected tool/args data
+    ├── llm-tool-coverage.ts              collect covered tool names for the gate
     └── config.ts                         TEMPERATURE / TIMEOUT
 ```
 
 Folder = role: **tests** at the top level, **utils/** reusable machinery,
 **mocks/** the fake service clients, **fixtures/** static data.
+
+## Coverage gate (`tools/list`)
+
+[`tool-coverage.int.test.ts`](tool-coverage.int.test.ts) starts the in-process
+server, reads the live tool names from `client.listTools()`, and asserts each
+name appears in LLM fixtures (`expectedToolName` / `accept` in
+[`fixtures/tool-cases.ts`](fixtures/tool-cases.ts), plus
+`MULTI_TURN_ACCEPT_TOOLS` for workflow/eval-only tools).
+
+**Do not** use `tests/fixtures/server/tag-filtering/all.json` for this — that
+file is hand-maintained for tag-filtering unit tests only.
+
+No provider API key is required for the coverage gate.
+
+## Regression vs ambiguity (single-turn)
+
+Both live primarily in [`fixtures/tool-cases.ts`](fixtures/tool-cases.ts):
+
+- **Regression** — clear happy-path prompts that already include required args;
+  assert tool name (+ partial args).
+- **Ambiguity** — trickier paraphrases (e.g. “area code 415”, “San Francisco
+  number for SMS”) that must still route to the correct sibling tool. Prefer
+  adding these next to the happy-path case. Promote flaky cases to
+  [`tests/eval/llms`](../../eval/llms/README.md).
+
+**TDD rule:** if routing fails, rewrite the tool `description` (and schema
+`.describe()` text) — do **not** soften the prompt.
 
 ## Two kinds of test
 

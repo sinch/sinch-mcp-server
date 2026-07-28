@@ -46,7 +46,8 @@ export const registerListRentedNumbers = (server: McpServer, tags: Tags[]) => {
     server,
     TOOL_NAME,
     {
-      description: 'Lists all active numbers for a project.',
+      description:
+        'List phone numbers already rented/active on this project. Optional filters: region, type, digit pattern, SMS/VOICE capability. Use this to see what you own — not to find numbers still available to buy (use search-for-available-numbers) and not to look up carrier/line type for an arbitrary number (use number-lookup).',
       inputSchema: ListRentedNumbersSchema,
     },
     listRentedNumbersHandler,

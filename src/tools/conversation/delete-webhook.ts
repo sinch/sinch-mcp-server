@@ -17,7 +17,8 @@ export const registerDeleteWebhook = (server: McpServer, tags: Tags[]) => {
   server.registerTool(
     TOOL_NAME,
     {
-      description: 'Delete a Conversation API webhook by its ID.',
+      description:
+        'Permanently delete a Conversation API webhook by its ID. Ask for the webhook ID if missing. Prefer update-webhook to clear triggers if the user only wants to disable events.',
       inputSchema: {
         webhookId: WebhookId,
         region: ConversationRegionOverride,
