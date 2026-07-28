@@ -2,6 +2,7 @@ import { BaseProvisioningClient } from '../../../provisioning-client';
 import {
   CreateWhatsAppTemplateRequest,
   UpdateWhatsAppTemplateRequest,
+  WhatsAppTemplateLanguage,
   WhatsAppTemplateResponse,
 } from '../types/whatsapp-api';
 
@@ -37,7 +38,7 @@ export class WhatsAppProvisioningClient extends BaseProvisioningClient {
 
   updateTemplate(
     templateName: string,
-    languageCode: string,
+    languageCode: WhatsAppTemplateLanguage,
     body: UpdateWhatsAppTemplateRequest,
   ): Promise<WhatsAppTemplateResponse> {
     return this.request<WhatsAppTemplateResponse>(

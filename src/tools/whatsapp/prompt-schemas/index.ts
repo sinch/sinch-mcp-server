@@ -1,7 +1,5 @@
 import { z } from 'zod';
 
-// Reused by create-whatsapp-template and update-whatsapp-template below.
-
 export const WhatsAppTemplateLanguage = z.enum([
   'AF',
   'AR',

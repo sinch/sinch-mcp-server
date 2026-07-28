@@ -23,7 +23,7 @@ export const registerUpdateWhatsAppTemplate = (server: McpServer, tags: Tags[]) 
     TOOL_NAME,
     {
       description:
-        'Update a DRAFT WhatsApp message template, identified by templateName and languageCode. Approved, rejected, paused, or disabled templates can also be updated, and are reset to draft. Not every field can be changed this way — unsupported changes require deleting the draft and creating a new one.',
+        'Update a DRAFT WhatsApp message template, identified by templateName and languageCode. Approved, Rejected, Paused, or Disabled templates can also be updated, and are reset to draft. Not every field can be changed this way — unsupported changes require deleting the draft and creating a new one.',
       inputSchema: UpdateWhatsAppTemplateSchema,
     },
     updateWhatsAppTemplateHandler,
@@ -45,6 +45,17 @@ export const updateWhatsAppTemplateHandler = async ({
       ...(allowCategoryChange !== undefined && { allowCategoryChange }),
       ...(details !== undefined && { details }),
     };
+
+    if (Object.keys(body).length === 0) {
+      return new PromptResponse(
+        JSON.stringify({
+          success: false,
+          error:
+            'No fields provided to update. Specify at least one of: status, category, allowCategoryChange, details.',
+        }),
+      ).promptResponse;
+    }
+
     const template = await client.updateTemplate(templateName, languageCode, body);
 
     return new PromptResponse(

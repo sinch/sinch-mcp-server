@@ -70,6 +70,7 @@ test('updateWhatsAppTemplateHandler surfaces a WhatsAppApiError as a formatted f
   const result = await updateWhatsAppTemplateHandler({
     templateName: 'order_confirmation',
     languageCode: 'EN',
+    status: 'SUBMIT',
   });
   const parsed = JSON.parse(result.content[0].text);
 
@@ -94,4 +95,53 @@ test('updateWhatsAppTemplateHandler returns the guard response when credentials 
 
   expect(parsed).toEqual({ success: false, error: 'Missing env vars: PROJECT_ID, KEY_ID, KEY_SECRET.' });
   expect(mockUpdateTemplate).not.toHaveBeenCalled();
+});
+
+test('updateWhatsAppTemplateHandler rejects an update with no fields to change', async () => {
+  const result = await updateWhatsAppTemplateHandler({
+    templateName: 'order_confirmation',
+    languageCode: 'EN',
+  });
+  const parsed = JSON.parse(result.content[0].text);
+
+  expect(parsed).toEqual({
+    success: false,
+    error: 'No fields provided to update. Specify at least one of: status, category, allowCategoryChange, details.',
+  });
+  expect(mockUpdateTemplate).not.toHaveBeenCalled();
+});
+
+test('updateWhatsAppTemplateHandler updates only the fields provided', async () => {
+  mockUpdateTemplate.mockResolvedValue({
+    name: 'order_confirmation',
+    language: 'EN',
+    category: 'MARKETING',
+    analytics: [],
+    isMetaGenerated: false,
+    state: 'DRAFT',
+  });
+
+  const result = await updateWhatsAppTemplateHandler({
+    templateName: 'order_confirmation',
+    languageCode: 'EN',
+    category: 'MARKETING',
+    allowCategoryChange: true,
+  });
+  const parsed = JSON.parse(result.content[0].text);
+
+  expect(mockUpdateTemplate).toHaveBeenCalledWith('order_confirmation', 'EN', {
+    category: 'MARKETING',
+    allowCategoryChange: true,
+  });
+  expect(parsed).toEqual({
+    success: true,
+    template: {
+      name: 'order_confirmation',
+      language: 'EN',
+      category: 'MARKETING',
+      analytics: [],
+      isMetaGenerated: false,
+      state: 'DRAFT',
+    },
+  });
 });
