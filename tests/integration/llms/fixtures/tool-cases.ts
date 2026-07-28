@@ -116,6 +116,26 @@ const messagingCases: ToolTestCase[] = [
     },
   },
   {
+    prompt:
+      'Set the RCS channel on Conversation app app-abc123 using RCS auth name my-rcs-auth and bearer token my-rcs-token.',
+    expectedToolName: 'set-rcs-channel-on-app',
+    expectedArguments: {
+      appId: 'app-abc123',
+      senderId: 'my-rcs-auth',
+      bearerToken: 'my-rcs-token',
+    },
+  },
+  {
+    prompt:
+      'Set the WhatsApp channel on Conversation app app-abc123 with WhatsApp sender id wa-sender-1 and bearer token wa-token-1.',
+    expectedToolName: 'set-whatsapp-channel-on-app',
+    expectedArguments: {
+      appId: 'app-abc123',
+      senderId: 'wa-sender-1',
+      bearerToken: 'wa-token-1',
+    },
+  },
+  {
     prompt: 'Rename Conversation app app-abc123 to My Support Bot.',
     expectedToolName: 'update-conversation-app',
     expectedArguments: {
@@ -141,6 +161,13 @@ const messagingCases: ToolTestCase[] = [
     expectedArguments: undefined,
   },
   {
+    prompt: 'Show me the details of webhook wh-abc123.',
+    expectedToolName: 'get-webhook',
+    expectedArguments: {
+      webhookId: 'wh-abc123',
+    },
+  },
+  {
     prompt: 'Create a webhook for inbound messages at https://example.com/callback with triggers MESSAGE_INBOUND.',
     expectedToolName: 'create-webhook',
     expectedArguments: {
@@ -154,6 +181,147 @@ const messagingCases: ToolTestCase[] = [
     expectedArguments: {
       webhookId: 'wh-abc123',
       triggers: [],
+    },
+  },
+  {
+    prompt: 'Delete webhook wh-abc123.',
+    expectedToolName: 'delete-webhook',
+    expectedArguments: {
+      webhookId: 'wh-abc123',
+    },
+  },
+];
+
+// Numbers API: search, rent, list, release, regions.
+const numbersCases: ToolTestCase[] = [
+  {
+    prompt: 'Search for available US local numbers that can do SMS.',
+    expectedToolName: 'search-for-available-numbers',
+    expectedArguments: {
+      regionCode: 'US',
+      type: 'LOCAL',
+      capabilities: ['SMS'],
+    },
+  },
+  // Trickier wording — still search, not rent.
+  {
+    prompt: 'I need a US local number in area code 415',
+    expectedToolName: 'search-for-available-numbers',
+    expectedArguments: {
+      regionCode: 'US',
+      type: 'LOCAL',
+    },
+    pathMatchers: {
+      searchPattern: /415/,
+    },
+  },
+  {
+    prompt: 'Can you get me a San Francisco number for SMS?',
+    expectedToolName: 'search-for-available-numbers',
+    expectedArguments: {
+      regionCode: 'US',
+      capabilities: ['SMS'],
+    },
+  },
+  {
+    prompt: 'Activate / rent this number +14155550123 for my project.',
+    expectedToolName: 'rent-sinch-virtual-numbers',
+    expectedArguments: {
+      numbers: ['+14155550123'],
+    },
+  },
+  {
+    prompt: 'List all active rented phone numbers on my account.',
+    expectedToolName: 'list-rented-numbers',
+    expectedArguments: undefined,
+  },
+  {
+    prompt: 'Release the rented phone number +14155550123 from my project.',
+    expectedToolName: 'release-rented-number',
+    expectedArguments: {
+      phoneNumber: '+14155550123',
+    },
+  },
+  {
+    prompt: 'Which regions can I buy virtual numbers in?',
+    expectedToolName: 'list-available-regions',
+    expectedArguments: undefined,
+  },
+];
+
+// RCS helpers (create/get/update/launch covered in multi-turn; these fill single-turn gaps).
+const rcsCases: ToolTestCase[] = [
+  {
+    prompt: 'Delete test number +3412345678900 from RCS sender snd_abc123.',
+    expectedToolName: 'delete-rcs-test-number',
+    expectedArguments: {
+      senderId: 'snd_abc123',
+      testNumber: '+3412345678900',
+    },
+  },
+  {
+    prompt: 'Resend the RCS test invite for +3412345678900 on sender snd_abc123.',
+    expectedToolName: 'resend-rcs-test-number-invite',
+    expectedArguments: {
+      senderId: 'snd_abc123',
+      testNumber: '+3412345678900',
+    },
+  },
+  {
+    prompt: 'What is the verification state of RCS test number +3412345678900 on sender snd_abc123?',
+    expectedToolName: 'get-rcs-test-number-state',
+    expectedArguments: {
+      senderId: 'snd_abc123',
+      testNumber: '+3412345678900',
+    },
+  },
+  {
+    prompt: 'Which RCS features does test number +3412345678900 support on sender snd_abc123?',
+    expectedToolName: 'get-rcs-number-capabilities',
+    expectedArguments: {
+      senderId: 'snd_abc123',
+      testNumber: '+3412345678900',
+    },
+  },
+];
+
+// WhatsApp provisioning templates.
+const whatsappCases: ToolTestCase[] = [
+  {
+    prompt:
+      "Create a WhatsApp template named 'order_update' in English (EN_US), category UTILITY, with body text 'Your order {{1}} has shipped.'",
+    expectedToolName: 'create-whatsapp-template',
+    expectedArguments: {
+      name: 'order_update',
+      language: 'EN_US',
+      category: 'UTILITY',
+    },
+  },
+];
+
+// Ambiguity / sibling-tool routing — trickier wording, still a deterministic expected tool.
+const ambiguityCases: ToolTestCase[] = [
+  {
+    prompt: 'Can +33612345678 receive RCS? Check capabilities for sender snd_abc123 and test number +33612345678.',
+    expectedToolName: 'get-rcs-number-capabilities',
+    expectedArguments: {
+      senderId: 'snd_abc123',
+      testNumber: '+33612345678',
+    },
+  },
+  {
+    prompt: 'Verify +33612345678',
+    expectedToolName: 'start-sms-verification',
+    expectedArguments: { phoneNumber: '+33612345678' },
+  },
+  {
+    prompt:
+      "Send Antoine a WhatsApp template message using template 'appt_reminder' in Spanish with parameter name set to Mr. Smith. His number is +33612345678.",
+    expectedToolName: 'send-whatsapp-template-message',
+    expectedArguments: {
+      recipient: '+33612345678',
+      templateName: 'appt_reminder',
+      templateLanguage: 'es',
     },
   },
 ];
@@ -254,12 +422,23 @@ const voiceCases: ToolTestCase[] = [
       conferenceId: 'abc123',
     },
   },
+  {
+    prompt: 'Get information about call call-xyz-789.',
+    expectedToolName: 'get-call-information',
+    expectedArguments: {
+      callId: 'call-xyz-789',
+    },
+  },
 ];
 
 export const toolTestCases: ToolTestCase[] = [
   ...generalCases,
   ...messagingCases,
+  ...numbersCases,
+  ...rcsCases,
+  ...whatsappCases,
   ...verificationCases,
   ...emailCases,
   ...voiceCases,
+  ...ambiguityCases,
 ];

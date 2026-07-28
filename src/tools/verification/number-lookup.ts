@@ -25,7 +25,7 @@ export const registerNumberLookup = (server: McpServer, tags: Tags[]) => {
     TOOL_NAME,
     {
       description:
-        'With quick and easy access to Number Lookup, you can enhance your communications and keep your database as clean as a whistle. Number Lookup checks against first-party numbering sources and provides real-time feedback. Test numbers to ensure your recipients are ready and waiting to receive your messages!',
+        'Look up line/carrier information for a phone number (E.164) via Number Lookup — validity, type, and related metadata. Use when the user asks whether a number is valid, what carrier/type it is, or to clean a contact list. Do NOT use this for RCS device feature support (use get-rcs-number-capabilities), SMS verification codes (use start-sms-verification), or searching Sinch virtual numbers to rent (use search-for-available-numbers).',
       inputSchema: NumberLookupSchema,
     },
     numberLookupHandler,

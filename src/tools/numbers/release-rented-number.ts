@@ -24,7 +24,8 @@ export const registerReleaseRentedNumber = (server: McpServer, tags: Tags[]) => 
     server,
     TOOL_NAME,
     {
-      description: 'Releases a rented phone number from your project.',
+      description:
+        'Release (cancel) a rented virtual phone number from the project. Requires the exact E.164 phone number. Ask for the number if missing. This is not for searching or renting numbers.',
       inputSchema: ReleaseRentedNumberSchema,
     },
     releaseRentedNumberHandler,
