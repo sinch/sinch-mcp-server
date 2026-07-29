@@ -173,3 +173,9 @@ export interface WhatsAppTemplateResponse {
   changes?: WhatsAppTemplateChanges;
   details?: WhatsAppTemplateDetailsResponse;
 }
+
+export interface WhatsAppTemplateListResponse {
+  totalSize: number;
+  pageSize: number;
+  templates: WhatsAppTemplateResponse[];
+}
