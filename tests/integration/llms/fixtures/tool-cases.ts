@@ -186,6 +186,20 @@ const whatsappTemplateCases: ToolTestCase[] = [
       'details.components.0.text': /shipped today/i,
     },
   },
+  // Confirm-gated tools: a bare delete request must not call the tool directly.
+  // Confirm-then-delete flow is covered by whatsapp-template-delete-confirmation.eval.test.ts.
+  {
+    prompt: 'Delete the draft of the order_confirmation EN WhatsApp template.',
+    expectedToolName: undefined,
+  },
+  {
+    prompt: 'Delete the order_confirmation EN WhatsApp template, including the version already submitted to Meta.',
+    expectedToolName: undefined,
+  },
+  {
+    prompt: 'Delete every language variant of the order_confirmation WhatsApp template.',
+    expectedToolName: undefined,
+  },
 ];
 
 // Verification & number lookup.

@@ -23,7 +23,9 @@
     "get-rcs-test-number-state",
     "launch-rcs-sender",
     "create-whatsapp-template",
-    "update-whatsapp-template"
+    "update-whatsapp-template",
+    "delete-whatsapp-template",
+    "delete-whatsapp-template-by-name"
   ],
   "expectedPrompts": []
 }
