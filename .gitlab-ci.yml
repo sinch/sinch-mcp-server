@@ -11,6 +11,21 @@ variables:
   SECURITY_STEPS_FORCE_RUN: "true"
   
 stages:
+  - test-coverage
   - security-scan-third-parties
   - security-scan-consolidation
   - security-scan-sonar
+
+# Produces coverage/lcov.info for the security-scan-sonar stage, which picks it up
+# as an artifact from this earlier stage (see sonar.javascript.lcov.reportPaths).
+unit-tests-coverage:
+  stage: test-coverage
+  image: node:20
+  script:
+    - npm ci
+    - npm run test:coverage
+  artifacts:
+    when: always
+    expire_in: 1 week
+    paths:
+      - coverage/lcov.info
