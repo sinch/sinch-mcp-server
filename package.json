@@ -80,6 +80,7 @@
     "prettier": "prettier './**/*.{js,ts,md}' --write",
     "format:write": "npm run lint:fix && npm run prettier",
     "test": "jest --testPathIgnorePatterns='/tests/(integration|eval)/'",
+    "test:coverage": "jest --coverage --testPathIgnorePatterns='/tests/(integration|eval)/'",
     "test:integration": "NODE_OPTIONS=--experimental-vm-modules jest --config jest.integration.config.ts --runInBand",
     "test:eval": "NODE_OPTIONS=--experimental-vm-modules jest --config jest.eval.config.ts --runInBand",
     "prepare": "husky",

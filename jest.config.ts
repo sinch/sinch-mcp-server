@@ -16,6 +16,9 @@ const config: Config = {
   testMatch: ['**/tests/**/*.test.ts'],
   moduleFileExtensions: ['ts', 'js', 'json', 'node'],
   setupFilesAfterEnv: ['jest-extended/all'],
+  collectCoverageFrom: ['src/**/*.ts', '!src/__mocks__/**', '!src/**/*.d.ts'],
+  coverageDirectory: 'coverage',
+  coverageReporters: ['lcov', 'text-summary'],
 };
 
 export default config;
