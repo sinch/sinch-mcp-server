@@ -59,11 +59,7 @@ Folder = role: **tests** at the top level, **utils/** reusable machinery,
 [`tool-coverage.int.test.ts`](tool-coverage.int.test.ts) starts the in-process
 server, reads the live tool names from `client.listTools()`, and asserts each
 name appears in LLM fixtures (`expectedToolName` / `accept` in
-[`fixtures/tool-cases.ts`](fixtures/tool-cases.ts), plus
-`MULTI_TURN_ACCEPT_TOOLS` for workflow/eval-only tools).
-
-**Do not** use `tests/fixtures/server/tag-filtering/all.json` for this — that
-file is hand-maintained for tag-filtering unit tests only.
+[`fixtures/tool-cases.ts`](fixtures/tool-cases.ts)).
 
 No provider API key is required for the coverage gate.
 
@@ -77,9 +73,6 @@ Both live primarily in [`fixtures/tool-cases.ts`](fixtures/tool-cases.ts):
   number for SMS”) that must still route to the correct sibling tool. Prefer
   adding these next to the happy-path case. Promote flaky cases to
   [`tests/eval/llms`](../../eval/llms/README.md).
-
-**TDD rule:** if routing fails, rewrite the tool `description` (and schema
-`.describe()` text) — do **not** soften the prompt.
 
 ## Two kinds of test
 

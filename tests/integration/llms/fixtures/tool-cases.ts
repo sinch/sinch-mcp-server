@@ -210,9 +210,8 @@ const numbersCases: ToolTestCase[] = [
     expectedArguments: {
       regionCode: 'US',
       type: 'LOCAL',
-    },
-    pathMatchers: {
-      searchPattern: /415/,
+      searchPattern: '415',
+      patternPosition: 'START',
     },
   },
   {
@@ -249,10 +248,55 @@ const numbersCases: ToolTestCase[] = [
   },
 ];
 
-// RCS helpers (create/get/update/launch covered in multi-turn; these fill single-turn gaps).
+// RCS agent tools (single-turn coverage; multi-turn onboarding/evals exercise flows).
 const rcsCases: ToolTestCase[] = [
   {
-    prompt: 'Delete test number +3412345678900 from RCS sender snd_abc123.',
+    prompt:
+      "Create a new RCS agent named 'AcmeCorp' in the US region, with a TRANSACTIONAL use case and a conversational billing category.",
+    expectedToolName: 'create-rcs-sender',
+    expectedArguments: {
+      region: 'US',
+      useCase: 'TRANSACTIONAL',
+      billingCategory: 'CONVERSATIONAL',
+    },
+  },
+  {
+    prompt: 'Get the details of RCS agent snd_abc123.',
+    expectedToolName: 'get-rcs-sender',
+    expectedArguments: {
+      senderId: 'snd_abc123',
+    },
+  },
+  {
+    prompt: 'List all RCS agents in my project.',
+    expectedToolName: 'list-rcs-senders',
+    expectedArguments: undefined,
+  },
+  {
+    prompt:
+      'Update RCS agent snd_abc123 with privacy policy URL https://example.com/privacy and terms of service URL https://example.com/terms.',
+    expectedToolName: 'update-rcs-sender',
+    expectedArguments: {
+      senderId: 'snd_abc123',
+    },
+  },
+  {
+    prompt: 'Add +3412345678900 as a test number on RCS agent snd_abc123.',
+    expectedToolName: 'add-rcs-test-number',
+    expectedArguments: {
+      senderId: 'snd_abc123',
+      testNumbers: ['+3412345678900'],
+    },
+  },
+  {
+    prompt: 'Launch RCS agent snd_abc123 now.',
+    expectedToolName: 'launch-rcs-sender',
+    expectedArguments: {
+      senderId: 'snd_abc123',
+    },
+  },
+  {
+    prompt: 'Delete test number +3412345678900 from RCS agent snd_abc123.',
     expectedToolName: 'delete-rcs-test-number',
     expectedArguments: {
       senderId: 'snd_abc123',
@@ -260,7 +304,7 @@ const rcsCases: ToolTestCase[] = [
     },
   },
   {
-    prompt: 'Resend the RCS test invite for +3412345678900 on sender snd_abc123.',
+    prompt: 'Resend the RCS test invite for +3412345678900 on agent snd_abc123.',
     expectedToolName: 'resend-rcs-test-number-invite',
     expectedArguments: {
       senderId: 'snd_abc123',
@@ -268,7 +312,7 @@ const rcsCases: ToolTestCase[] = [
     },
   },
   {
-    prompt: 'What is the verification state of RCS test number +3412345678900 on sender snd_abc123?',
+    prompt: 'What is the verification state of RCS test number +3412345678900 on agent snd_abc123?',
     expectedToolName: 'get-rcs-test-number-state',
     expectedArguments: {
       senderId: 'snd_abc123',
@@ -276,7 +320,7 @@ const rcsCases: ToolTestCase[] = [
     },
   },
   {
-    prompt: 'Which RCS features does test number +3412345678900 support on sender snd_abc123?',
+    prompt: 'Which RCS features does test number +3412345678900 support on agent snd_abc123?',
     expectedToolName: 'get-rcs-number-capabilities',
     expectedArguments: {
       senderId: 'snd_abc123',
@@ -302,7 +346,7 @@ const whatsappCases: ToolTestCase[] = [
 // Ambiguity / sibling-tool routing — trickier wording, still a deterministic expected tool.
 const ambiguityCases: ToolTestCase[] = [
   {
-    prompt: 'Can +33612345678 receive RCS? Check capabilities for sender snd_abc123 and test number +33612345678.',
+    prompt: 'Can +33612345678 receive RCS? Check capabilities for RCS agent snd_abc123 and test number +33612345678.',
     expectedToolName: 'get-rcs-number-capabilities',
     expectedArguments: {
       senderId: 'snd_abc123',
