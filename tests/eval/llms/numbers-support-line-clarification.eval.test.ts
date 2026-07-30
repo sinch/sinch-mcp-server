@@ -1,7 +1,8 @@
 import { defineWorkflowEval } from './utils/workflow-eval-harness';
 
-// Under-specified Numbers request: "support line" has no E.164 number — not
-// enough to rent. Clarify OR search is fine; rent with invented digits is not.
+// Ambiguity + multi-turn: "set up a virtual number" is under-specified and
+// search alone does not activate a number. The model must clarify first, then
+// search, then rent a concrete E.164 — never invent digits for rent.
 defineWorkflowEval({
   name: 'Virtual number support-line clarification',
   debugFirstIteration: true,
@@ -10,8 +11,8 @@ defineWorkflowEval({
     {
       id: 'vague-support-line',
       prompt: `Set up a virtual number for our support line.`,
-      accept: ['search-for-available-numbers'],
-      allowNoTool: true,
+      expectNoTool: true,
+      responseIncludes: ['region'],
       reject: ['rent-sinch-virtual-numbers'],
     },
     {
@@ -19,6 +20,11 @@ defineWorkflowEval({
       prompt: `Search for available US local numbers that support SMS in area code 415.`,
       accept: ['search-for-available-numbers'],
       reject: ['rent-sinch-virtual-numbers'],
+    },
+    {
+      id: 'rent-chosen-number',
+      prompt: `Rent / activate +14155550123 for the project.`,
+      accept: ['rent-sinch-virtual-numbers'],
     },
   ],
 });

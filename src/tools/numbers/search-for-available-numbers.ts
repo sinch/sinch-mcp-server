@@ -47,7 +47,7 @@ export const registerSearchAvailableNumbers = (server: McpServer, tags: Tags[]) 
     TOOL_NAME,
     {
       description:
-        'Search for available Sinch virtual phone numbers you can rent later. Use this when the user wants to find or browse numbers (by country/region, type LOCAL/MOBILE/TOLL_FREE, area-code pattern, or SMS/VOICE capability) but has not yet chosen a specific E.164 number to activate. Do NOT use this to activate/rent a known number — use rent-sinch-virtual-numbers for that. If the user asks vaguely for "a support line" or "a number" without region/type, ask for country/region (and optionally area code or capabilities) before calling, or call this tool once those filters are clear.',
+        'Search for available Sinch virtual phone numbers you can rent (activate) later. Use this when the user wants to find or browse numbers (by country/region, type LOCAL/MOBILE/TOLL_FREE, area-code pattern, or SMS/VOICE capability) but has not yet chosen a specific E.164 number to activate. Do NOT use this to activate/rent a known number — use rent-sinch-virtual-numbers for that. If the user asks vaguely for "a support line" or "a number" without region/type, ask for country/region (and optionally area code or capabilities) before calling, or call this tool once those filters are clear.',
       inputSchema: SearchAvailableNumbersSchema,
     },
     searchAvailableNumbersHandler,

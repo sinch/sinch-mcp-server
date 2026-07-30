@@ -62,21 +62,17 @@ Step assertions (all optional, combine as needed):
   schema fields like phone/channel) or to check it _surfaced_ an unmet
   requirement rather than claiming success.
 
-### Tool-aware clarification
+### Where to add new cases (maintenance)
 
-Users will not know every required parameter. `expectNoTool` alone cannot tell
-MCP-aware clarification from a generic chat reply. Pair it with
-`responseIncludes` for missing required fields (e.g. `phone`, `number`,
-`sms`/`whatsapp`), then a follow-up turn that supplies them and asserts
-`accept`.
-
-### Adding regression vs ambiguity cases
+Use this as the authoring checklist when extending coverage:
 
 - Clear happy-paths and trickier single-turn paraphrases →
   [`fixtures/tool-cases.ts`](../../integration/llms/fixtures/tool-cases.ts)
   (integration).
 - Under-specified / probabilistic clarify flows → an `*.eval.test.ts` here.
-- **TDD:** fix tool `description`s when cases fail — do not rewrite prompts.
+  Pair `expectNoTool` with `responseIncludes` for missing required fields
+  (e.g. `phone`, `region`) so the reply is tool-aware, then assert `accept` on
+  the follow-up turn.
 - Multi-step RCS launch/update uses **stateful** mocks (`enforceLaunch`), not
   prompt-only checks — see `rcs-launch-recovery.eval.test.ts`.
 

@@ -28,7 +28,7 @@ export const registerListAvailableRegions = (server: McpServer, tags: Tags[]) =>
     TOOL_NAME,
     {
       description:
-        'List countries/regions where Sinch virtual numbers are available to search and rent. Use when the user asks where they can buy numbers or which regions are offered. Optional filter by number types (MOBILE, LOCAL, TOLL_FREE). After picking a region, use search-for-available-numbers to find candidates.',
+        'List countries/regions where Sinch virtual numbers are available to search and rent. Use when the user asks where they can buy numbers or which regions are offered. Optional filter by number types (MOBILE, LOCAL, TOLL_FREE). If the user later wants to find candidates in a region, they can follow up with search-for-available-numbers.',
       inputSchema: ListAvailableRegionsSchema,
     },
     listAvailableRegionsHandler,
