@@ -196,6 +196,11 @@ const verificationCases: ToolTestCase[] = [
     expectedArguments: { phoneNumber: '+33612345678' },
   },
   {
+    prompt: 'Look up the status of phone number +33612345678',
+    expectedToolName: 'number-lookup',
+    expectedArguments: { phoneNumber: '+33612345678' },
+  },
+  {
     prompt: 'Verify the phone number +33612345678',
     expectedToolName: 'start-sms-verification',
     expectedArguments: { phoneNumber: '+33612345678' },
