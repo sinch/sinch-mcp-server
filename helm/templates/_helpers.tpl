@@ -34,6 +34,7 @@ app.kubernetes.io/managed-by: {{ .Release.Service }}
 {{- with .Values.costGovernance }}
 cg_product: {{ .cg_product | quote }}
 cg_product2: {{ .cg_product2 | quote }}
+cg_system: {{ .cg_system | quote }}
 cg_product_id: {{ .cg_product_id | quote }}
 cg_team: {{ .cg_team | quote }}
 cg_business_unit: {{ .cg_business_unit | quote }}

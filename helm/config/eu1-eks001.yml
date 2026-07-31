@@ -1,4 +1,4 @@
-# Production US — single replica while MCP sessions remain in-memory per pod.
+# Production EU — single replica while MCP sessions remain in-memory per pod.
 
 replicaCount: 1
 

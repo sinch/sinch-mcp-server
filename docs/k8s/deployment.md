@@ -1,10 +1,9 @@
 # MCP Kubernetes deployment notes
 #
-# Confirmed defaults (replace if MR !3834 differs):
-#   Namespace:        mcp-messaging
-#   Staging site:     eu1tst-eks001
-#   Prod site (later): us1-eks001
-#   cg_product:       mcp_messaging  (BLOCKED until allow-listed)
+# Namespace:   mcp-messaging
+# cg_product:  agent_tools
+# Staging:     eu1tst-eks001, us1tst-eks001
+# Production:  us1-eks001, eu1-eks001, br1-eks001 (regions: us, eu, br)
 #
 # App chart lives in this repo under `helm/`.
 # GKA / namespace DevOps checklist lives in Confluence under Platform Foundation → MCPs.
@@ -12,6 +11,10 @@
 # Runtime: Streamable HTTP on port 8000, path `/mcp`.
 # Probes: `/health/live`, `/health/ready` (no auth).
 # Auth (staging v1): single-tenant — Secret `sinch-mcp-server` with MCP_API_KEY + Sinch creds.
+#
+# Note: MCP sessions are in-memory per pod. Production overlays keep replicaCount: 1
+# until sticky sessions or shared session storage is in place. Staging uses 2 replicas
+# with a PodDisruptionBudget.
 
 ## Secret skeleton (create in namespace before first deploy)
 

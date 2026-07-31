@@ -5,8 +5,8 @@ fullnameOverride: ""
 
 image:
   repository: registry.gitlab.com/sinch/sinch-projects/product/agent-experience/sinch-mcp-server
-  # Default matches Chart.appVersion; CI/GKA overrides with the built image tag.
-  tag: "0.0.1-alpha.6"
+  # Default matches Chart.appVersion; CI/GKA overrides via ARTIFACT_VERSION.
+  version: "0.0.1-alpha.6"
   pullPolicy: IfNotPresent
 
 imagePullSecrets: []
@@ -17,13 +17,12 @@ serviceAccount:
 
 podAnnotations: {}
 
-# Cost-governance labels required by Kyverno on Messaging clusters.
-# Confirm cg_product with #msg-devops / Christoffer Jonsson (must be allow-listed).
 costGovernance:
-  cg_product: mcp_messaging
-  cg_product2: mcp_server
+  cg_product: agent_tools
+  cg_product2: mcp
+  cg_system: agent_tools
   cg_product_id: "0"
-  cg_team: platform
+  cg_team: ax
   cg_business_unit: enterprise_messaging
   cg_release_state: alpha
 
@@ -51,6 +50,8 @@ env:
     value: production
   - name: LOG_LEVEL
     value: info
+  - name: SHUTDOWN_DRAIN_MS
+    value: "10000"
 
 # Keys loaded from existingSecret into the container env.
 secretKeys:
@@ -77,10 +78,18 @@ probes:
     periodSeconds: 5
     failureThreshold: 3
 
+lifecycle:
+  preStop:
+    sleepSeconds: 15
+
+podDisruptionBudget:
+  enabled: true
+  minAvailable: 1
+
 autoscaling:
   enabled: false
 
-terminationGracePeriodSeconds: 30
+terminationGracePeriodSeconds: 45
 
 nodeSelector: {}
 tolerations: []

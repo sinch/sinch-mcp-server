@@ -1,5 +1,4 @@
-# Staging EU — 2 replicas for PDB / rolling updates.
-# Sessions are in-memory; staging accepts multi-replica for HA testing.
+# Staging US — 2 replicas for PDB / rolling updates.
 
 replicaCount: 2
 

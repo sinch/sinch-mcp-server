@@ -43,8 +43,6 @@ export const clearSessionsForTests = (): void => {
   sessions.clear();
 };
 
-export const getActiveSessionCount = (): number => sessions.size;
-
 const isInitializationBody = (body: unknown): boolean => {
   if (!body || typeof body !== 'object') {
     return false;
@@ -210,6 +208,13 @@ export const createHttpApp = () => {
   return app;
 };
 
+const getShutdownDrainMs = (): number => {
+  const configured = Number(process.env.SHUTDOWN_DRAIN_MS ?? 10_000);
+  return Number.isFinite(configured) && configured >= 0 ? Math.floor(configured) : 10_000;
+};
+
+const sleep = (ms: number): Promise<void> => new Promise((resolve) => setTimeout(resolve, ms));
+
 export const main = async (): Promise<void> => {
   const port = Number(process.env.PORT ?? DEFAULT_PORT);
   const app = createHttpApp();
@@ -223,15 +228,24 @@ export const main = async (): Promise<void> => {
     });
 
     const shutdown = (signal: string) => {
-      console.error(`Received ${signal}, shutting down HTTP server`);
-      isShuttingDown = true;
-      server.close((error) => {
-        if (error) {
-          console.error('Error during HTTP server shutdown:', error);
-          process.exit(1);
+      void (async () => {
+        console.error(`Received ${signal}, marking not ready before closing HTTP server`);
+        // Fail readiness first so the Service stops routing, then drain before close.
+        // Pairs with the Deployment preStop sleep for endpoint controller lag.
+        isShuttingDown = true;
+        const drainMs = getShutdownDrainMs();
+        if (drainMs > 0) {
+          console.error(`Draining for ${drainMs}ms before closing listeners`);
+          await sleep(drainMs);
         }
-        process.exit(0);
-      });
+        server.close((error) => {
+          if (error) {
+            console.error('Error during HTTP server shutdown:', error);
+            process.exit(1);
+          }
+          process.exit(0);
+        });
+      })();
     };
 
     process.on('SIGTERM', () => shutdown('SIGTERM'));
