@@ -1,5 +1,4 @@
-import { Conversation } from '@sinch/conversation';
-import { ConversationService } from '@sinch/conversation';
+import { Conversation, ConversationService } from '@sinch/conversation';
 import { IPromptResponse, PromptResponse } from '../../../types';
 import { appendRegionHint } from './region-hint';
 import { formatAppResponse } from './format-app-response';

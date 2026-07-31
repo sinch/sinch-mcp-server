@@ -101,7 +101,16 @@ export const retrieveEmailInfoHandler = async ({ emailId, domain }: RetrieveEmai
     events: events,
   };
 
-  const storedEmail = await fetch(storageUrl!, {
+  if (!storageUrl) {
+    return new PromptResponse(
+      JSON.stringify({
+        success: false,
+        error: `No stored email content found for email ID ${emailId} (no "accepted" event was recorded).`,
+      }),
+    ).promptResponse;
+  }
+
+  const storedEmail = await fetch(storageUrl, {
     method: 'GET',
     headers: {
       Authorization: 'Basic ' + Buffer.from(`api:${credentials.apiKey}`).toString('base64'),

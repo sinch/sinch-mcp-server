@@ -1,7 +1,7 @@
 import { Conversation } from '@sinch/conversation';
 
 export const formatListAllAppsResponse = (response: Conversation.ListAppsResponse | undefined) => {
-  if (!response || !response.apps) {
+  if (!response?.apps) {
     return { apps: [] };
   }
   return {
