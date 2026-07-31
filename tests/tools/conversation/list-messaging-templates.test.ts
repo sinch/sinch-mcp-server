@@ -1,9 +1,9 @@
-import { ConversationService } from '@sinch/conversation';
+import { Conversation, ConversationService } from '@sinch/conversation';
 import { listAllTemplatesHandler } from '../../../src/tools/conversation/list-messaging-templates';
-import { getConversationService } from '../../../src/tools/conversation/utils/conversation-service-helper';
-import { getWhatsAppProvisioningClient } from '../../../src/tools/whatsapp/utils/whatsapp-service-helper';
-import { WhatsAppProvisioningClient } from '../../../src/tools/whatsapp/utils/whatsapp-provisioning-client';
-import { PromptResponse } from '../../../src/types';
+import {
+  getConversationService,
+  setTemplateRegion,
+} from '../../../src/tools/conversation/utils/conversation-service-helper';
 
 jest.mock(
   '@sinch/sdk-core/package.json',
@@ -13,79 +13,85 @@ jest.mock(
   { virtual: true },
 );
 
-jest.mock('../../../src/tools/conversation/utils/conversation-service-helper');
-jest.mock('../../../src/tools/whatsapp/utils/whatsapp-service-helper');
+jest.mock('../../../src/tools/conversation/utils/conversation-service-helper', () => ({
+  getConversationService: jest.fn(),
+  setTemplateRegion: jest.fn(() => 'us'),
+}));
 
 const mockConversationService = new ConversationService({});
 const mockListMessagingTemplates = jest.spyOn(mockConversationService.templatesV2, 'list');
 
-const mockWhatsAppClient = new WhatsAppProvisioningClient('project-id', 'key-id', 'key-secret', 'test-tool');
-const mockListTemplates = jest.spyOn(mockWhatsAppClient, 'listTemplates');
-
 beforeEach(() => {
   jest.clearAllMocks();
   jest.mocked(getConversationService).mockReturnValue(mockConversationService);
-  jest.mocked(getWhatsAppProvisioningClient).mockReturnValue(mockWhatsAppClient);
-  mockListMessagingTemplates.mockResolvedValue({ templates: [] });
+  jest.mocked(setTemplateRegion).mockReturnValue('us');
 });
 
-test('listAllTemplatesHandler returns WhatsApp templates when credentials resolve', async () => {
+test('listAllTemplatesHandler returns the templates for the configured region and mentions the WhatsApp tool', async () => {
   // Given
-  mockListTemplates.mockResolvedValue({
-    totalSize: 1,
-    pageSize: 1,
+  mockListMessagingTemplates.mockResolvedValue({
     templates: [
       {
-        name: 'welcome',
-        language: 'en',
-        category: 'MARKETING',
-        state: 'APPROVED',
-        analytics: [],
-        isMetaGenerated: false,
+        id: 'template-id',
+        description: 'My omni-channel template',
+        version: 2,
+        default_translation: 'en-US',
+        translations: [{ language_code: 'en-US', version: '2' }],
       },
     ],
-  });
+  } as Conversation.V2ListTemplatesResponse);
 
   // When
-  const result = await listAllTemplatesHandler();
+  const result = await listAllTemplatesHandler({});
 
   // Then
+  expect(setTemplateRegion).toHaveBeenCalledTimes(1);
+  expect(setTemplateRegion).toHaveBeenCalledWith(undefined, mockConversationService);
+  expect(mockListMessagingTemplates).toHaveBeenCalledTimes(1);
   const body = JSON.parse(result.content[0].text);
   expect(body.success).toBeTrue();
-  expect(body.templates.whatsapp).toEqual([
-    { channel: 'WhatsApp', name: 'welcome', language: 'en', category: 'MARKETING', state: 'APPROVED' },
+  expect(body.region).toBe('us');
+  expect(body.templates).toEqual([
+    {
+      id: 'template-id',
+      description: 'My omni-channel template',
+      version: 2,
+      defaultTranslation: 'en-US',
+      translations: ['en-US (version "2")'],
+    },
   ]);
-  expect(body.templates.errors).toBeUndefined();
+  expect(body.total_count).toBe(1);
+  expect(body.related_tools['list-whatsapp-templates']).toContain('list-whatsapp-templates');
 });
 
-test('listAllTemplatesHandler surfaces an error instead of silently reporting no WhatsApp templates when credentials cannot be resolved', async () => {
+test('listAllTemplatesHandler forwards the region override to the template client', async () => {
   // Given
-  jest
-    .mocked(getWhatsAppProvisioningClient)
-    .mockReturnValue(new PromptResponse('Missing env vars: PROJECT_ID, KEY_ID, KEY_SECRET.'));
+  jest.mocked(setTemplateRegion).mockReturnValue('eu');
+  mockListMessagingTemplates.mockResolvedValue({ templates: [] });
 
   // When
-  const result = await listAllTemplatesHandler();
+  const result = await listAllTemplatesHandler({ region: 'eu' });
+
+  // Then
+  expect(setTemplateRegion).toHaveBeenCalledWith('eu', mockConversationService);
+  const body = JSON.parse(result.content[0].text);
+  expect(body.success).toBeTrue();
+  expect(body.region).toBe('eu');
+  expect(body.templates).toEqual([]);
+  expect(body.total_count).toBe(0);
+});
+
+test('listAllTemplatesHandler surfaces an error with a region hint when the API call fails', async () => {
+  // Given
+  mockListMessagingTemplates.mockRejectedValue(new Error('Oops'));
+
+  // When
+  const result = await listAllTemplatesHandler({});
 
   // Then
   const body = JSON.parse(result.content[0].text);
   expect(body.success).toBeFalse();
-  expect(body.templates.whatsapp).toEqual([]);
-  expect(body.templates.errors).toEqual([
-    { region: 'whatsapp', error: 'Missing env vars: PROJECT_ID, KEY_ID, KEY_SECRET.' },
-  ]);
-});
-
-test('listAllTemplatesHandler surfaces an error when the WhatsApp API call fails', async () => {
-  // Given
-  mockListTemplates.mockRejectedValue(new Error('Oops'));
-
-  // When
-  const result = await listAllTemplatesHandler();
-
-  // Then
-  const body = JSON.parse(result.content[0].text);
-  expect(body.success).toBeFalse();
-  expect(body.templates.whatsapp).toEqual([]);
-  expect(body.templates.errors).toEqual([{ region: 'whatsapp', error: 'Oops' }]);
+  expect(body.error).toBe(
+    'Oops. If the resource cannot be found, the region parameter may be incorrect. Current region: us.',
+  );
 });

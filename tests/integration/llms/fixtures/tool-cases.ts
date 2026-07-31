@@ -158,8 +158,13 @@ const messagingCases: ToolTestCase[] = [
   },
 ];
 
-// WhatsApp templates: create/update draft templates.
+// WhatsApp templates: list templates, create/update draft templates.
 const whatsappTemplateCases: ToolTestCase[] = [
+  {
+    prompt: 'Show me my WhatsApp templates.',
+    expectedToolName: 'list-whatsapp-templates',
+    expectedArguments: undefined,
+  },
   {
     prompt:
       "Create a WhatsApp UTILITY template named order_confirmation in English with body text 'Your order {{1}} has shipped.'",
