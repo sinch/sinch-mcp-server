@@ -387,14 +387,16 @@ export const UpdateWhatsAppTemplateSchema = {
 
 export const DeleteWhatsAppTemplateSchema = {
   templateName: z.string().describe('The unique name of the template.'),
-  languageCode: WhatsAppTemplateLanguage.describe(
-    'The language code of the specific template variant to delete. Other language variants of this template name are left untouched.',
-  ),
+  languageCode: z
+    .string()
+    .describe(
+      'The language code of the specific template variant to delete (e.g. EN, ES_MX). Other language variants of this template name are left untouched.',
+    ),
   deleteSubmitted: z
     .boolean()
     .optional()
     .describe(
-      'Also delete the template already submitted to Meta, not just the draft. Defaults to false, which only deletes a draft and throws an error if the template has been submitted. Once an approved template is deleted, its name and language cannot be reused for 30 days.',
+      'Also delete the template already submitted to Meta, not just the draft. Defaults to false, which only deletes a draft and throws an error if the template has been submitted. Deleting an approved template does not free up its name — recreating a template with this same name and language is blocked for 30 days.',
     ),
 };
 

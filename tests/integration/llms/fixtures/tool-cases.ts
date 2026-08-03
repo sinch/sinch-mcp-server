@@ -187,7 +187,14 @@ const whatsappTemplateCases: ToolTestCase[] = [
     },
   },
   // Confirm-gated tools: a bare delete request must not call the tool directly.
-  // Confirm-then-delete flow is covered by whatsapp-template-delete-confirmation.eval.test.ts.
+  // The gating is prompt-only (the tool descriptions instruct the model to ask
+  // for confirmation first) — there's no schema flag or code-level guard, so
+  // this only tests whether the model honors that instruction on its own.
+  // `expectedToolName: undefined` is this file's ToolTestCase convention for
+  // "no tool called" (see generalCases above); `expectNoTool` is the equivalent
+  // field on the separate eval harness used by *.eval.test.ts files, e.g.
+  // whatsapp-template-delete-confirmation.eval.test.ts, which covers the
+  // confirm-then-delete flow.
   {
     prompt: 'Delete the draft of the order_confirmation EN WhatsApp template.',
     expectedToolName: undefined,

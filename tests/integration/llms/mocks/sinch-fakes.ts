@@ -1,6 +1,7 @@
 import { AsyncLocalStorage } from 'node:async_hooks';
 import { jest } from '@jest/globals';
 import { RcsApiError } from '../../../../src/tools/rcs/utils/rcs-provisioning-client';
+import { WhatsAppApiError } from '../../../../src/tools/whatsapp/utils/whatsapp-provisioning-client';
 
 // Scopes the fake RCS sender store per eval iteration. Eval suites run several
 // iterations concurrently against the same mocked module (see
@@ -157,8 +158,19 @@ export const registerSinchMocks = (opts: { enforceLaunch?: boolean } = {}): void
       currentTemplates().set(key, updated);
       return updated;
     },
-    deleteTemplate: async (templateName: string, languageCode: string) => {
-      currentTemplates().delete(templateKey(templateName, languageCode));
+    // Mirrors the real 409: a submitted (non-draft) template needs deleteSubmitted=true.
+    deleteTemplate: async (templateName: string, languageCode: string, deleteSubmitted?: boolean) => {
+      const key = templateKey(templateName, languageCode);
+      const existing = currentTemplates().get(key);
+      if (existing && existing.state !== 'DRAFT' && !deleteSubmitted) {
+        throw new WhatsAppApiError(
+          409,
+          'Conflict',
+          'template_not_deletable_due_to_input_config',
+          'Only draft templates will be deleted by name and language code if deleteSubmitted is false or not provided.',
+        );
+      }
+      currentTemplates().delete(key);
     },
     deleteTemplateByName: async (templateName: string) => {
       for (const key of [...currentTemplates().keys()]) {
