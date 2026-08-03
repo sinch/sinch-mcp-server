@@ -54,96 +54,36 @@ const optionalRequestFields = (credential: Conversation.ConversationChannelCrede
   ...(credential.callback_secret !== undefined ? { callback_secret: credential.callback_secret } : {}),
 });
 
+// Every channel keeps its credential under exactly one of these keys, and the response
+// shape for each one is identical to the request shape (see StaticBearerCredential,
+// StaticTokenCredential, MMSCredentials, etc. in @sinch/conversation), so a passthrough
+// copy is all that's needed. Add new channels here as the SDK adds them.
+const CREDENTIAL_FIELDS = [
+  'static_bearer',
+  'static_token',
+  'mms_credentials',
+  'instagram_credentials',
+  'telegram_credentials',
+  'kakaotalk_credentials',
+  'kakaotalkchat_credentials',
+  'line_credentials',
+  'line_enterprise_credentials',
+  'wechat_credentials',
+  'applebc_credentials',
+] as const;
+
 export const toChannelCredentialRequest = (
   credential: Conversation.ConversationChannelCredentialResponse,
 ): Conversation.ConversationChannelCredentialRequest => {
-  const optional = optionalRequestFields(credential);
+  const base = { channel: credential.channel, ...optionalRequestFields(credential) };
+  const source = credential as unknown as Record<string, unknown>;
 
-  if ('static_bearer' in credential && credential.static_bearer) {
-    return {
-      channel: credential.channel,
-      ...optional,
-      static_bearer: {
-        claimed_identity: credential.static_bearer.claimed_identity,
-        token: credential.static_bearer.token,
-      },
-    } as Conversation.ConversationChannelCredentialRequest;
-  }
-  if ('static_token' in credential && credential.static_token) {
-    return {
-      channel: credential.channel,
-      ...optional,
-      static_token: {
-        token: credential.static_token.token,
-      },
-    } as Conversation.ConversationChannelCredentialRequest;
-  }
-  if ('mms_credentials' in credential && credential.mms_credentials) {
-    return {
-      channel: credential.channel,
-      ...optional,
-      mms_credentials: credential.mms_credentials,
-    } as Conversation.ConversationChannelCredentialRequest;
-  }
-  if ('instagram_credentials' in credential && credential.instagram_credentials) {
-    return {
-      channel: credential.channel,
-      ...optional,
-      instagram_credentials: credential.instagram_credentials,
-    } as Conversation.ConversationChannelCredentialRequest;
-  }
-  if ('telegram_credentials' in credential && credential.telegram_credentials) {
-    return {
-      channel: credential.channel,
-      ...optional,
-      telegram_credentials: credential.telegram_credentials,
-    } as Conversation.ConversationChannelCredentialRequest;
-  }
-  if ('kakaotalk_credentials' in credential && credential.kakaotalk_credentials) {
-    return {
-      channel: credential.channel,
-      ...optional,
-      kakaotalk_credentials: credential.kakaotalk_credentials,
-    } as Conversation.ConversationChannelCredentialRequest;
-  }
-  if ('kakaotalkchat_credentials' in credential && credential.kakaotalkchat_credentials) {
-    return {
-      channel: credential.channel,
-      ...optional,
-      kakaotalkchat_credentials: credential.kakaotalkchat_credentials,
-    } as Conversation.ConversationChannelCredentialRequest;
-  }
-  if ('line_credentials' in credential && credential.line_credentials) {
-    return {
-      channel: credential.channel,
-      ...optional,
-      line_credentials: credential.line_credentials,
-    } as Conversation.ConversationChannelCredentialRequest;
-  }
-  if ('line_enterprise_credentials' in credential && credential.line_enterprise_credentials) {
-    return {
-      channel: credential.channel,
-      ...optional,
-      line_enterprise_credentials: credential.line_enterprise_credentials,
-    } as Conversation.ConversationChannelCredentialRequest;
-  }
-  if ('wechat_credentials' in credential && credential.wechat_credentials) {
-    return {
-      channel: credential.channel,
-      ...optional,
-      wechat_credentials: credential.wechat_credentials,
-    } as Conversation.ConversationChannelCredentialRequest;
-  }
-  if ('applebc_credentials' in credential && credential.applebc_credentials) {
-    return {
-      channel: credential.channel,
-      ...optional,
-      applebc_credentials: credential.applebc_credentials,
-    } as Conversation.ConversationChannelCredentialRequest;
+  for (const field of CREDENTIAL_FIELDS) {
+    const value = source[field];
+    if (value) {
+      return { ...base, [field]: value } as Conversation.ConversationChannelCredentialRequest;
+    }
   }
 
-  return {
-    channel: credential.channel,
-    ...optional,
-  } as Conversation.ConversationChannelCredentialRequest;
+  return base as Conversation.ConversationChannelCredentialRequest;
 };

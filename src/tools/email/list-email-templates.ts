@@ -38,7 +38,7 @@ export const registerListEmailTemplates = (server: McpServer, tags: Tags[]) => {
 };
 
 export const listEmailTemplatesHandler = async ({ domain }: ListEmailTemplates): Promise<IPromptResponse> => {
-  const maybeCredentials = await getMailgunCredentials(domain);
+  const maybeCredentials = getMailgunCredentials(domain);
   if (isPromptResponse(maybeCredentials)) {
     return maybeCredentials.promptResponse;
   }
