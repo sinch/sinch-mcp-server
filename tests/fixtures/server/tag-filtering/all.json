@@ -8,6 +8,8 @@
     "send-email",
     "list-conversation-apps",
     "create-conversation-app",
+    "update-conversation-app",
+    "delete-conversation-app",
     "set-sms-channel-on-app",
     "set-rcs-channel-on-app",
     "set-whatsapp-channel-on-app",
@@ -45,7 +47,10 @@
     "resend-rcs-test-number-invite",
     "get-rcs-number-capabilities",
     "get-rcs-test-number-state",
-    "launch-rcs-sender"
+    "launch-rcs-sender",
+    "list-whatsapp-templates",
+    "create-whatsapp-template",
+    "update-whatsapp-template"
   ],
   "expectedPrompts": [
     "conversation-app-id"

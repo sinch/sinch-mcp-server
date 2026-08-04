@@ -82,8 +82,8 @@ export const registerSinchMocks = (opts: { enforceLaunch?: boolean } = {}): void
     getRcsProvisioningClient: () => rcs,
   }));
 
-  // Conversation API: enough for set-sms-channel-on-app (get app, then update)
-  // and send-text-message (get app for channel check, then send).
+  // Conversation API: enough for set-sms-channel-on-app / update-conversation-app
+  // (get + update), delete-conversation-app, and send-text-message.
   const conversation = {
     app: {
       list: async () => ({ apps: [] }),
@@ -94,9 +94,10 @@ export const registerSinchMocks = (opts: { enforceLaunch?: boolean } = {}): void
       }),
       update: async ({ app_id, appUpdateRequestBody }: any) => ({
         id: app_id,
-        display_name: 'Mock App',
+        display_name: appUpdateRequestBody?.display_name ?? 'Mock App',
         channel_credentials: appUpdateRequestBody?.channel_credentials ?? [{ channel: 'SMS' }],
       }),
+      delete: async ({ app_id }: { app_id: string }) => ({ deleted: true, app_id }),
     },
     messages: {
       sendTextMessage: async () => ({ message_id: 'msg_mock_1' }),

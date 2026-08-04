@@ -1,0 +1,5 @@
+{
+  "tag": "whatsapp",
+  "expectedTools": ["list-whatsapp-templates", "create-whatsapp-template", "update-whatsapp-template"],
+  "expectedPrompts": []
+}

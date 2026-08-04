@@ -52,10 +52,10 @@ const messagingCases: ToolTestCase[] = [
     expectedArguments: {
       recipient: '+33612345678',
       templateName: 'appt_reminder',
-      templateLanguage: 'es',
-      parameters: {
-        name: 'Mr. Smith',
-      },
+    },
+    pathMatchers: {
+      templateLanguage: /^es$/i,
+      'parameters.body[1]text': /Mr\.? Smith/i,
     },
   },
   {
@@ -116,6 +116,21 @@ const messagingCases: ToolTestCase[] = [
     },
   },
   {
+    prompt: 'Rename Conversation app app-abc123 to My Support Bot.',
+    expectedToolName: 'update-conversation-app',
+    expectedArguments: {
+      appId: 'app-abc123',
+      displayName: 'My Support Bot',
+    },
+  },
+  {
+    prompt: 'Delete Conversation app app-abc123.',
+    expectedToolName: 'delete-conversation-app',
+    expectedArguments: {
+      appId: 'app-abc123',
+    },
+  },
+  {
     prompt: 'Show me all message templates in my account.',
     expectedToolName: 'list-messaging-templates',
     expectedArguments: undefined,
@@ -143,10 +158,50 @@ const messagingCases: ToolTestCase[] = [
   },
 ];
 
+// WhatsApp templates: list templates, create/update draft templates.
+const whatsappTemplateCases: ToolTestCase[] = [
+  {
+    prompt: 'Show me my WhatsApp templates.',
+    expectedToolName: 'list-whatsapp-templates',
+    expectedArguments: undefined,
+  },
+  {
+    prompt:
+      "Create a WhatsApp UTILITY template named order_confirmation in English with body text 'Your order {{1}} has shipped.'",
+    expectedToolName: 'create-whatsapp-template',
+    expectedArguments: {
+      name: 'order_confirmation',
+      language: 'EN',
+      category: 'UTILITY',
+    },
+    pathMatchers: {
+      'details.components.0.text': /shipped/i,
+    },
+  },
+  {
+    prompt:
+      "Update the order_confirmation EN WhatsApp template's body text to 'Your order {{1}} has shipped today.' and submit it for review.",
+    expectedToolName: 'update-whatsapp-template',
+    expectedArguments: {
+      templateName: 'order_confirmation',
+      languageCode: 'EN',
+      status: 'SUBMIT',
+    },
+    pathMatchers: {
+      'details.components.0.text': /shipped today/i,
+    },
+  },
+];
+
 // Verification & number lookup.
 const verificationCases: ToolTestCase[] = [
   {
     prompt: 'Lookup for the following phone number capabilities: +33612345678',
+    expectedToolName: 'number-lookup',
+    expectedArguments: { phoneNumber: '+33612345678' },
+  },
+  {
+    prompt: 'Look up the status of phone number +33612345678',
     expectedToolName: 'number-lookup',
     expectedArguments: { phoneNumber: '+33612345678' },
   },
@@ -244,6 +299,7 @@ const voiceCases: ToolTestCase[] = [
 export const toolTestCases: ToolTestCase[] = [
   ...generalCases,
   ...messagingCases,
+  ...whatsappTemplateCases,
   ...verificationCases,
   ...emailCases,
   ...voiceCases,

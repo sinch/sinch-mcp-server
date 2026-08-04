@@ -10,6 +10,13 @@ For RCS sender provisioning (create, test, launch) before connecting a channel, 
 2. **create-conversation-app** — Create an app with \`displayName\` and optional \`region\` (\`us\`, \`eu\`, \`br\`). No channels are configured at creation.
 3. **set-*-channel-on-app** — Add or replace a channel on that app (same \`region\` as the app and channel resources).
 
+## Rename or delete an app
+
+- **update-conversation-app** — Rename an app (\`appId\` + \`displayName\`). Does **not** change channel credentials.
+- **delete-conversation-app** — Permanently delete an app by \`appId\`.
+
+Do **not** use \`update-conversation-app\` to configure SMS, RCS, or WhatsApp — use the matching \`set-*-channel-on-app\` tool instead.
+
 ## Channels supported by MCP tools
 
 Use only the MCP tools below (not the raw Conversation API). Required parameters per channel:

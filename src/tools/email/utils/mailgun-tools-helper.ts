@@ -1,5 +1,5 @@
 import { ToolsConfig } from '../../../types';
-import crypto from 'crypto';
+import crypto from 'node:crypto';
 
 export const toolsConfig: Record<string, ToolsConfig> = {
   analyticsMetrics: {

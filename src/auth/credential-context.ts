@@ -1,5 +1,5 @@
-import { AsyncLocalStorage } from 'async_hooks';
-import type { IncomingHttpHeaders } from 'http';
+import { AsyncLocalStorage } from 'node:async_hooks';
+import type { IncomingHttpHeaders } from 'node:http';
 import {
   parseSinchCredentialsHeader,
   SINCH_CREDENTIALS_HEADER,

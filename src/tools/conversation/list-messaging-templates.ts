@@ -1,18 +1,16 @@
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
-import { resolveSinchOAuthCredentials } from '../../auth/resolve-sinch-oauth-credentials';
 import { registerTracedTool } from '../../telemetry/register-traced-tool';
-import { logger } from '../../telemetry/logger';
 import { isPromptResponse, matchesAnyTag } from '../../utils';
 import { formatListAllTemplatesResponse } from './utils/format-list-all-templates-response';
 import { getConversationService, setTemplateRegion } from './utils/conversation-service-helper';
 import { ConversationToolKey, getToolName, toolsConfig } from './utils/conversation-tools-helper';
+import { appendRegionHint } from './utils/region-hint';
 import { IPromptResponse, PromptResponse, Tags } from '../../types';
-import { SupportedConversationRegion } from '@sinch/sdk-client';
 
 const TOOL_KEY: ConversationToolKey = 'listMessagingTemplates';
 const TOOL_NAME = getToolName(TOOL_KEY);
 
-export const registerListAllTemplates = (server: McpServer, tags: Tags[]) => {
+export const registerListOmniChannelTemplates = (server: McpServer, tags: Tags[]) => {
   if (!matchesAnyTag(tags, toolsConfig[TOOL_KEY].tags)) {
     return;
   }
@@ -22,99 +20,42 @@ export const registerListAllTemplates = (server: McpServer, tags: Tags[]) => {
     TOOL_NAME,
     {
       description:
-        'Get a list of all messaging-related templates (omni-channel or channel specific) belonging to an account. Note that the Email templates are NOT included in this list - they can be found with another tool: list-email-templates. Do not try to use this tool to list Email templates, it will not work.',
+        'Get a list of the omni-channel messaging templates (managed by Sinch) belonging to an account, for the configured region only. Note that this list does NOT include: (1) Email templates - use the list-email-templates tool to fetch them; (2) WhatsApp channel-specific templates (managed by Meta) - use the list-whatsapp-templates tool to fetch them. If the user asks for all their messaging templates, you can propose to additionally call list-whatsapp-templates to fetch the WhatsApp-specific templates.',
     },
-    listAllTemplatesHandler,
+    listOmniChannelTemplatesHandler,
   );
 };
 
-export const listAllTemplatesHandler = async (): Promise<IPromptResponse> => {
+export const listOmniChannelTemplatesHandler = async (): Promise<IPromptResponse> => {
   const maybeService = getConversationService(TOOL_NAME);
   if (isPromptResponse(maybeService)) {
     return maybeService.promptResponse;
   }
   const conversationService = maybeService;
-
-  const maybeCredentials = resolveSinchOAuthCredentials();
-  if (isPromptResponse(maybeCredentials)) {
-    return maybeCredentials.promptResponse;
-  }
-  const { projectId, keyId, keySecret } = maybeCredentials;
+  const usedRegion = setTemplateRegion(undefined, conversationService);
 
   try {
-    const supportedRegions = Object.values(SupportedConversationRegion);
-    const omniChannelTemplates: any[] = [];
-    const errors: { region: string; error: string }[] = [];
-
-    for (const region of supportedRegions) {
-      try {
-        setTemplateRegion(region, conversationService);
-        const response = await conversationService.templatesV2.list({});
-        const formatted = formatListAllTemplatesResponse(response);
-        omniChannelTemplates.push(...formatted.map((t) => ({ ...t, region })));
-      } catch (error) {
-        errors.push({
-          region,
-          error: error instanceof Error ? error.message : 'Unknown error',
-        });
-      }
-    }
-
-    const whatsAppTemplates = await fetchWhatsAppSpecificTemplates(projectId, keyId, keySecret);
+    const response = await conversationService.templatesV2.list({});
+    const omniChannelTemplates = formatListAllTemplatesResponse(response);
 
     return new PromptResponse(
       JSON.stringify({
-        success: errors.length === 0,
-        templates: {
-          omni_channel: omniChannelTemplates,
-          whatsapp: whatsAppTemplates,
-          ...(errors.length > 0 && { errors }),
+        success: true,
+        region: usedRegion,
+        templates: omniChannelTemplates,
+        total_count: omniChannelTemplates.length,
+        related_tools: {
+          'list-whatsapp-templates':
+            'WhatsApp channel-specific templates (managed by Meta) are not included in this list. Use the list-whatsapp-templates tool to fetch them if the user wants them.',
         },
-        total_count: omniChannelTemplates.length + whatsAppTemplates.length,
       }),
     ).promptResponse;
   } catch (error) {
     return new PromptResponse(
       JSON.stringify({
         success: false,
-        error: error instanceof Error ? error.message : String(error),
+        error: appendRegionHint(error, usedRegion),
       }),
     ).promptResponse;
   }
-};
-
-interface WhatsAppTemplate {
-  name: string;
-  language: string;
-  category: string;
-  state: string;
-}
-
-interface WhatsAppTemplatesResponse {
-  templates: WhatsAppTemplate[];
-}
-
-const fetchWhatsAppSpecificTemplates = async (projectId: string, keyId: string, keySecret: string) => {
-  const resp = await fetch(`https://provisioning.api.sinch.com/v1/projects/${projectId}/whatsapp/templates`, {
-    method: 'GET',
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: 'Basic ' + Buffer.from(`${keyId}:${keySecret}`).toString('base64'),
-    },
-  });
-
-  if (!resp.ok) {
-    logger.error({ status: resp.status, statusText: resp.statusText }, 'Failed to fetch WhatsApp templates');
-    return [];
-  }
-
-  const data = (await resp.json()) as WhatsAppTemplatesResponse;
-
-  return data.templates.map((template) => ({
-    channel: 'WhatsApp' as const,
-    name: template.name,
-    language: template.language,
-    category: template.category,
-    state: template.state,
-  }));
 };

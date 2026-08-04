@@ -24,8 +24,7 @@ export const registerNumberLookup = (server: McpServer, tags: Tags[]) => {
     server,
     TOOL_NAME,
     {
-      description:
-        'With quick and easy access to Number Lookup, you can enhance your communications and keep your database as clean as a whistle. Number Lookup checks against first-party numbering sources and provides real-time feedback. Test numbers to ensure your recipients are ready and waiting to receive your messages!',
+      description: 'Look up a phone number for its status and capabilities.',
       inputSchema: NumberLookupSchema,
     },
     numberLookupHandler,

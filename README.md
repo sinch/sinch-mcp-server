@@ -20,10 +20,12 @@ Here is the list of tools available in the MCP server (all the phone numbers mus
 | **send-location-message**          | Send a location pin or coordinates to a user. <br> _Example prompt_: "Send a pin to the Guggenheim Museum location in Bilbao to the phone number +33612345678."                                                                     | conversation, notification  |
 | **list-conversation-apps**         | List all configured Conversation apps in the Sinch account. <br> _Example prompt_: "What messaging apps do I have set up in my account?"                                                                                            | conversation, notification  |
 | **create-conversation-app**        | Create a new Conversation API app (no channels required at creation). <br> _Example prompt_: "Create a Conversation app named My Support Bot in the EU region."                                                                     | conversation, configuration |
+| **update-conversation-app**        | Update a Conversation API app display name. <br> _Example prompt_: "Rename Conversation app abc123 to My Support Bot."                                                                                                              | conversation, configuration |
+| **delete-conversation-app**        | Delete a Conversation API app by ID. <br> _Example prompt_: "Delete Conversation app abc123."                                                                                                                                       | conversation, configuration |
 | **set-sms-channel-on-app**         | Set (create or replace) the SMS channel on a Conversation app. <br> _Example prompt_: "Set SMS on app abc123 using service plan XYZ and API token …"                                                                                | conversation, configuration |
 | **set-rcs-channel-on-app**         | Set (create or replace) the RCS channel on a Conversation app. <br> _Example prompt_: "Set RCS on app abc123 with sender ID … and bearer token …"                                                                                   | conversation, configuration |
 | **set-whatsapp-channel-on-app**    | Set (create or replace) the WhatsApp channel on a Conversation app. <br> _Example prompt_: "Set WhatsApp on app abc123 with sender ID … and bearer token …"                                                                         | conversation, configuration |
-| **list-messaging-templates**       | List all omni-channel and channel-specific message templates. <br> _Example prompt_: "Show me all message templates in my account."                                                                                                 | conversation, notification  |
+| **list-messaging-templates**       | List the omni-channel message templates (managed by Sinch) for the configured region. WhatsApp-specific templates can be fetched with the `list-whatsapp-templates` tool. <br> _Example prompt_: "Show me all message templates in my account."     | conversation, notification  |
 | **list-webhooks**                  | List webhooks configured for a Conversation app. <br> _Example prompt_: "List all webhooks for my Conversation app."                                                                                                                | conversation, configuration |
 | **get-webhook**                    | Get a webhook by ID. <br> _Example prompt_: "Show me the details of webhook ID abc123."                                                                                                                                             | conversation, configuration |
 | **create-webhook**                 | Create a webhook that delivers Conversation API events to a target URL. <br> _Example prompt_: "Create a webhook for inbound messages at https://example.com/callback."                                                             | conversation, configuration |
@@ -73,6 +75,14 @@ Here is the list of tools available in the MCP server (all the phone numbers mus
 | **get-rcs-test-number-state**     | Get the verification state of a single RCS test number. <br> _Example prompt_: "What is the state of test number +14155552671 on sender abc123?"                                                                                                   | rcs, configuration |
 | **get-rcs-number-capabilities**   | Get the RCS features supported by a test number's device (actions, rich card layouts, revocation). <br> _Example prompt_: "What RCS features does +14155552671 support?"                                                                           | rcs, configuration |
 
+### WhatsApp Template Tools
+
+| Tool                         | Description                                                                                                                                                                                                                                                                                 | Tags                    |
+| ---------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------- |
+| **list-whatsapp-templates**  | List the WhatsApp channel-specific message templates (managed by Meta). Omni-channel templates can be fetched with the `list-messaging-templates` tool. <br> _Example prompt_: "Show me my WhatsApp templates."                                                                             | whatsapp, configuration |
+| **create-whatsapp-template** | Create a WhatsApp message template, as a draft or submitted for review. <br> _Example prompt_: "Create a WhatsApp UTILITY template named order_confirmation in English with body text 'Your order {{1}} has shipped.'"                                                                      | whatsapp, configuration |
+| **update-whatsapp-template** | Update a WhatsApp message template draft (or reset an APPROVED/REJECTED/PAUSED/DISABLED template to draft) by name and language. <br> _Example prompt_: "Update the order_confirmation EN WhatsApp template's body text to 'Your order {{1}} has shipped today.' and submit it for review." | whatsapp, configuration |
+
 ### Numbers Tools
 
 | Tool                             | Description                                                                                                                                                                                              | Tags    |
@@ -102,6 +112,8 @@ Here is the list of tools available in the MCP server (all the phone numbers mus
 To use the APIs used by the MCP tools, you will need the following credentials:
 
 - RCS API credentials: RCS must be enabled for your Sinch project. Contact si-richmessaging@sinch.com to activate it. Once enabled, RCS uses the same `PROJECT_ID`, `KEY_ID`, and `KEY_SECRET` as the Conversation API (see below).
+
+- WhatsApp Template API credentials: uses the same `PROJECT_ID`, `KEY_ID`, and `KEY_SECRET` as the Conversation API (see below).
 
 - Conversation / Numbers API credentials:
   - (Required) `PROJECT_ID`: Select the project you want to use from your [Sinch Build dashboard](https://dashboard.sinch.com/dashboard) (Located at the left of the top toolbar)
@@ -227,7 +239,7 @@ You can combine multiple tags by separating them with commas. For example, if yo
       ],
 ```
 
-Available tags: `conversation`, `rcs`, `email`, `verification`, `voice`, `numbers`, `notification`, `configuration`, `all`.
+Available tags: `conversation`, `rcs`, `whatsapp`, `email`, `verification`, `voice`, `numbers`, `notification`, `configuration`, `all`.
 
 If you want to use all the tools, you can omit the `--tags` option, or use the tag `all`:
 
@@ -321,7 +333,6 @@ You can then configure the MCP server in the Claude configuration file as follow
 
 (Replace the `http://localhost:8000/sse` with the URL of your MCP server if it is not running locally)
 
-
 ## Option 3: Native Streamable HTTP server (recommended for remote)
 
 This option runs a **native Streamable HTTP** MCP server on `/mcp`. Choose **single-tenant** or **multi-tenant** deployment — they are mutually exclusive.
@@ -350,8 +361,8 @@ KEY_SECRET=
 
 Remote clients send **one header** on every request:
 
-| Header | Value |
-|--------|--------|
+| Header          | Value                  |
+| --------------- | ---------------------- |
 | `Authorization` | `Bearer <MCP_API_KEY>` |
 
 `MCP_API_KEY` (or comma-separated `MCP_API_KEYS` for [key rotation](#mcp_api_keys-key-rotation)) authorizes access to the MCP server. `PROJECT_ID`, `KEY_ID`, and `KEY_SECRET` are read from the server environment only — **`X-Sinch-Credentials` is ignored** in this mode (no client override of server credentials).
@@ -362,8 +373,8 @@ Use when different clients must use different Sinch projects. **Do not set `MCP_
 
 Remote clients send **one header** on every request:
 
-| Header | Value |
-|--------|--------|
+| Header                | Value                                      |
+| --------------------- | ------------------------------------------ |
 | `X-Sinch-Credentials` | Base64-encoded `projectId:keyId:keySecret` |
 
 The server does **not** read `PROJECT_ID`, `KEY_ID`, or `KEY_SECRET` from its environment for OAuth-backed tools in this mode. OAuth clients are cached in memory with **LRU eviction** (default 256 entries, configurable via `OAUTH_TOKEN_CACHE_MAX_ENTRIES`).
@@ -439,7 +450,6 @@ Each MCP client session creates an in-memory `McpServer` instance (all registere
 ```
 
 After the `initialize` response, include the `mcp-session-id` header returned by the server on subsequent requests.
-
 
 ## Contributing
 

@@ -28,7 +28,18 @@ const SendWhatsAppTemplateMessageSchema = {
     .record(z.string(), z.string())
     .optional()
     .describe(
-      'The parameters to use for the template. This is a key-value map where the key is the parameter name and the value is the parameter value. Look carefully in the prompt to find which parameters are expected by the template.',
+      "Template variable values, keyed using WhatsApp's structured parameter format: " +
+        '<component>[<index>]<subtype>[<paramIndex>]<field>, e.g. "body[1]text" or "button[0]url[1]text". ' +
+        'component is header, body, button, or carousel; index is 0-based and only used for carousel cards ' +
+        'and buttons (omit it for header/body); paramIndex is 1-based. Never use bare keys like "1" or ' +
+        'dotted keys like "body.1" — WhatsApp does not recognize them and the send will silently fail. Examples: ' +
+        '"body[1]text" for a body variable; "header[1]text" for a text header variable; ' +
+        '"header[1]image.link" / "header[1]video.link" / "header[1]document.link" (+ optional ' +
+        '"header[1]document.filename") for a media header; "header[1]location.latitude" and ' +
+        '"header[1]location.longitude" (+ optional "header[1]location.name" / "header[1]location.address") ' +
+        'for a location header; "button[0]quick_reply[1]payload", "button[0]url[1]text", ' +
+        '"button[0]copy_code[1]coupon_code", "button[0]flow[1]action.type" for interactive buttons; ' +
+        '"carousel[0]header[1]image.link" and "carousel[0]body[1]text" for carousel card content.',
     ),
   appId: ConversationAppIdOverride,
   sender: MessageSenderNumberOverride,

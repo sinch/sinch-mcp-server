@@ -37,7 +37,7 @@ export const registerSetRcsChannelOnApp = (server: McpServer, tags: Tags[]) => {
     TOOL_NAME,
     {
       description:
-        'Set (create or replace) the RCS channel on a Conversation API app. Requires the RCS sender ID and bearer token. For vague requests such as "add messaging", ask whether the user means SMS, RCS, or WhatsApp and collect the required credentials before calling a tool.',
+        'Set (create or replace) the RCS channel on a Conversation API app. Requires the RCS sender ID and bearer token. To rename an app, use update-conversation-app instead. For vague requests such as "add messaging", ask whether the user means SMS, RCS, or WhatsApp and collect the required credentials before calling a tool.',
       inputSchema: SetRcsChannelOnAppSchema,
     },
     setRcsChannelOnAppHandler,

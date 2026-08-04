@@ -25,10 +25,10 @@
   "dependencies": {
     "@modelcontextprotocol/sdk": "1.17.3",
     "@opentelemetry/api": "1.9.1",
-    "@opentelemetry/instrumentation-http": "0.218.0",
-    "@opentelemetry/instrumentation-undici": "0.28.0",
     "@opentelemetry/exporter-metrics-otlp-grpc": "0.218.0",
     "@opentelemetry/exporter-trace-otlp-grpc": "0.218.0",
+    "@opentelemetry/instrumentation-http": "0.218.0",
+    "@opentelemetry/instrumentation-undici": "0.28.0",
     "@opentelemetry/resources": "2.7.1",
     "@opentelemetry/sdk-metrics": "2.7.1",
     "@opentelemetry/sdk-node": "0.218.0",
@@ -40,7 +40,7 @@
     "express": "5.1.0",
     "pino": "10.3.1",
     "undici": "7.9.0",
-    "zod": "3.24.4"
+    "zod": "3.25.76"
   },
   "devDependencies": {
     "@anthropic-ai/sdk": "0.60.0",
@@ -50,8 +50,9 @@
     "@mcpjam/sdk": "1.28.0",
     "@types/express": "5.0.3",
     "@types/jest": "29.5.14",
-    "@typescript-eslint/eslint-plugin": "8.32.0",
-    "@typescript-eslint/parser": "8.32.0",
+    "@typescript-eslint/eslint-plugin": "8.64.0",
+    "@typescript-eslint/parser": "8.64.0",
+    "@typescript/native": "npm:typescript@7.0.2",
     "eslint": "9.26.0",
     "eslint-config-prettier": "10.1.2",
     "eslint-plugin-import": "2.31.0",
@@ -65,10 +66,10 @@
     "jest-extended": "4.0.2",
     "lint-staged": "15.5.2",
     "openai": "5.12.2",
-    "ts-jest": "29.4.0",
+    "ts-jest": "29.4.11",
     "ts-node": "10.9.2",
-    "typescript": "5.8.3",
-    "typescript-eslint": "8.32.0"
+    "typescript": "npm:@typescript/typescript6@6.0.2",
+    "typescript-eslint": "8.64.0"
   },
   "scripts": {
     "build": "tsc --project tsconfig.build.json && tsc --project tsconfig.tests.json",
@@ -80,6 +81,7 @@
     "prettier": "prettier './**/*.{js,ts,md}' --write",
     "format:write": "npm run lint:fix && npm run prettier",
     "test": "jest --testPathIgnorePatterns='/tests/(integration|eval)/'",
+    "test:coverage": "jest --coverage --testPathIgnorePatterns='/tests/(integration|eval)/'",
     "test:integration": "NODE_OPTIONS=--experimental-vm-modules jest --config jest.integration.config.ts --runInBand",
     "test:eval": "NODE_OPTIONS=--experimental-vm-modules jest --config jest.eval.config.ts --runInBand",
     "prepare": "husky",

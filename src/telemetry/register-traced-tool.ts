@@ -1,4 +1,4 @@
-import { McpServer, RegisteredTool, ToolCallback } from '@modelcontextprotocol/sdk/server/mcp.js';
+import { McpServer, RegisteredTool } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { SpanStatusCode, trace } from '@opentelemetry/api';
 import { ZodRawShape } from 'zod';
 import { ATTR_AUTH_METHOD, ATTR_PROJECT_ID, ATTR_TOOL_NAME, SPAN_TOOL_PREFIX, TRACER_NAME } from './constants';
@@ -62,19 +62,25 @@ const runWithTracing = async <T>(toolName: string, handler: () => T | Promise<T>
   });
 };
 
-type ToolConfig<InputArgs extends ZodRawShape> = {
+type ToolConfig = {
   title?: string;
   description?: string;
-  inputSchema?: InputArgs;
-  outputSchema?: InputArgs;
+  inputSchema?: ZodRawShape;
+  outputSchema?: ZodRawShape;
   annotations?: Record<string, unknown>;
 };
 
-export const registerTracedTool = <InputArgs extends ZodRawShape>(
+// Avoid ToolCallback<Schema> generics — they hit TS2589 (excessively deep Zod instantiation).
+type ToolHandler = (args: never, extra: never) => unknown;
+
+type RegisterToolFn = (name: string, config: ToolConfig, cb: ToolHandler) => RegisteredTool;
+
+export const registerTracedTool = (
   server: McpServer,
   name: string,
-  config: ToolConfig<InputArgs>,
-  cb: ToolCallback<InputArgs>,
-): RegisteredTool =>
-  server.registerTool(name, config, ((args, extra) =>
-    runWithTracing(name, () => cb(args, extra))) as ToolCallback<InputArgs>);
+  config: ToolConfig,
+  cb: ToolHandler,
+): RegisteredTool => {
+  const registerTool = server.registerTool.bind(server) as RegisterToolFn;
+  return registerTool(name, config, (args, extra) => runWithTracing(name, () => cb(args, extra)));
+};

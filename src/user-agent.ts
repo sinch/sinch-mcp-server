@@ -1,4 +1,4 @@
-import process from 'process';
+import process from 'node:process';
 import pkg from '../package.json';
 const mcpServerVersion = pkg.version;
 
