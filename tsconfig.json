@@ -6,10 +6,8 @@
     "strict": true,
     "target": "ES2022",
     "module": "CommonJS",
-    "moduleResolution": "node",
-    "paths": {
-      "@t3-oss/env-core": ["./node_modules/@t3-oss/env-core/dist/index.d.ts"]
-    },
+    "moduleResolution": "bundler",
+    "rootDir": "src",
     "esModuleInterop": true,
     "skipLibCheck": true,
     "allowJs": true,
@@ -27,8 +25,5 @@
     "outDir": "dist"
   },
   "include": ["src/**/*", "package.json"],
-  "exclude": ["jest.config.ts", "eslint.config.mjs", "dist", "bin"],
-  "ts-node": {
-    "esm": true
-  }
+  "exclude": ["jest.config.ts", "eslint.config.mjs", "dist", "bin"]
 }
