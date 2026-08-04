@@ -120,19 +120,10 @@ export interface UpdateWhatsAppTemplateRequest {
 export type WhatsAppTemplateState = 'APPROVED' | 'DISABLED' | 'PAUSED' | 'REJECTED' | string;
 
 export type WhatsAppTemplateRejectionCode =
-  | 'ABUSIVE_CONTENT'
-  | 'INCORRECT_CATEGORY'
-  | 'INVALID_FORMAT'
-  | 'NONE'
-  | 'SCAM'
-  | string;
+  'ABUSIVE_CONTENT' | 'INCORRECT_CATEGORY' | 'INVALID_FORMAT' | 'NONE' | 'SCAM' | string;
 
 export type WhatsAppTemplateQualityScore =
-  | 'QUALITY_SCORE_GREEN'
-  | 'QUALITY_SCORE_RED'
-  | 'QUALITY_SCORE_YELLOW'
-  | 'QUALITY_SCORE_UNKNOWN'
-  | string;
+  'QUALITY_SCORE_GREEN' | 'QUALITY_SCORE_RED' | 'QUALITY_SCORE_YELLOW' | 'QUALITY_SCORE_UNKNOWN' | string;
 
 export interface WhatsAppTemplateButtonAnalytics {
   type: 'QUICK_REPLY' | 'UNIQUE_URL' | 'URL' | string;
