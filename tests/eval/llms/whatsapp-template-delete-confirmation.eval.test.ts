@@ -31,7 +31,7 @@ defineWorkflowEval({
       id: 'confirm-delete-one',
       // Answers deleteSubmitted too — leaving it open gets a second question instead of the tool call.
       prompt: `Yes, I confirm — delete 'appt_reminder' (English) only, draft only, not the submitted version. Leave the Spanish version untouched.`,
-      accept: ['delete-whatsapp-template'],
+      accept: ['delete-single-whatsapp-template-variant'],
     },
     {
       id: 'verify-remaining',
@@ -46,7 +46,7 @@ defineWorkflowEval({
     {
       id: 'confirm-bulk-delete',
       prompt: `Yes, I confirm — delete every remaining language variant of 'appt_reminder' entirely.`,
-      accept: ['delete-whatsapp-template-by-name'],
+      accept: ['delete-all-whatsapp-template-variants'],
     },
   ],
 });

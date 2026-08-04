@@ -381,7 +381,7 @@ export const UpdateWhatsAppTemplateSchema = {
   details: WhatsAppTemplateDetails,
 };
 
-// ── delete-whatsapp-template ─────────────────────────────────────────────────
+// ── delete-single-whatsapp-template-variant ──────────────────────────────────
 // DELETE /v1/projects/{projectId}/whatsapp/templates/{templateName}/languages/{languageCode}
 // Deletes a single language variant only — other languages of the same template name are unaffected.
 
@@ -400,7 +400,7 @@ export const DeleteWhatsAppTemplateSchema = {
     ),
 };
 
-// ── delete-whatsapp-template-by-name ─────────────────────────────────────────
+// ── delete-all-whatsapp-template-variants ────────────────────────────────────
 // DELETE /v1/projects/{projectId}/whatsapp/templates/{templateName}
 // Deletes every language variant of the template name at once.
 
@@ -408,6 +408,6 @@ export const DeleteWhatsAppTemplateByNameSchema = {
   templateName: z
     .string()
     .describe(
-      'The unique name of the template. Every language variant of this template name is deleted — to remove only one language, use delete-whatsapp-template instead.',
+      'The unique name of the template. Every language variant of this template name is deleted — to remove only one language, use delete-single-whatsapp-template-variant instead.',
     ),
 };

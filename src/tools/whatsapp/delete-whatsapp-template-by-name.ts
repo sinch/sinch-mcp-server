@@ -22,12 +22,8 @@ export const registerDeleteWhatsAppTemplateByName = (server: McpServer, tags: Ta
     TOOL_NAME,
     {
       description:
-        'Destructive — always ask the user to confirm the exact templateName in chat and wait for an explicit yes before calling this tool. Delete ALL language variants of a WhatsApp message template by name, in one call — draft and submitted variants alike, regardless of state. This is more destructive than delete-whatsapp-template, which only removes a single language variant; use this one only when every language of the template name should be removed. This does not free up the name — recreating a template with this same name and any language it had approved is blocked for 30 days. In-flight messages already sent with the deleted template keep attempting delivery for 30 days.',
+        'Destructive — always ask the user to confirm the exact templateName in chat and wait for an explicit yes before calling this tool. Delete ALL language variants of a WhatsApp message template by name, in one call — draft and submitted variants alike, regardless of state. This is more destructive than delete-single-whatsapp-template-variant, which only removes a single language variant; use this one only when every language of the template name should be removed. This does not free up the name — recreating a template with this same name and any language it had approved is blocked for 30 days. In-flight messages already sent with the deleted template keep attempting delivery for 30 days.',
       inputSchema: DeleteWhatsAppTemplateByNameSchema,
-      annotations: {
-        destructiveHint: true,
-        idempotentHint: false,
-      },
     },
     deleteWhatsAppTemplateByNameHandler,
   );

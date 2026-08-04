@@ -12,12 +12,12 @@ export const toolsConfig = defineToolsConfig({
     tags: ['all', 'whatsapp', 'configuration', 'update-whatsapp-template'],
   },
   deleteWhatsAppTemplate: {
-    name: 'delete-whatsapp-template',
-    tags: ['all', 'whatsapp', 'configuration', 'delete-whatsapp-template'],
+    name: 'delete-single-whatsapp-template-variant',
+    tags: ['all', 'whatsapp', 'configuration', 'delete-single-whatsapp-template-variant'],
   },
   deleteWhatsAppTemplateByName: {
-    name: 'delete-whatsapp-template-by-name',
-    tags: ['all', 'whatsapp', 'configuration', 'delete-whatsapp-template-by-name'],
+    name: 'delete-all-whatsapp-template-variants',
+    tags: ['all', 'whatsapp', 'configuration', 'delete-all-whatsapp-template-variants'],
   },
 });
 
