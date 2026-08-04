@@ -1,5 +1,5 @@
 import { Conversation, ConversationService } from '@sinch/conversation';
-import { listAllTemplatesHandler } from '../../../src/tools/conversation/list-messaging-templates';
+import { listOmniChannelTemplatesHandler } from '../../../src/tools/conversation/list-messaging-templates';
 import {
   getConversationService,
   setTemplateRegion,
@@ -27,7 +27,7 @@ beforeEach(() => {
   jest.mocked(setTemplateRegion).mockReturnValue('us');
 });
 
-test('listAllTemplatesHandler returns the templates for the configured region and mentions the WhatsApp tool', async () => {
+test('listOmniChannelTemplatesHandler returns the templates for the configured region and mentions the WhatsApp tool', async () => {
   // Given
   mockListMessagingTemplates.mockResolvedValue({
     templates: [
@@ -42,7 +42,7 @@ test('listAllTemplatesHandler returns the templates for the configured region an
   } as Conversation.V2ListTemplatesResponse);
 
   // When
-  const result = await listAllTemplatesHandler({});
+  const result = await listOmniChannelTemplatesHandler();
 
   // Then
   expect(setTemplateRegion).toHaveBeenCalledTimes(1);
@@ -64,29 +64,12 @@ test('listAllTemplatesHandler returns the templates for the configured region an
   expect(body.related_tools['list-whatsapp-templates']).toContain('list-whatsapp-templates');
 });
 
-test('listAllTemplatesHandler forwards the region override to the template client', async () => {
-  // Given
-  jest.mocked(setTemplateRegion).mockReturnValue('eu');
-  mockListMessagingTemplates.mockResolvedValue({ templates: [] });
-
-  // When
-  const result = await listAllTemplatesHandler({ region: 'eu' });
-
-  // Then
-  expect(setTemplateRegion).toHaveBeenCalledWith('eu', mockConversationService);
-  const body = JSON.parse(result.content[0].text);
-  expect(body.success).toBeTrue();
-  expect(body.region).toBe('eu');
-  expect(body.templates).toEqual([]);
-  expect(body.total_count).toBe(0);
-});
-
-test('listAllTemplatesHandler surfaces an error with a region hint when the API call fails', async () => {
+test('listOmniChannelTemplatesHandler surfaces an error with a region hint when the API call fails', async () => {
   // Given
   mockListMessagingTemplates.mockRejectedValue(new Error('Oops'));
 
   // When
-  const result = await listAllTemplatesHandler({});
+  const result = await listOmniChannelTemplatesHandler();
 
   // Then
   const body = JSON.parse(result.content[0].text);

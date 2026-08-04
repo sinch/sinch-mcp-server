@@ -13,8 +13,7 @@
     "send-template-message",
     "send-whatsapp-template-message",
     "list-conversation-apps",
-    "list-messaging-templates",
-    "list-whatsapp-templates"
+    "list-messaging-templates"
   ],
   "expectedPrompts": [
     "conversation-app-id"

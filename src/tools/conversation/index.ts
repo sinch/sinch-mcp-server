@@ -6,7 +6,7 @@ import { registerSetRcsChannelOnApp } from './set-rcs-channel-on-app';
 import { registerSetSmsChannelOnApp } from './set-sms-channel-on-app';
 import { registerSetWhatsAppChannelOnApp } from './set-whatsapp-channel-on-app';
 import { registerListAllApps } from './list-all-apps';
-import { registerListAllTemplates } from './list-messaging-templates';
+import { registerListOmniChannelTemplates } from './list-messaging-templates';
 import { registerSendCardOrChoiceMessage } from './send-card-or-choice-message';
 import { registerSendLocationMessage } from './send-location-message';
 import { registerSendMediaMessage } from './send-media-message';
@@ -34,7 +34,7 @@ export const registerConversationTools = (server: McpServer, tags: Tags[]) => {
   registerSetSmsChannelOnApp(server, tags);
   registerSetRcsChannelOnApp(server, tags);
   registerSetWhatsAppChannelOnApp(server, tags);
-  registerListAllTemplates(server, tags);
+  registerListOmniChannelTemplates(server, tags);
   registerListWebhooks(server, tags);
   registerGetWebhook(server, tags);
   registerCreateWebhook(server, tags);
