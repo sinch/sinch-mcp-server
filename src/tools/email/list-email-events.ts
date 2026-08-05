@@ -19,6 +19,24 @@ const eventTypes = [
 ] as const;
 
 type EventType = (typeof eventTypes)[number];
+type MailgunEventFields = { recipient?: string; subject?: string; from?: string };
+type EmailEventGroup = MailgunEventFields & { events: { event: string; timestamp: string }[] };
+interface MailgunEventsResponse {
+  items: MailgunEvent[];
+}
+
+interface MailgunEvent {
+  timestamp?: number;
+  event?: EventType;
+  recipient?: string;
+  message?: {
+    headers: {
+      'message-id': string;
+      from?: string;
+      subject?: string;
+    };
+  };
+}
 
 const ListEmailEventsSchema = {
   domain: z.string().optional().describe('(Optional) The Mailgun domain to fetch events for.'),
@@ -71,23 +89,7 @@ export const listEmailEventsHandler = async ({
   }
   const credentials = maybeCredentials;
 
-  const params = new URLSearchParams();
-  if (event) {
-    params.append('event', event);
-  }
-  if (limit) {
-    params.append('limit', limit.toString());
-  }
-  if (beginSearchPeriod) {
-    params.append('begin', (new Date(beginSearchPeriod).getTime() / 1000).toString());
-  }
-  if (endSearchPeriod) {
-    params.append('end', (new Date(endSearchPeriod).getTime() / 1000).toString());
-  }
-  if (beginSearchPeriod && !endSearchPeriod) {
-    params.append('end', (new Date().getTime() / 1000).toString()); // Default to now if no end is provided
-  }
-
+  const params = getUrlSearchParams({ event, limit, beginSearchPeriod, endSearchPeriod });
   const url = `https://api.mailgun.net/v3/${credentials.domain}/events?${params.toString()}`;
 
   const response = await fetch(url, {
@@ -118,43 +120,8 @@ export const listEmailEventsHandler = async ({
     ).promptResponse;
   }
 
-  const grouped: Map<
-    string,
-    { recipient?: string; subject?: string; from?: string; events: { event: string; timestamp: string }[] }
-  > = new Map();
-
   const events = responseData.items || [];
-  for (const e of events) {
-    const messageId = e.message?.headers['message-id'] || '(no message-id)';
-    const isAccepted = e.event === 'accepted';
-    const subject = isAccepted && e.message?.headers.subject ? e.message.headers.subject : undefined;
-    const from = isAccepted && e.message?.headers.from ? e.message.headers.from : undefined;
-    const recipient = isAccepted && e.recipient ? e.recipient : undefined;
-
-    if (!grouped.has(messageId)) {
-      grouped.set(messageId, {
-        recipient,
-        subject,
-        from,
-        events: [],
-      });
-    }
-    const group = grouped.get(messageId)!;
-    if (subject && !group.subject) {
-      group.subject = subject;
-    }
-    if (from && !group.from) {
-      group.from = from;
-    }
-    if (recipient && !group.recipient) {
-      group.recipient = recipient;
-    }
-
-    group.events.push({
-      event: e.event || '',
-      timestamp: e.timestamp ? new Date(e.timestamp * 1000).toISOString() : '',
-    });
-  }
+  const grouped = groupEventsByMessageId(events);
 
   const groupedArray = Array.from(grouped.entries()).map(([messageId, data]) => ({
     message_id: messageId,
@@ -172,19 +139,51 @@ export const listEmailEventsHandler = async ({
   ).promptResponse;
 };
 
-interface MailgunEventsResponse {
-  items: MailgunEvent[];
-}
+const getUrlSearchParams = ({ event, limit, beginSearchPeriod, endSearchPeriod }: ListEmailEvents): URLSearchParams => {
+  const searchParams = new URLSearchParams();
+  if (event) {
+    searchParams.append('event', event);
+  }
+  if (limit) {
+    searchParams.append('limit', limit.toString());
+  }
+  if (beginSearchPeriod) {
+    searchParams.append('begin', (new Date(beginSearchPeriod).getTime() / 1000).toString());
+  }
+  if (endSearchPeriod) {
+    searchParams.append('end', (new Date(endSearchPeriod).getTime() / 1000).toString());
+  }
+  if (beginSearchPeriod && !endSearchPeriod) {
+    searchParams.append('end', (Date.now() / 1000).toString()); // Default to now if no end is provided
+  }
+  return searchParams;
+};
 
-interface MailgunEvent {
-  timestamp?: number;
-  event?: EventType;
-  recipient?: string;
-  message?: {
-    headers: {
-      'message-id': string;
-      from?: string;
-      subject?: string;
-    };
-  };
-}
+// Only the "accepted" event carries the recipient/subject/from headers; later events
+// for the same message-id (delivered, opened, ...) only add to the events timeline.
+const acceptedFieldsOf = (e: MailgunEvent): MailgunEventFields =>
+  e.event === 'accepted'
+    ? { recipient: e.recipient, subject: e.message?.headers.subject, from: e.message?.headers.from }
+    : {};
+
+const groupEventsByMessageId = (events: MailgunEvent[]): Map<string, EmailEventGroup> => {
+  const grouped = new Map<string, EmailEventGroup>();
+
+  for (const e of events) {
+    const messageId = e.message?.headers['message-id'] || '(no message-id)';
+    const group = grouped.get(messageId) ?? { events: [] };
+    grouped.set(messageId, group);
+
+    const accepted = acceptedFieldsOf(e);
+    group.subject ??= accepted.subject;
+    group.from ??= accepted.from;
+    group.recipient ??= accepted.recipient;
+
+    group.events.push({
+      event: e.event || '',
+      timestamp: e.timestamp ? new Date(e.timestamp * 1000).toISOString() : '',
+    });
+  }
+
+  return grouped;
+};

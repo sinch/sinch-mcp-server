@@ -1,4 +1,4 @@
-import crypto from 'crypto';
+import crypto from 'node:crypto';
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { registerTracedTool } from '../../telemetry/register-traced-tool';
 import { Voice } from '@sinch/voice';

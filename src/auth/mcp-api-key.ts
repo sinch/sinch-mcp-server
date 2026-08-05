@@ -1,4 +1,4 @@
-import { createHash, timingSafeEqual } from 'crypto';
+import { createHash, timingSafeEqual } from 'node:crypto';
 import type { NextFunction, Request, Response } from 'express';
 
 const BEARER_SCHEME = 'bearer';
@@ -65,12 +65,14 @@ export const loadMcpApiKeys = (): string[] => {
 };
 
 export const extractBearerToken = (authorizationHeader: string | string[] | undefined): string | undefined => {
-  const headers =
-    authorizationHeader === undefined
-      ? []
-      : Array.isArray(authorizationHeader)
-        ? authorizationHeader
-        : [authorizationHeader];
+  let headers: string[];
+  if (authorizationHeader === undefined) {
+    headers = [];
+  } else if (Array.isArray(authorizationHeader)) {
+    headers = authorizationHeader;
+  } else {
+    headers = [authorizationHeader];
+  }
 
   for (const header of headers) {
     if (!header) {

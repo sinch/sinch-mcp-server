@@ -48,6 +48,7 @@
     "get-rcs-number-capabilities",
     "get-rcs-test-number-state",
     "launch-rcs-sender",
+    "list-whatsapp-templates",
     "create-whatsapp-template",
     "update-whatsapp-template",
     "delete-single-whatsapp-template-variant",

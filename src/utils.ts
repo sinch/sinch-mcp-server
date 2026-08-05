@@ -11,9 +11,9 @@ export const matchesAnyTag = (tags: string[], filteringTags: string[]): boolean 
   }
 
   const normalizedTags = tags.map((tag) => tag.toLowerCase());
-  const normalizedFilteringTags = filteringTags.map((tag) => tag.toLowerCase());
+  const normalizedFilteringTags = new Set(filteringTags.map((tag) => tag.toLowerCase()));
 
-  return normalizedTags.some((tag) => normalizedFilteringTags.includes(tag));
+  return normalizedTags.some((tag) => normalizedFilteringTags.has(tag));
 };
 
 export const formatUserAgent = (toolName: string, userId: string): string => {
