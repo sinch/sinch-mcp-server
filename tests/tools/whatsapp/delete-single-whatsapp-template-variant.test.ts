@@ -1,4 +1,4 @@
-import { deleteWhatsAppTemplateHandler } from '../../../src/tools/whatsapp/delete-whatsapp-template';
+import { deleteSingleWhatsAppTemplateVariantHandler } from '../../../src/tools/whatsapp/delete-single-whatsapp-template-variant';
 import { getWhatsAppProvisioningClient } from '../../../src/tools/whatsapp/utils/whatsapp-service-helper';
 import {
   WhatsAppApiError,
@@ -18,10 +18,10 @@ beforeEach(() => {
   mockedGetClient.mockReturnValue(mockClient);
 });
 
-test('deleteWhatsAppTemplateHandler deletes the template and returns success', async () => {
+test('deleteSingleWhatsAppTemplateVariantHandler deletes the template and returns success', async () => {
   mockDeleteTemplate.mockResolvedValue(undefined);
 
-  const result = await deleteWhatsAppTemplateHandler({
+  const result = await deleteSingleWhatsAppTemplateVariantHandler({
     templateName: 'order_confirmation',
     languageCode: 'EN',
     deleteSubmitted: true,
@@ -36,7 +36,7 @@ test('deleteWhatsAppTemplateHandler deletes the template and returns success', a
   });
 });
 
-test('deleteWhatsAppTemplateHandler surfaces a WhatsAppApiError as a formatted failure', async () => {
+test('deleteSingleWhatsAppTemplateVariantHandler surfaces a WhatsAppApiError as a formatted failure', async () => {
   mockDeleteTemplate.mockRejectedValue(
     new WhatsAppApiError(
       409,
@@ -46,7 +46,7 @@ test('deleteWhatsAppTemplateHandler surfaces a WhatsAppApiError as a formatted f
     ),
   );
 
-  const result = await deleteWhatsAppTemplateHandler({
+  const result = await deleteSingleWhatsAppTemplateVariantHandler({
     templateName: 'order_confirmation',
     languageCode: 'EN',
   });
@@ -59,13 +59,13 @@ test('deleteWhatsAppTemplateHandler surfaces a WhatsAppApiError as a formatted f
   });
 });
 
-test('deleteWhatsAppTemplateHandler returns the guard response when credentials are missing', async () => {
+test('deleteSingleWhatsAppTemplateVariantHandler returns the guard response when credentials are missing', async () => {
   const guard = new PromptResponse(
     JSON.stringify({ success: false, error: 'Missing env vars: PROJECT_ID, KEY_ID, KEY_SECRET.' }),
   );
   mockedGetClient.mockReturnValue(guard);
 
-  const result = await deleteWhatsAppTemplateHandler({
+  const result = await deleteSingleWhatsAppTemplateVariantHandler({
     templateName: 'order_confirmation',
     languageCode: 'EN',
   });

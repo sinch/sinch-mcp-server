@@ -385,7 +385,7 @@ export const UpdateWhatsAppTemplateSchema = {
 // DELETE /v1/projects/{projectId}/whatsapp/templates/{templateName}/languages/{languageCode}
 // Deletes a single language variant only — other languages of the same template name are unaffected.
 
-export const DeleteWhatsAppTemplateSchema = {
+export const DeleteSingleWhatsAppTemplateVariantSchema = {
   templateName: z.string().describe('The unique name of the template.'),
   languageCode: z
     .string()
@@ -404,7 +404,7 @@ export const DeleteWhatsAppTemplateSchema = {
 // DELETE /v1/projects/{projectId}/whatsapp/templates/{templateName}
 // Deletes every language variant of the template name at once.
 
-export const DeleteWhatsAppTemplateByNameSchema = {
+export const DeleteAllWhatsAppTemplateVariantsSchema = {
   templateName: z
     .string()
     .describe(

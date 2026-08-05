@@ -1,4 +1,4 @@
-import { deleteWhatsAppTemplateByNameHandler } from '../../../src/tools/whatsapp/delete-whatsapp-template-by-name';
+import { deleteAllWhatsAppTemplateVariantsHandler } from '../../../src/tools/whatsapp/delete-all-whatsapp-template-variants';
 import { getWhatsAppProvisioningClient } from '../../../src/tools/whatsapp/utils/whatsapp-service-helper';
 import {
   WhatsAppApiError,
@@ -18,10 +18,10 @@ beforeEach(() => {
   mockedGetClient.mockReturnValue(mockClient);
 });
 
-test('deleteWhatsAppTemplateByNameHandler deletes every language variant and returns success', async () => {
+test('deleteAllWhatsAppTemplateVariantsHandler deletes every language variant and returns success', async () => {
   mockDeleteTemplateByName.mockResolvedValue(undefined);
 
-  const result = await deleteWhatsAppTemplateByNameHandler({ templateName: 'order_confirmation' });
+  const result = await deleteAllWhatsAppTemplateVariantsHandler({ templateName: 'order_confirmation' });
   const parsed = JSON.parse(result.content[0].text);
 
   expect(mockDeleteTemplateByName).toHaveBeenCalledWith('order_confirmation');
@@ -31,7 +31,7 @@ test('deleteWhatsAppTemplateByNameHandler deletes every language variant and ret
   });
 });
 
-test('deleteWhatsAppTemplateByNameHandler surfaces a WhatsAppApiError as a formatted failure', async () => {
+test('deleteAllWhatsAppTemplateVariantsHandler surfaces a WhatsAppApiError as a formatted failure', async () => {
   mockDeleteTemplateByName.mockRejectedValue(
     new WhatsAppApiError(
       429,
@@ -41,7 +41,7 @@ test('deleteWhatsAppTemplateByNameHandler surfaces a WhatsAppApiError as a forma
     ),
   );
 
-  const result = await deleteWhatsAppTemplateByNameHandler({ templateName: 'order_confirmation' });
+  const result = await deleteAllWhatsAppTemplateVariantsHandler({ templateName: 'order_confirmation' });
   const parsed = JSON.parse(result.content[0].text);
 
   expect(parsed).toEqual({
@@ -51,13 +51,13 @@ test('deleteWhatsAppTemplateByNameHandler surfaces a WhatsAppApiError as a forma
   });
 });
 
-test('deleteWhatsAppTemplateByNameHandler returns the guard response when credentials are missing', async () => {
+test('deleteAllWhatsAppTemplateVariantsHandler returns the guard response when credentials are missing', async () => {
   const guard = new PromptResponse(
     JSON.stringify({ success: false, error: 'Missing env vars: PROJECT_ID, KEY_ID, KEY_SECRET.' }),
   );
   mockedGetClient.mockReturnValue(guard);
 
-  const result = await deleteWhatsAppTemplateByNameHandler({ templateName: 'order_confirmation' });
+  const result = await deleteAllWhatsAppTemplateVariantsHandler({ templateName: 'order_confirmation' });
   const parsed = JSON.parse(result.content[0].text);
 
   expect(parsed).toEqual({ success: false, error: 'Missing env vars: PROJECT_ID, KEY_ID, KEY_SECRET.' });
