@@ -52,4 +52,16 @@ export class WhatsAppProvisioningClient extends BaseProvisioningClient {
       body,
     );
   }
+
+  deleteTemplate(templateName: string, languageCode: string, deleteSubmitted?: boolean): Promise<void> {
+    const query = deleteSubmitted ? '?deleteSubmitted=true' : '';
+    return this.request<void>(
+      'DELETE',
+      `/templates/${encodeURIComponent(templateName)}/languages/${encodeURIComponent(languageCode)}${query}`,
+    );
+  }
+
+  deleteTemplateByName(templateName: string): Promise<void> {
+    return this.request<void>('DELETE', `/templates/${encodeURIComponent(templateName)}`);
+  }
 }
