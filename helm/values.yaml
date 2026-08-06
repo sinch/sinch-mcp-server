@@ -39,7 +39,7 @@ resources:
     cpu: 500m
     memory: 512Mi
 
-# Existing K8s Secret with MCP_API_KEY and Sinch/Mailgun credentials.
+# Existing K8s Secret with MCP_API_KEY, REDIS_URL, and Sinch/Mailgun credentials.
 # Create manually or via ExternalSecrets before first deploy.
 existingSecret: sinch-mcp-server
 
@@ -56,6 +56,7 @@ env:
 # Keys loaded from existingSecret into the container env.
 secretKeys:
   - MCP_API_KEY
+  - REDIS_URL
   - PROJECT_ID
   - KEY_ID
   - KEY_SECRET
