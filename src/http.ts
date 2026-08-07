@@ -13,13 +13,35 @@ import { instantiateMcpServer, parseArgs, registerCapabilities } from './server'
 dotenv.config();
 
 const MCP_PATH = '/mcp';
+const HEALTH_LIVE_PATH = '/health/live';
+const HEALTH_READY_PATH = '/health/ready';
 const DEFAULT_PORT = 8000;
+
+const startedAtMs = Date.now();
+let isShuttingDown = false;
 
 type SessionEntry = {
   transport: StreamableHTTPServerTransport;
 };
 
 const sessions = new Map<string, SessionEntry>();
+
+/** Exposed for unit tests. */
+export const setShuttingDownForTests = (value: boolean): void => {
+  isShuttingDown = value;
+};
+
+/** Exposed for unit tests — inserts a placeholder session entry. */
+export const seedSessionForTests = (sessionId = 'test-session'): void => {
+  sessions.set(sessionId, {
+    transport: {} as StreamableHTTPServerTransport,
+  });
+};
+
+/** Exposed for unit tests. */
+export const clearSessionsForTests = (): void => {
+  sessions.clear();
+};
 
 const isInitializationBody = (body: unknown): boolean => {
   if (!body || typeof body !== 'object') {
@@ -135,6 +157,37 @@ export const createHttpApp = () => {
   const app = express();
   app.use(express.json({ limit: '4mb' }));
 
+  // Unauthenticated probes for Kubernetes (must stay outside MCP auth middleware).
+  app.get(HEALTH_LIVE_PATH, (_req, res) => {
+    res.status(200).json({
+      status: 'ok',
+      uptimeSeconds: Math.floor((Date.now() - startedAtMs) / 1000),
+    });
+  });
+
+  app.get(HEALTH_READY_PATH, (_req, res) => {
+    if (isShuttingDown) {
+      res.status(503).json({ status: 'not_ready', reason: 'shutting_down' });
+      return;
+    }
+
+    if (isMcpSessionCapacityReached(sessions.size)) {
+      res.status(503).json({
+        status: 'not_ready',
+        reason: 'session_capacity_reached',
+        activeSessions: sessions.size,
+        maxSessions: getMaxMcpSessions(),
+      });
+      return;
+    }
+
+    res.status(200).json({
+      status: 'ready',
+      activeSessions: sessions.size,
+      maxSessions: getMaxMcpSessions(),
+    });
+  });
+
   if (isSingleTenant) {
     app.use(MCP_PATH, createMcpApiKeyMiddleware(mcpApiKeys));
   }
@@ -155,6 +208,13 @@ export const createHttpApp = () => {
   return app;
 };
 
+const getShutdownDrainMs = (): number => {
+  const configured = Number(process.env.SHUTDOWN_DRAIN_MS ?? 10_000);
+  return Number.isFinite(configured) && configured >= 0 ? Math.floor(configured) : 10_000;
+};
+
+const sleep = (ms: number): Promise<void> => new Promise((resolve) => setTimeout(resolve, ms));
+
 export const main = async (): Promise<void> => {
   const port = Number(process.env.PORT ?? DEFAULT_PORT);
   const app = createHttpApp();
@@ -166,6 +226,30 @@ export const main = async (): Promise<void> => {
       );
       resolve();
     });
+
+    const shutdown = (signal: string) => {
+      void (async () => {
+        console.error(`Received ${signal}, marking not ready before closing HTTP server`);
+        // Fail readiness first so the Service stops routing, then drain before close.
+        // Pairs with the Deployment preStop sleep for endpoint controller lag.
+        isShuttingDown = true;
+        const drainMs = getShutdownDrainMs();
+        if (drainMs > 0) {
+          console.error(`Draining for ${drainMs}ms before closing listeners`);
+          await sleep(drainMs);
+        }
+        server.close((error) => {
+          if (error) {
+            console.error('Error during HTTP server shutdown:', error);
+            process.exit(1);
+          }
+          process.exit(0);
+        });
+      })();
+    };
+
+    process.on('SIGTERM', () => shutdown('SIGTERM'));
+    process.on('SIGINT', () => shutdown('SIGINT'));
 
     server.on('error', reject);
   });

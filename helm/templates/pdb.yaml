@@ -1,0 +1,13 @@
+{{- if .Values.podDisruptionBudget.enabled }}
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: {{ include "sinch-mcp-server.fullname" . }}
+  labels:
+    {{- include "sinch-mcp-server.labels" . | nindent 4 }}
+spec:
+  minAvailable: {{ .Values.podDisruptionBudget.minAvailable }}
+  selector:
+    matchLabels:
+      {{- include "sinch-mcp-server.selectorLabels" . | nindent 6 }}
+{{- end }}

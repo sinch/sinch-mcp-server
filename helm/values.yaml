@@ -1,0 +1,96 @@
+replicaCount: 2
+
+nameOverride: ""
+fullnameOverride: ""
+
+image:
+  repository: registry.gitlab.com/sinch/sinch-projects/product/agent-experience/sinch-mcp-server
+  # Fallback for local `helm template` / `helm install` only. In every deployed
+  # environment this is overridden by the HelmRelease in k8s-manifests-mcp-messaging,
+  # which the `update-manifests` CI job bumps to the freshly built image tag.
+  version: "0.0.1-alpha.6"
+  pullPolicy: IfNotPresent
+
+imagePullSecrets: []
+
+serviceAccount:
+  create: false
+  name: ""
+
+podAnnotations: {}
+
+costGovernance:
+  cg_product: agent_tools
+  cg_product2: mcp
+  cg_system: agent_tools
+  cg_product_id: "0"
+  cg_team: ax
+  cg_business_unit: enterprise_messaging
+  cg_release_state: alpha
+
+service:
+  type: ClusterIP
+  port: 80
+  targetPort: 8000
+
+resources:
+  requests:
+    cpu: 100m
+    memory: 256Mi
+  limits:
+    cpu: 500m
+    memory: 512Mi
+
+# Credentials are deliberately empty
+# Do NOT populate MCP_API_KEY / MCP_API_KEYS as it switches the server into SINGLE-TENANT mode
+# Leaving existingSecret empty means the chart mounts no secret at all.
+existingSecret: ""
+secretKeys: []
+
+# Conversation API region — one of: us | eu | br. REQUIRED; there is no default.
+# Set per site in k8s-manifests-mcp-messaging.
+conversationRegion: ""
+
+# Allow-list of tool tags to register (MCP_TAGS). Only tools whose credentials can be
+# supplied per request belong on a multi-tenant deployment.
+# Empty string = no filter = all tools (correct for local/stdio use, wrong for remote).
+toolTags: "conversation,numbers"
+
+env:
+  - name: PORT
+    value: "8000"
+  - name: NODE_ENV
+    value: production
+  - name: LOG_LEVEL
+    value: info
+  - name: SHUTDOWN_DRAIN_MS
+    value: "10000"
+
+probes:
+  liveness:
+    path: /health/live
+    initialDelaySeconds: 10
+    periodSeconds: 10
+    failureThreshold: 3
+  readiness:
+    path: /health/ready
+    initialDelaySeconds: 5
+    periodSeconds: 5
+    failureThreshold: 3
+
+lifecycle:
+  preStop:
+    sleepSeconds: 15
+
+podDisruptionBudget:
+  enabled: true
+  minAvailable: 1
+
+autoscaling:
+  enabled: false
+
+terminationGracePeriodSeconds: 45
+
+nodeSelector: {}
+tolerations: []
+affinity: {}
