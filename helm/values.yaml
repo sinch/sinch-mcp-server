@@ -5,7 +5,9 @@ fullnameOverride: ""
 
 image:
   repository: registry.gitlab.com/sinch/sinch-projects/product/agent-experience/sinch-mcp-server
-  # Default matches Chart.appVersion; CI/GKA overrides via ARTIFACT_VERSION.
+  # Fallback for local `helm template` / `helm install` only. In every deployed
+  # environment this is overridden by the HelmRelease in k8s-manifests-mcp-messaging,
+  # which the `update-manifests` CI job bumps to the freshly built image tag.
   version: "0.0.1-alpha.6"
   pullPolicy: IfNotPresent
 
@@ -39,9 +41,20 @@ resources:
     cpu: 500m
     memory: 512Mi
 
-# Existing K8s Secret with MCP_API_KEY and Sinch/Mailgun credentials.
-# Create manually or via ExternalSecrets before first deploy.
-existingSecret: sinch-mcp-server
+# Credentials are deliberately empty
+# Do NOT populate MCP_API_KEY / MCP_API_KEYS as it switches the server into SINGLE-TENANT mode
+# Leaving existingSecret empty means the chart mounts no secret at all.
+existingSecret: ""
+secretKeys: []
+
+# Conversation API region — one of: us | eu | br. REQUIRED; there is no default.
+# Set per site in k8s-manifests-mcp-messaging.
+conversationRegion: ""
+
+# Allow-list of tool tags to register (MCP_TAGS). Only tools whose credentials can be
+# supplied per request belong on a multi-tenant deployment.
+# Empty string = no filter = all tools (correct for local/stdio use, wrong for remote).
+toolTags: "conversation,numbers"
 
 env:
   - name: PORT
@@ -52,19 +65,6 @@ env:
     value: info
   - name: SHUTDOWN_DRAIN_MS
     value: "10000"
-
-# Keys loaded from existingSecret into the container env.
-secretKeys:
-  - MCP_API_KEY
-  - PROJECT_ID
-  - KEY_ID
-  - KEY_SECRET
-  - CONVERSATION_REGION
-  - APPLICATION_KEY
-  - APPLICATION_SECRET
-  - MAILGUN_DOMAIN
-  - MAILGUN_API_KEY
-  - MAILGUN_SENDER_ADDRESS
 
 probes:
   liveness:
