@@ -1,5 +1,5 @@
 # Staging EU — 2 replicas for PDB / rolling updates.
-# Sessions are in-memory; staging accepts multi-replica for HA testing.
+# Session state is shared via Redis (REDIS_URL), so requests can land on either pod.
 
 replicaCount: 2
 
