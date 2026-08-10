@@ -6,6 +6,7 @@ import dotenv from 'dotenv';
 import { runWithHttpCredentialHeaders } from './auth/credential-context';
 import { setHttpCredentialSource } from './auth/http-credential-mode';
 import { createMcpApiKeyMiddleware, loadMcpApiKeys } from './auth/mcp-api-key';
+import { env } from './env';
 import { buildJsonRpcErrorResponse } from './json-rpc';
 import { instantiateMcpServer, parseArgs, registerCapabilities } from './server';
 import {
@@ -64,6 +65,7 @@ const buildTransport = async (): Promise<StreamableHTTPServerTransport> => {
 
 const respondSessionStoreUnavailable = (res: Response, body: unknown): void => {
   res
+    .setHeader('Retry-After', '2')
     .status(503)
     .json(
       buildJsonRpcErrorResponse(SESSION_STORE_UNAVAILABLE_CODE, 'Service Unavailable: session store unreachable', body),
@@ -112,6 +114,7 @@ export const createHttpApp = () => {
 
       res.setHeader('mcp-session-id', newSessionId);
       const transport = await buildTransport();
+      res.on('close', () => void transport.close());
       await runWithCredentials(req, () => transport.handleRequest(req, res, req.body));
       return;
     }
@@ -152,6 +155,7 @@ export const createHttpApp = () => {
     }
 
     const transport = await buildTransport();
+    res.on('close', () => void transport.close());
     await runWithCredentials(req, () => transport.handleRequest(req, res, req.body));
   };
 
@@ -196,8 +200,21 @@ export const createHttpApp = () => {
   };
 
   app.post(MCP_PATH, routeHandler);
-  app.get(MCP_PATH, routeHandler);
   app.delete(MCP_PATH, routeHandler);
+
+  // GET/SSE unsupported: per-request transports can't receive a later push, so the stream is dead weight.
+  app.get(MCP_PATH, (_req, res) => {
+    res.setHeader('Allow', 'POST, DELETE');
+    res
+      .status(405)
+      .json(
+        buildJsonRpcErrorResponse(
+          -32000,
+          'Method Not Allowed: server-initiated notifications are not supported; use POST for all MCP requests',
+          null,
+        ),
+      );
+  });
 
   return app;
 };
@@ -209,21 +226,39 @@ const getShutdownDrainMs = (): number => {
 
 const sleep = (ms: number): Promise<void> => new Promise((resolve) => setTimeout(resolve, ms));
 
+/** Logs only host:port — REDIS_URL may carry credentials. */
+const describeRedisTarget = (redisUrl: string): string => {
+  try {
+    const url = new URL(redisUrl);
+    return `${url.hostname}:${url.port || '6379'}`;
+  } catch {
+    return 'unparseable REDIS_URL';
+  }
+};
+
 export const main = async (): Promise<void> => {
+  const redisUrl = env.REDIS_URL;
+  if (!redisUrl) {
+    console.error('Fatal: REDIS_URL is not set. The HTTP server requires Redis for shared session storage.');
+    process.exit(1);
+    return;
+  }
+
   const port = Number(process.env.PORT ?? DEFAULT_PORT);
   const app = createHttpApp();
 
   await new Promise<void>((resolve, reject) => {
     const server = app.listen(port, () => {
-      console.error(`Sinch MCP HTTP server listening on port ${port} (${MCP_PATH})`);
+      console.error(
+        `Sinch MCP HTTP server listening on port ${port} (${MCP_PATH}), session store: ${describeRedisTarget(redisUrl)}`,
+      );
       resolve();
     });
 
     const shutdown = (signal: string) => {
       void (async () => {
         console.error(`Received ${signal}, marking not ready before closing HTTP server`);
-        // Fail readiness first so the Service stops routing, then drain before close.
-        // Pairs with the Deployment preStop sleep for endpoint controller lag.
+        // Mark not-ready before draining, so the Service stops routing before we close.
         isShuttingDown = true;
         const drainMs = getShutdownDrainMs();
         if (drainMs > 0) {

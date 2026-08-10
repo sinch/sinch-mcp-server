@@ -3,7 +3,9 @@ import type { AddressInfo } from 'net';
 
 jest.mock('ioredis', () => jest.requireActual('ioredis-mock'));
 
-import { createHttpApp } from '../src/http';
+import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js';
+import { mockEnv } from '../src/__mocks__/env';
+import { createHttpApp, main } from '../src/http';
 import { getSessionStoreClientForTests, resetSessionStoreClientForTests } from '../src/session-store';
 
 const ACCEPT_HEADER = 'application/json, text/event-stream';
@@ -75,10 +77,12 @@ describe('HTTP MCP session handling (Redis-backed)', () => {
 
   beforeEach(() => {
     process.env.MCP_API_KEY = 'test-http-key';
+    mockEnv.REDIS_URL = 'redis://127.0.0.1:6379';
   });
 
   afterEach(async () => {
     resetSessionStoreClientForTests();
+    mockEnv.REDIS_URL = undefined;
     if (originalApiKey === undefined) {
       delete process.env.MCP_API_KEY;
     } else {
@@ -149,31 +153,7 @@ describe('HTTP MCP session handling (Redis-backed)', () => {
     }
   });
 
-  it('opens a standalone SSE stream on GET for a valid session', async () => {
-    const { baseUrl, close } = await listen(createHttpApp());
-    try {
-      const initResponse = await post(baseUrl, initializeBody);
-      const sessionId = initResponse.headers.get('mcp-session-id')!;
-
-      const response = await fetch(`${baseUrl}/mcp`, {
-        method: 'GET',
-        headers: {
-          Accept: 'text/event-stream',
-          Authorization: 'Bearer test-http-key',
-          'Mcp-Session-Id': sessionId,
-        },
-      });
-
-      expect(response.status).toBe(200);
-      expect(response.headers.get('content-type')).toBe('text/event-stream');
-
-      await response.body?.cancel();
-    } finally {
-      await close();
-    }
-  });
-
-  it('rejects GET without a valid session id', async () => {
+  it('rejects GET with 405 — server-initiated notifications are unsupported', async () => {
     const { baseUrl, close } = await listen(createHttpApp());
     try {
       const response = await fetch(`${baseUrl}/mcp`, {
@@ -181,8 +161,27 @@ describe('HTTP MCP session handling (Redis-backed)', () => {
         headers: { Accept: 'text/event-stream', Authorization: 'Bearer test-http-key' },
       });
 
-      expect(response.status).toBe(400);
+      expect(response.status).toBe(405);
+      expect(response.headers.get('allow')).toBe('POST, DELETE');
+      const body = await parseJsonRpcError(response);
+      expect(body.error.code).toBe(-32000);
     } finally {
+      await close();
+    }
+  });
+
+  it('closes the per-request transport once the response finishes', async () => {
+    const closeSpy = jest.spyOn(StreamableHTTPServerTransport.prototype, 'close');
+    const { baseUrl, close } = await listen(createHttpApp());
+    try {
+      const initResponse = await post(baseUrl, initializeBody);
+      expect(initResponse.status).toBe(200);
+
+      // res 'close' fires once the socket is fully done with the response; give it a tick.
+      await new Promise((resolve) => setTimeout(resolve, 20));
+      expect(closeSpy).toHaveBeenCalledTimes(1);
+    } finally {
+      closeSpy.mockRestore();
       await close();
     }
   });
@@ -195,10 +194,34 @@ describe('HTTP MCP session handling (Redis-backed)', () => {
     try {
       const response = await post(baseUrl, initializeBody);
       expect(response.status).toBe(503);
+      expect(response.headers.get('retry-after')).toBe('2');
       const body = await parseJsonRpcError(response);
       expect(body.error.code).toBe(-32003);
     } finally {
       await close();
     }
+  });
+});
+
+describe('main() startup', () => {
+  const originalExit = process.exit;
+
+  afterEach(() => {
+    process.exit = originalExit;
+    mockEnv.REDIS_URL = undefined;
+  });
+
+  it('fails fast with a clear error when REDIS_URL is not set', async () => {
+    mockEnv.REDIS_URL = undefined;
+    const exitSpy = jest.fn() as unknown as typeof process.exit;
+    process.exit = exitSpy;
+    const errorSpy = jest.spyOn(console, 'error').mockImplementation(() => undefined);
+
+    await main();
+
+    expect(exitSpy).toHaveBeenCalledWith(1);
+    expect(errorSpy).toHaveBeenCalledWith(expect.stringContaining('REDIS_URL is not set'));
+
+    errorSpy.mockRestore();
   });
 });

@@ -1,4 +1,5 @@
 import Redis from 'ioredis';
+import { env } from './env';
 
 const DEFAULT_SESSION_TTL_SECONDS = 1800;
 const REDIS_RETRY_ATTEMPTS = 3;
@@ -15,15 +16,16 @@ export class SessionStoreUnavailableError extends Error {
 }
 
 const getSessionTtlSeconds = (): number => {
-  const configured = Number(process.env.MCP_SESSION_TTL_SECONDS ?? DEFAULT_SESSION_TTL_SECONDS);
+  const configured = Number(env.MCP_SESSION_TTL_SECONDS ?? DEFAULT_SESSION_TTL_SECONDS);
   return Number.isFinite(configured) && configured > 0 ? Math.floor(configured) : DEFAULT_SESSION_TTL_SECONDS;
 };
 
 let client: Redis | undefined;
 
+// REDIS_URL is required to reach this point — src/http.ts's main() fails fast on startup when it's unset.
 const getClient = (): Redis => {
   if (!client) {
-    client = new Redis(process.env.REDIS_URL ?? 'redis://localhost:6379', {
+    client = new Redis(env.REDIS_URL!, {
       enableOfflineQueue: false,
       maxRetriesPerRequest: 1,
       commandTimeout: REDIS_COMMAND_TIMEOUT_MS,

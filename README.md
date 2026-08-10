@@ -415,7 +415,9 @@ The server listens on `http://localhost:8000/mcp` by default (override with `POR
 
 #### Session storage (Redis)
 
-Session identity is stored in Redis (`REDIS_URL`), not in process memory, so any pod behind a load balancer can validate any session — no sticky sessions required. Each request builds its own short-lived `McpServer` and `StreamableHTTPServerTransport`; nothing is held in memory between requests. If Redis is unreachable after a short retry, the server returns **503 Service Unavailable** with JSON-RPC error code `-32003`, distinct from `-32001 Session not found`.
+Session identity is stored in Redis (`REDIS_URL`), not in process memory, so any pod behind a load balancer can validate any session — no sticky sessions required. Each request builds its own short-lived `McpServer` and `StreamableHTTPServerTransport`, closed once the response finishes; nothing is held in memory between requests. `REDIS_URL` is required — the server exits immediately on startup if it's unset, rather than silently falling back to a default host. If Redis is unreachable after a short retry, the server returns **503 Service Unavailable** with JSON-RPC error code `-32003`, distinct from `-32001 Session not found`.
+
+Because there's no persistent per-session transport, the server doesn't support the standalone GET/SSE stream — `GET /mcp` returns **405**. Server-initiated notifications sent during a POST (e.g. tool progress) work as usual; a notification pushed independently of any request would have nowhere to go once transports are per-request.
 
 ### Step 4: Example MCP client configuration
 

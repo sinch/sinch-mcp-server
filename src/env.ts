@@ -23,6 +23,8 @@ export const env = createEnv({
     OTEL_SERVICE_NAME: z.string().optional(),
     OTEL_PROPAGATORS: z.string().optional(),
     LOG_LEVEL: z.enum(['fatal', 'error', 'warn', 'info', 'debug', 'trace', 'silent']).optional(),
+    REDIS_URL: z.string().optional(),
+    MCP_SESSION_TTL_SECONDS: z.string().optional(),
   },
   runtimeEnvStrict: {
     PROJECT_ID: process.env.PROJECT_ID,
@@ -42,6 +44,8 @@ export const env = createEnv({
     OTEL_SERVICE_NAME: process.env.OTEL_SERVICE_NAME,
     OTEL_PROPAGATORS: process.env.OTEL_PROPAGATORS,
     LOG_LEVEL: process.env.LOG_LEVEL,
+    REDIS_URL: process.env.REDIS_URL,
+    MCP_SESSION_TTL_SECONDS: process.env.MCP_SESSION_TTL_SECONDS,
   },
   emptyStringAsUndefined: true,
   onValidationError: (issues: readonly StandardSchemaV1.Issue[]) => {

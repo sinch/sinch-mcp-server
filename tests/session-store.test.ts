@@ -2,6 +2,7 @@ import { randomUUID } from 'node:crypto';
 
 jest.mock('ioredis', () => jest.requireActual('ioredis-mock'));
 
+import { mockEnv } from '../src/__mocks__/env';
 import {
   createSession,
   deleteSession,
@@ -13,9 +14,14 @@ import {
 } from '../src/session-store';
 
 describe('session-store', () => {
+  beforeEach(() => {
+    mockEnv.REDIS_URL = 'redis://127.0.0.1:6379';
+  });
+
   afterEach(() => {
     jest.restoreAllMocks();
     resetSessionStoreClientForTests();
+    mockEnv.REDIS_URL = undefined;
   });
 
   it('validates a session created moments earlier', async () => {
