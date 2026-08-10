@@ -45,6 +45,15 @@ spec:
             - name: {{ .name }}
               value: {{ .value | quote }}
             {{- end }}
+            # Required, not optional: this chart only ever deploys the remote
+            # multi-tenant server, which refuses to start without a region. Failing at
+            # template time gives a clear error instead of a crash-looping pod.
+            - name: CONVERSATION_REGION
+              value: {{ required "conversationRegion is required (us | eu | br). Without it the server would route customer data to another region." .Values.conversationRegion | quote }}
+            {{- if .Values.toolTags }}
+            - name: MCP_TAGS
+              value: {{ .Values.toolTags | quote }}
+            {{- end }}
             {{- if .Values.existingSecret }}
             {{- range .Values.secretKeys }}
             - name: {{ . }}
