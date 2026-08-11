@@ -15,13 +15,13 @@ export const toolsConfig = defineToolsConfig({
     name: 'update-whatsapp-template',
     tags: ['all', 'whatsapp', 'configuration', 'update-whatsapp-template'],
   },
-  deleteSingleWhatsAppTemplateVariant: {
-    name: 'delete-single-whatsapp-template-variant',
-    tags: ['all', 'whatsapp', 'configuration', 'delete-single-whatsapp-template-variant'],
+  deleteSingleWhatsAppTemplateLanguage: {
+    name: 'delete-single-whatsapp-template-language',
+    tags: ['all', 'whatsapp', 'configuration', 'delete-single-whatsapp-template-language'],
   },
-  deleteAllWhatsAppTemplateVariants: {
-    name: 'delete-all-whatsapp-template-variants',
-    tags: ['all', 'whatsapp', 'configuration', 'delete-all-whatsapp-template-variants'],
+  deleteAllWhatsAppTemplateLanguages: {
+    name: 'delete-all-whatsapp-template-languages',
+    tags: ['all', 'whatsapp', 'configuration', 'delete-all-whatsapp-template-languages'],
   },
 });
 

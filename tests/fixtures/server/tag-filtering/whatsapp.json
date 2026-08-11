@@ -4,8 +4,8 @@
     "list-whatsapp-templates",
     "create-whatsapp-template",
     "update-whatsapp-template",
-    "delete-single-whatsapp-template-variant",
-    "delete-all-whatsapp-template-variants"
+    "delete-single-whatsapp-template-language",
+    "delete-all-whatsapp-template-languages"
   ],
   "expectedPrompts": []
 }
