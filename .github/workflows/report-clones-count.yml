@@ -1,0 +1,123 @@
+name: Report clones count
+
+on:
+  schedule:
+    # Every Monday at 08:00 UTC; the job itself only proceeds on even ISO weeks,
+    # so the report is effectively bi-weekly. The GitHub traffic API returns the
+    # last 14 days of data, which matches this cadence exactly.
+    - cron: "0 8 * * 1"
+  workflow_dispatch:
+
+permissions: {}
+
+concurrency:
+  group: report-clones-count
+  cancel-in-progress: false
+
+jobs:
+  report-clones:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check bi-weekly schedule
+        id: schedule-gate
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+        run: |
+          set -euo pipefail
+
+          # Manual runs always proceed; scheduled runs only on even ISO weeks.
+          week=$((10#$(date -u +%V)))
+          if [ "${EVENT_NAME}" = "schedule" ] && [ $((week % 2)) -ne 0 ]; then
+            echo "Odd ISO week (${week}), skipping this run."
+            echo "proceed=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "proceed=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Fetch clones traffic data
+        id: traffic
+        if: steps.schedule-gate.outputs.proceed == 'true'
+        env:
+          # The default GITHUB_TOKEN cannot read traffic data. This must be a
+          # token with push access to the repo (classic PAT with "repo" scope,
+          # or fine-grained PAT with "Administration: read" permission).
+          TRAFFIC_TOKEN: ${{ secrets.TRAFFIC_API_TOKEN }}
+          REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+
+          if [ -z "${TRAFFIC_TOKEN}" ]; then
+            echo "Missing TRAFFIC_API_TOKEN secret" >&2
+            exit 1
+          fi
+
+          curl -fsS \
+            -H "Authorization: Bearer ${TRAFFIC_TOKEN}" \
+            -H "Accept: application/vnd.github+json" \
+            -H "X-GitHub-Api-Version: 2022-11-28" \
+            "https://api.github.com/repos/${REPO}/traffic/clones" \
+            > clones.json
+
+          jq . clones.json
+
+      - name: Post report to Slack
+        if: steps.schedule-gate.outputs.proceed == 'true'
+        env:
+          # Incoming webhook URL for the #mcp-clones-count channel.
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_CLONES_WEBHOOK_URL }}
+          REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+
+          if [ -z "${SLACK_WEBHOOK_URL}" ]; then
+            echo "Missing SLACK_CLONES_WEBHOOK_URL secret" >&2
+            exit 1
+          fi
+
+          jq -n \
+            --arg repo "${REPO}" \
+            --slurpfile data clones.json \
+            '
+            $data[0] as $d |
+            ($d.clones | if length > 0 then (first.timestamp | split("T")[0]) else "n/a" end) as $from |
+            ($d.clones | if length > 0 then (last.timestamp | split("T")[0]) else "n/a" end) as $to |
+            ($d.clones | map("\(.timestamp | split("T")[0]): \(.count) clones (\(.uniques) unique)") | join("\n")) as $daily |
+            {
+              text: "Clones report for \($repo)",
+              blocks: [
+                {
+                  type: "header",
+                  text: { type: "plain_text", text: "Clones report: \($repo)" }
+                },
+                {
+                  type: "section",
+                  text: {
+                    type: "mrkdwn",
+                    text: "*Period:* \($from) to \($to)\n*Total clones:* \($d.count)\n*Unique cloners:* \($d.uniques)"
+                  }
+                },
+                {
+                  type: "section",
+                  text: {
+                    type: "mrkdwn",
+                    text: "*Daily breakdown:*\n\(if $daily == "" then "No clone data for this period." else $daily end)"
+                  }
+                },
+                {
+                  type: "context",
+                  elements: [
+                    {
+                      type: "mrkdwn",
+                      text: "Source: <https://github.com/\($repo)/graphs/traffic|GitHub traffic graph> (14-day window)"
+                    }
+                  ]
+                }
+              ]
+            }
+            ' > slack-payload.json
+
+          curl -fsS -X POST \
+            -H "Content-Type: application/json" \
+            --data @slack-payload.json \
+            "${SLACK_WEBHOOK_URL}"
