@@ -51,7 +51,7 @@ export const ConversationRegionOverride = z
   .enum([...supportedRegions, ''])
   .optional()
   .describe(
-    '(Optional) The region to use for the Sinch conversation API. If set, it will override the value from the environment variable CONVERSATION_REGION.',
+    '(Optional) The region to use for the Sinch conversation API. If set, it will override the value from the environment variable CONVERSATION_REGION. Ignored in multi-tenant deployments, where the region is fixed by the server configuration.',
   );
 
 export const TextMessage = z.string().describe('(Required) The text to send.');
