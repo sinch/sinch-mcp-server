@@ -2,19 +2,83 @@ include:
   - project: '$SINCH_SECURITY_PIPELINE_PROJECT'
     ref: v1-latest
     file: 'auto_security.yml'
-    
+
 default:
   tags: [default]
-  
+
 variables:
-  SINCH_GLOBAL_SECURITY_STAGE_SAST_DEEP_CLONE: "true"
-  SECURITY_STEPS_FORCE_RUN: "true"
-  
+  SINCH_GLOBAL_SECURITY_STAGE_SAST_DEEP_CLONE: 'true'
+  SECURITY_STEPS_FORCE_RUN: 'true'
+  DOCKER_IMAGE: $CI_REGISTRY_IMAGE
+  NEXUS_HELM_REPO: 'https://nexus.int.clxnetworks.net/repository/sinch-helm'
+  MANIFESTS_REPO: 'gitlab.com/sinch/sinch-projects/product/agent-experience/k8s-manifests-mcp-messaging.git'
+
 stages:
+  - validate
   - test-coverage
+  - publish
+  - release
   - security-scan-third-parties
   - security-scan-consolidation
   - security-scan-sonar
+
+# Fails the MR early if helm/ changed without bumping helm/Chart.yaml `version`.
+chart-version-bumped:
+  stage: validate
+  image: alpine:3.20
+  variables:
+    GIT_DEPTH: 0
+  before_script:
+    - apk add --no-cache git yq
+  script:
+    - |
+      set -euo pipefail
+
+      TARGET="${CI_MERGE_REQUEST_TARGET_BRANCH_NAME:-$CI_DEFAULT_BRANCH}"
+      git fetch --quiet origin "${TARGET}"
+      BASE="$(git merge-base HEAD "origin/${TARGET}")"
+
+      if git diff --quiet "${BASE}" HEAD -- helm/; then
+        echo "No changes under helm/ — nothing to check."
+        exit 0
+      fi
+
+      echo "Changes detected under helm/:"
+      git diff --name-only "${BASE}" HEAD -- helm/ | sed 's/^/  /'
+
+      NEW="$(yq -r '.version' helm/Chart.yaml)"
+      OLD="$(git show "${BASE}:helm/Chart.yaml" 2>/dev/null | yq -r '.version' || echo '')"
+
+      if [ -z "${OLD}" ]; then
+        echo "helm/Chart.yaml is new on this branch (version ${NEW}) — OK."
+        exit 0
+      fi
+
+      echo "Chart version: ${OLD} (${TARGET}) -> ${NEW} (this branch)"
+
+      if [ "${OLD}" = "${NEW}" ]; then
+        echo ""
+        echo "ERROR: helm/ was modified but helm/Chart.yaml 'version' is still ${OLD}."
+        echo "Nexus chart versions are immutable, so publish-chart would fail after merge."
+        echo "Bump 'version' in helm/Chart.yaml in this MR:"
+        echo "  patch -> template/default fix   minor -> new configurable value"
+        echo "  major -> breaking values change"
+        echo ""
+        echo "Note: appVersion does NOT need bumping — CI sets it from package.json"
+        echo "at package time via 'helm package --app-version'."
+        exit 1
+      fi
+
+      # Guard against a downgrade, which Nexus would accept but Renovate would not pick up.
+      if [ "$(printf '%s\n%s\n' "${OLD}" "${NEW}" | sort -V | tail -1)" != "${NEW}" ]; then
+        echo "ERROR: chart version went backwards (${OLD} -> ${NEW})."
+        exit 1
+      fi
+
+      echo "OK: chart version bumped ${OLD} -> ${NEW}"
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
 
 # Produces coverage/lcov.info for the security-scan-sonar stage, which picks it up
 # as an artifact from this earlier stage (see sonar.javascript.lcov.reportPaths).
@@ -29,3 +93,125 @@ unit-tests-coverage:
     expire_in: 1 week
     paths:
       - coverage/lcov.info
+
+publish-image:
+  stage: publish
+  image:
+    name: gcr.io/kaniko-project/executor:v1.23.2-debug
+    entrypoint: ['']
+  script:
+    - |
+      set -euo pipefail
+      IMAGE_TAG="${CI_COMMIT_TAG:-$CI_COMMIT_SHORT_SHA}"
+      DEST="${CI_REGISTRY_IMAGE}:${IMAGE_TAG}"
+      echo "Building ${DEST}"
+      /kaniko/executor \
+        --context "${CI_PROJECT_DIR}" \
+        --dockerfile "${CI_PROJECT_DIR}/Dockerfile" \
+        --destination "${DEST}" \
+        --destination "${CI_REGISTRY_IMAGE}:latest" \
+        --build-arg "BUILDKIT_INLINE_CACHE=1"
+      echo "ARTIFACT_VERSION=${IMAGE_TAG}" > deploy.env
+  artifacts:
+    reports:
+      dotenv: deploy.env
+  rules:
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+    - if: $CI_COMMIT_TAG
+
+# Packages helm/ and uploads it to the Nexus `sinch-helm` hosted Helm repository.
+# The HelmRelease in k8s-manifests-mcp-messaging pins `chart.spec.version`, so a chart
+# change is only picked up once this job has published that version AND the HelmRelease
+# has been bumped to it (Renovate can do the bump automatically).
+#
+# Only runs when helm/ actually changed
+publish-chart:
+  stage: publish
+  image: alpine:3.20
+  before_script:
+    - apk add --no-cache curl yq helm
+  script:
+    - |
+      set -euo pipefail
+
+      : "${NEXUS_USERNAME:?NEXUS_USERNAME CI variable is not set}"
+      : "${NEXUS_PASSWORD:?NEXUS_PASSWORD CI variable is not set}"
+
+      CHART_NAME="$(yq -r '.name' helm/Chart.yaml)"
+      CHART_VERSION="$(yq -r '.version' helm/Chart.yaml)"
+      APP_VERSION="$(yq -r '.version' package.json 2>/dev/null || node -p "require('./package.json').version")"
+
+      echo "Chart: ${CHART_NAME} ${CHART_VERSION} (appVersion ${APP_VERSION})"
+
+      # Nexus hosted Helm repos reject re-uploading an existing version. Fail early with a
+      # clear message rather than a raw 400 from curl.
+      if curl -sfI -o /dev/null -u "${NEXUS_USERNAME}:${NEXUS_PASSWORD}" \
+           "${NEXUS_HELM_REPO}/${CHART_NAME}-${CHART_VERSION}.tgz"; then
+        echo "ERROR: ${CHART_NAME}-${CHART_VERSION}.tgz already exists in Nexus."
+        echo "Bump 'version' in helm/Chart.yaml — chart versions are immutable."
+        exit 1
+      fi
+
+      helm package helm/ --version "${CHART_VERSION}" --app-version "${APP_VERSION}"
+
+      curl -sf --fail-with-body -u "${NEXUS_USERNAME}:${NEXUS_PASSWORD}" \
+        --upload-file "${CHART_NAME}-${CHART_VERSION}.tgz" \
+        "${NEXUS_HELM_REPO}/"
+
+      echo "Published ${CHART_NAME}-${CHART_VERSION} to ${NEXUS_HELM_REPO}"
+  rules:
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+      changes:
+        - helm/**/*
+    - if: $CI_COMMIT_TAG
+
+# Commits the freshly built image version into k8s-manifests-mcp-messaging.
+# Flux polls that repo every 2 minutes and rolls the new image out
+update-manifests:
+  stage: release
+  image: alpine:3.20
+  retry:
+    max: 2
+    when: script_failure
+  needs:
+    - job: publish-image
+      artifacts: true
+  before_script:
+    - apk add --no-cache git yq
+  script:
+    - |
+      set -euo pipefail
+
+      : "${MANIFESTS_REPO_TOKEN:?MANIFESTS_REPO_TOKEN CI variable is not set}"
+      : "${ARTIFACT_VERSION:?ARTIFACT_VERSION not provided by publish-image dotenv}"
+
+      git clone --depth 1 \
+        "https://oauth2:${MANIFESTS_REPO_TOKEN}@${MANIFESTS_REPO}" manifests
+      cd manifests
+
+      git config user.email "ci@sinch.com"
+      git config user.name "sinch-mcp-server CI"
+
+      export TAG="${ARTIFACT_VERSION}"
+      for site in eu1tst us1tst; do
+        f="staging/${site}/overrides/sinch-mcp-server.yaml"
+        yq -i '.spec.values.image.version = strenv(TAG)' "$f"
+        echo "updated ${f} -> ${TAG}"
+      done
+
+      if git diff --quiet; then
+        echo "Manifests already at ${TAG}, nothing to commit."
+        exit 0
+      fi
+
+      git add staging/eu1tst/overrides/sinch-mcp-server.yaml \
+              staging/us1tst/overrides/sinch-mcp-server.yaml
+      git commit \
+        -m "chore(staging): deploy sinch-mcp-server ${TAG}" \
+        -m "Source commit: ${CI_PROJECT_PATH}@${CI_COMMIT_SHA}" \
+        -m "Pipeline: ${CI_PIPELINE_URL}"
+
+      # Non-force push on purpose: if main has moved, fail rather than overwrite.
+      git push origin HEAD:main
+  rules:
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
