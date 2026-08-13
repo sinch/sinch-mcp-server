@@ -1,6 +1,7 @@
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { Tags } from '../src/types';
-import { registerCapabilities } from '../src/server';
+import { parseArgs, registerCapabilities } from '../src/server';
+import { mockEnv, resetMockEnv } from './helpers/mock-env';
 import * as path from 'path';
 import * as fs from 'fs';
 
@@ -48,6 +49,32 @@ interface TagFilteringTestCase {
   expectedTools: string[];
   expectedPrompts: string[];
 }
+
+describe('parseArgs', () => {
+  const argv = (...args: string[]) => ['node', 'dist/index.js', ...args];
+
+  afterEach(() => {
+    resetMockEnv();
+  });
+
+  it('returns the tags from the --tags argument', () => {
+    expect(parseArgs(argv('--tags', 'conversation,verification'))).toEqual(['conversation', 'verification']);
+  });
+
+  it('falls back on the MCP_TAGS environment variable when no --tags argument is present', () => {
+    mockEnv.MCP_TAGS = 'conversation,verification';
+    expect(parseArgs(argv())).toEqual(['conversation', 'verification']);
+  });
+
+  it('prefers the --tags argument over the MCP_TAGS environment variable', () => {
+    mockEnv.MCP_TAGS = 'email';
+    expect(parseArgs(argv('--tags', 'voice'))).toEqual(['voice']);
+  });
+
+  it('returns an empty array when neither --tags nor MCP_TAGS is set', () => {
+    expect(parseArgs(argv())).toEqual([]);
+  });
+});
 
 describe('MCP Server capability registration', () => {
   const testCases: TagFilteringTestCase[] = loadTestCases('tag-filtering');
