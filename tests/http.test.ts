@@ -35,7 +35,8 @@ describe('createHttpApp startup validation', () => {
 
   test('throws in multi-tenant mode when CONVERSATION_REGION is not set', () => {
     expect(() => createHttpApp()).toThrow(
-      'CONVERSATION_REGION must be set when running in multi-tenant mode (no MCP_API_KEY configured).',
+      'The server is starting in multi-tenant mode because neither MCP_API_KEY nor MCP_API_KEYS is set. ' +
+        'In multi-tenant mode, the CONVERSATION_REGION environment variable is required',
     );
   });
 

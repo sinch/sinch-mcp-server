@@ -22,6 +22,9 @@ export const resolveConversationRegion = (promptRegion: string | undefined): str
   if (getHttpCredentialSource() === 'request-header') {
     const region = env.CONVERSATION_REGION;
     if (!region) {
+      // Unreachable when the server is started through http.ts, which refuses to start in
+      // multi-tenant mode without CONVERSATION_REGION. Kept as a safety net so the
+      // "no default region in multi-tenant" invariant holds even for future entry points.
       throw new Error('CONVERSATION_REGION must be set in multi-tenant mode; no default region is applied.');
     }
     return region;

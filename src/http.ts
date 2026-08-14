@@ -95,8 +95,10 @@ export const createHttpApp = () => {
     // region silently could route traffic to the wrong region, so refuse to start instead.
     if (!env.CONVERSATION_REGION) {
       throw new Error(
-        'CONVERSATION_REGION must be set when running in multi-tenant mode (no MCP_API_KEY configured). ' +
-          'Refusing to start rather than defaulting to a region.',
+        'The server is starting in multi-tenant mode because neither MCP_API_KEY nor MCP_API_KEYS is set. ' +
+          'In multi-tenant mode, the CONVERSATION_REGION environment variable is required: ' +
+          'refusing to start rather than defaulting to a region. ' +
+          'Either set CONVERSATION_REGION, or set MCP_API_KEY to run in single-tenant mode.',
       );
     }
     setHttpCredentialSource('request-header');

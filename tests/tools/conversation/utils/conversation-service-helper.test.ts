@@ -8,7 +8,11 @@ import {
 } from '../../../../src/tools/conversation/utils/conversation-service-helper';
 import { PromptResponse } from '../../../../src/types';
 import { formatUserAgent } from '../../../../src/utils';
-import { clearHttpCredentialSourceForTests, setHttpCredentialSource } from '../../../../src/auth/http-credential-mode';
+import {
+  clearHttpCredentialSourceForTests,
+  getHttpCredentialSource,
+  setHttpCredentialSource,
+} from '../../../../src/auth/http-credential-mode';
 import { mockEnv, resetMockEnv } from '../../../helpers/mock-env';
 
 jest.mock(
@@ -116,6 +120,8 @@ describe('region resolution in multi-tenant mode', () => {
     mockEnv.CONVERSATION_REGION = 'br';
     const usedRegion = setConversationRegion('eu', service);
 
+    // The prompt region ("eu") is discarded because the server runs in multi-tenant mode
+    expect(getHttpCredentialSource()).toBe('request-header');
     expect(usedRegion).toBe('br');
     expect(service.lazyConversationClient.apiFetchClient!.apiClientOptions.hostname).toBe(
       'https://br.conversation.api.sinch.com',
@@ -126,6 +132,8 @@ describe('region resolution in multi-tenant mode', () => {
     mockEnv.CONVERSATION_REGION = 'br';
     const usedRegion = setTemplateRegion('eu', service);
 
+    // The prompt region ("eu") is discarded because the server runs in multi-tenant mode
+    expect(getHttpCredentialSource()).toBe('request-header');
     expect(usedRegion).toBe('br');
     expect(service.lazyConversationTemplateClient.apiFetchClient!.apiClientOptions.hostname).toBe(
       'https://br.template.api.sinch.com',
