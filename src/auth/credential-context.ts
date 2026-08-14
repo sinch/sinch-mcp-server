@@ -1,18 +1,31 @@
 import { AsyncLocalStorage } from 'node:async_hooks';
 import type { IncomingHttpHeaders } from 'node:http';
+import { AGENT_ID_HEADER, parseAgentIdHeader } from './agent-id';
 import {
   parseSinchCredentialsHeader,
   SINCH_CREDENTIALS_HEADER,
   type SinchOAuthCredentials,
 } from './sinch-oauth-credentials';
 
-const credentialStorage = new AsyncLocalStorage<SinchOAuthCredentials | undefined>();
+type RequestAuthContext = {
+  credentials?: SinchOAuthCredentials;
+  agentId?: string;
+};
+
+const requestAuthStorage = new AsyncLocalStorage<RequestAuthContext>();
 
 export const getRequestSinchOAuthCredentials = (): SinchOAuthCredentials | undefined => {
-  return credentialStorage.getStore();
+  return requestAuthStorage.getStore()?.credentials;
+};
+
+export const getRequestAgentId = (): string | undefined => {
+  return requestAuthStorage.getStore()?.agentId;
 };
 
 export const runWithHttpCredentialHeaders = <T>(headers: IncomingHttpHeaders, fn: () => T): T => {
-  const credentials = parseSinchCredentialsHeader(headers[SINCH_CREDENTIALS_HEADER]);
-  return credentialStorage.run(credentials, fn);
+  const context: RequestAuthContext = {
+    credentials: parseSinchCredentialsHeader(headers[SINCH_CREDENTIALS_HEADER]),
+    agentId: parseAgentIdHeader(headers[AGENT_ID_HEADER]),
+  };
+  return requestAuthStorage.run(context, fn);
 };

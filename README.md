@@ -401,6 +401,14 @@ curl -X POST "http://localhost:8000/mcp" \
 
 **Scope:** `X-Sinch-Credentials` applies to **Conversation**, **Numbers**, and **Number Lookup** tools. **Voice**, **Verification**, and **Mailgun** still use server environment variables for now. **Local stdio** (Option 1) always uses server environment variables.
 
+#### `x-agent-id` header (optional)
+
+Agent integrations (e.g. an agent installed in a Gemini Enterprise app) may send an `x-agent-id` header carrying the unique installation identifier (the Marketplace **OrderId**). The server captures it per request in both single- and multi-tenant modes; it will be used to resolve the caller's Sinch credentials in an upcoming release. This custom header is a temporary mechanism until a token-exchange capability is available over M2M authentication.
+
+| Header       | Value                                              |
+| ------------ | -------------------------------------------------- |
+| `x-agent-id` | Agent installation identifier (e.g. GE `OrderId`) |
+
 #### MCP_API_KEYS key rotation
 
 Use `MCP_API_KEYS` (comma-separated) in **single-tenant** mode to accept an old and new gateway key during rotation, then remove the retired key.
