@@ -170,6 +170,9 @@ publish-chart:
 update-manifests:
   stage: release
   image: alpine:3.20
+  retry:
+    max: 2
+    when: script_failure
   needs:
     - job: publish-image
       artifacts: true

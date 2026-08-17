@@ -116,6 +116,26 @@ const messagingCases: ToolTestCase[] = [
     },
   },
   {
+    prompt:
+      'Set the RCS channel on Conversation app app-abc123 using RCS auth name my-rcs-auth and bearer token my-rcs-token.',
+    expectedToolName: 'set-rcs-channel-on-app',
+    expectedArguments: {
+      appId: 'app-abc123',
+      senderId: 'my-rcs-auth',
+      bearerToken: 'my-rcs-token',
+    },
+  },
+  {
+    prompt:
+      'Set the WhatsApp channel on Conversation app app-abc123 with WhatsApp sender id wa-sender-1 and bearer token wa-token-1.',
+    expectedToolName: 'set-whatsapp-channel-on-app',
+    expectedArguments: {
+      appId: 'app-abc123',
+      senderId: 'wa-sender-1',
+      bearerToken: 'wa-token-1',
+    },
+  },
+  {
     prompt: 'Rename Conversation app app-abc123 to My Support Bot.',
     expectedToolName: 'update-conversation-app',
     expectedArguments: {
@@ -141,6 +161,13 @@ const messagingCases: ToolTestCase[] = [
     expectedArguments: undefined,
   },
   {
+    prompt: 'Show me the details of webhook wh-abc123.',
+    expectedToolName: 'get-webhook',
+    expectedArguments: {
+      webhookId: 'wh-abc123',
+    },
+  },
+  {
     prompt: 'Create a webhook for inbound messages at https://example.com/callback with triggers MESSAGE_INBOUND.',
     expectedToolName: 'create-webhook',
     expectedArguments: {
@@ -154,6 +181,177 @@ const messagingCases: ToolTestCase[] = [
     expectedArguments: {
       webhookId: 'wh-abc123',
       triggers: [],
+    },
+  },
+  {
+    prompt: 'Delete webhook wh-abc123.',
+    expectedToolName: 'delete-webhook',
+    expectedArguments: {
+      webhookId: 'wh-abc123',
+    },
+  },
+];
+
+// Numbers API: search, rent, list, release, regions.
+const numbersCases: ToolTestCase[] = [
+  {
+    prompt: 'Search for available US local numbers that can do SMS.',
+    expectedToolName: 'search-for-available-numbers',
+    expectedArguments: {
+      regionCode: 'US',
+      type: 'LOCAL',
+      capabilities: ['SMS'],
+    },
+  },
+  // Trickier wording — still search, not rent.
+  {
+    prompt: 'I need a US local number in area code 415',
+    expectedToolName: 'search-for-available-numbers',
+    expectedArguments: {
+      regionCode: 'US',
+      type: 'LOCAL',
+      searchPattern: '415',
+      patternPosition: 'START',
+    },
+  },
+  {
+    prompt: 'Can you get me a San Francisco number for SMS?',
+    expectedToolName: 'search-for-available-numbers',
+    expectedArguments: {
+      regionCode: 'US',
+      capabilities: ['SMS'],
+    },
+  },
+  {
+    prompt: 'Activate / rent this number +14155550123 for my project.',
+    expectedToolName: 'rent-sinch-virtual-numbers',
+    expectedArguments: {
+      numbers: ['+14155550123'],
+    },
+  },
+  {
+    prompt: 'List all active rented phone numbers on my account.',
+    expectedToolName: 'list-rented-numbers',
+    expectedArguments: undefined,
+  },
+  {
+    prompt: 'Release the rented phone number +14155550123 from my project.',
+    expectedToolName: 'release-rented-number',
+    expectedArguments: {
+      phoneNumber: '+14155550123',
+    },
+  },
+  {
+    prompt: 'Which regions can I buy virtual numbers in?',
+    expectedToolName: 'list-available-regions',
+    expectedArguments: undefined,
+  },
+];
+
+// RCS agent tools (single-turn coverage; multi-turn onboarding/evals exercise flows).
+const rcsCases: ToolTestCase[] = [
+  {
+    prompt:
+      "Create a new RCS agent named 'AcmeCorp' in the US region, with a TRANSACTIONAL use case and a conversational billing category.",
+    expectedToolName: 'create-rcs-sender',
+    expectedArguments: {
+      region: 'US',
+      useCase: 'TRANSACTIONAL',
+      billingCategory: 'CONVERSATIONAL',
+    },
+  },
+  {
+    prompt: 'Get the details of RCS agent snd_abc123.',
+    expectedToolName: 'get-rcs-sender',
+    expectedArguments: {
+      senderId: 'snd_abc123',
+    },
+  },
+  {
+    prompt: 'List all RCS agents in my project.',
+    expectedToolName: 'list-rcs-senders',
+    expectedArguments: undefined,
+  },
+  {
+    prompt:
+      'Update RCS agent snd_abc123 with privacy policy URL https://example.com/privacy and terms of service URL https://example.com/terms.',
+    expectedToolName: 'update-rcs-sender',
+    expectedArguments: {
+      senderId: 'snd_abc123',
+    },
+  },
+  {
+    prompt: 'Add +3412345678900 as a test number on RCS agent snd_abc123.',
+    expectedToolName: 'add-rcs-test-number',
+    expectedArguments: {
+      senderId: 'snd_abc123',
+      testNumbers: ['+3412345678900'],
+    },
+  },
+  {
+    prompt: 'Launch RCS agent snd_abc123 now.',
+    expectedToolName: 'launch-rcs-sender',
+    expectedArguments: {
+      senderId: 'snd_abc123',
+    },
+  },
+  {
+    prompt: 'Delete test number +3412345678900 from RCS agent snd_abc123.',
+    expectedToolName: 'delete-rcs-test-number',
+    expectedArguments: {
+      senderId: 'snd_abc123',
+      testNumber: '+3412345678900',
+    },
+  },
+  {
+    prompt: 'Resend the RCS test invite for +3412345678900 on agent snd_abc123.',
+    expectedToolName: 'resend-rcs-test-number-invite',
+    expectedArguments: {
+      senderId: 'snd_abc123',
+      testNumber: '+3412345678900',
+    },
+  },
+  {
+    prompt: 'What is the verification state of RCS test number +3412345678900 on agent snd_abc123?',
+    expectedToolName: 'get-rcs-test-number-state',
+    expectedArguments: {
+      senderId: 'snd_abc123',
+      testNumber: '+3412345678900',
+    },
+  },
+  {
+    prompt: 'Which RCS features does test number +3412345678900 support on agent snd_abc123?',
+    expectedToolName: 'get-rcs-number-capabilities',
+    expectedArguments: {
+      senderId: 'snd_abc123',
+      testNumber: '+3412345678900',
+    },
+  },
+];
+
+// Ambiguity / sibling-tool routing — trickier wording, still a deterministic expected tool.
+const ambiguityCases: ToolTestCase[] = [
+  {
+    prompt: 'Can +33612345678 receive RCS? Check capabilities for RCS agent snd_abc123 and test number +33612345678.',
+    expectedToolName: 'get-rcs-number-capabilities',
+    expectedArguments: {
+      senderId: 'snd_abc123',
+      testNumber: '+33612345678',
+    },
+  },
+  {
+    prompt: 'Verify +33612345678',
+    expectedToolName: 'start-sms-verification',
+    expectedArguments: { phoneNumber: '+33612345678' },
+  },
+  {
+    prompt:
+      "Send Antoine a WhatsApp template message using template 'appt_reminder' in Spanish with parameter name set to Mr. Smith. His number is +33612345678.",
+    expectedToolName: 'send-whatsapp-template-message',
+    expectedArguments: {
+      recipient: '+33612345678',
+      templateName: 'appt_reminder',
+      templateLanguage: 'es',
     },
   },
 ];
@@ -190,6 +388,27 @@ const whatsappTemplateCases: ToolTestCase[] = [
     pathMatchers: {
       'details.components.0.text': /shipped today/i,
     },
+  },
+  // Confirm-gated tools: a bare delete request must not call the tool directly.
+  // The gating is prompt-only (the tool descriptions instruct the model to ask
+  // for confirmation first) — there's no schema flag or code-level guard, so
+  // this only tests whether the model honors that instruction on its own.
+  // `expectedToolName: undefined` is this file's ToolTestCase convention for
+  // "no tool called" (see generalCases above); `expectNoTool` is the equivalent
+  // field on the separate eval harness used by *.eval.test.ts files, e.g.
+  // whatsapp-template-delete-confirmation.eval.test.ts, which covers the
+  // confirm-then-delete flow.
+  {
+    prompt: 'Delete the draft of the order_confirmation EN WhatsApp template.',
+    expectedToolName: undefined,
+  },
+  {
+    prompt: 'Delete the order_confirmation EN WhatsApp template, including the version already submitted to Meta.',
+    expectedToolName: undefined,
+  },
+  {
+    prompt: 'Delete every language variant of the order_confirmation WhatsApp template.',
+    expectedToolName: undefined,
   },
 ];
 
@@ -294,13 +513,23 @@ const voiceCases: ToolTestCase[] = [
       conferenceId: 'abc123',
     },
   },
+  {
+    prompt: 'Get information about call call-xyz-789.',
+    expectedToolName: 'get-call-information',
+    expectedArguments: {
+      callId: 'call-xyz-789',
+    },
+  },
 ];
 
 export const toolTestCases: ToolTestCase[] = [
   ...generalCases,
   ...messagingCases,
+  ...numbersCases,
+  ...rcsCases,
   ...whatsappTemplateCases,
   ...verificationCases,
   ...emailCases,
   ...voiceCases,
+  ...ambiguityCases,
 ];

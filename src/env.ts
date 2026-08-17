@@ -25,6 +25,7 @@ export const env = createEnv({
     LOG_LEVEL: z.enum(['fatal', 'error', 'warn', 'info', 'debug', 'trace', 'silent']).optional(),
     REDIS_URL: z.string().optional(),
     MCP_SESSION_TTL_SECONDS: z.string().optional(),
+    MCP_TAGS: z.string().optional(),
   },
   runtimeEnvStrict: {
     PROJECT_ID: process.env.PROJECT_ID,
@@ -46,6 +47,7 @@ export const env = createEnv({
     LOG_LEVEL: process.env.LOG_LEVEL,
     REDIS_URL: process.env.REDIS_URL,
     MCP_SESSION_TTL_SECONDS: process.env.MCP_SESSION_TTL_SECONDS,
+    MCP_TAGS: process.env.MCP_TAGS,
   },
   emptyStringAsUndefined: true,
   onValidationError: (issues: readonly StandardSchemaV1.Issue[]) => {

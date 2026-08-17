@@ -19,7 +19,7 @@ export const registerGetWebhook = (server: McpServer, tags: Tags[]) => {
     TOOL_NAME,
     {
       description:
-        'Get a Conversation API webhook by its ID. Signing secrets are not returned; configure them in the Sinch Dashboard.',
+        'Get a Conversation API webhook by its ID. Signing secrets are not returned — configure them in the Sinch Dashboard. Use list-webhooks to browse webhooks when the user does not have an ID yet.',
       inputSchema: {
         webhookId: WebhookId,
         region: ConversationRegionOverride,

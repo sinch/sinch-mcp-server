@@ -28,7 +28,7 @@ export const registerRentNumbers = (server: McpServer, tags: Tags[]) => {
     TOOL_NAME,
     {
       description:
-        'Activates a phone number that matches the search criteria provided in the request. Currently the rentAny operation works only for US LOCAL numbers',
+        'Rent (activate) one or more known Sinch virtual phone numbers on the project. Requires specific E.164 numbers (with leading +) that the user already chose — typically after search-for-available-numbers. Do NOT invent phone numbers. Do NOT use this to search or browse available numbers — use search-for-available-numbers for that. If the user has not provided an exact number, ask for it or search first.',
       inputSchema: RentNumbersSchema,
     },
     rentNumbersHandler,

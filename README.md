@@ -77,11 +77,13 @@ Here is the list of tools available in the MCP server (all the phone numbers mus
 
 ### WhatsApp Template Tools
 
-| Tool                         | Description                                                                                                                                                                                                                                                                                 | Tags                    |
-| ---------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------- |
-| **list-whatsapp-templates**  | List the WhatsApp channel-specific message templates (managed by Meta). Omni-channel templates can be fetched with the `list-messaging-templates` tool. <br> _Example prompt_: "Show me my WhatsApp templates."                                                                             | whatsapp, configuration |
-| **create-whatsapp-template** | Create a WhatsApp message template, as a draft or submitted for review. <br> _Example prompt_: "Create a WhatsApp UTILITY template named order_confirmation in English with body text 'Your order {{1}} has shipped.'"                                                                      | whatsapp, configuration |
-| **update-whatsapp-template** | Update a WhatsApp message template draft (or reset an APPROVED/REJECTED/PAUSED/DISABLED template to draft) by name and language. <br> _Example prompt_: "Update the order_confirmation EN WhatsApp template's body text to 'Your order {{1}} has shipped today.' and submit it for review." | whatsapp, configuration |
+| Tool                                        | Description                                                                                                                                                                                                                                                                                 | Tags                    |
+| ------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------- |
+| **list-whatsapp-templates**                 | List the WhatsApp channel-specific message templates (managed by Meta). Omni-channel templates can be fetched with the `list-messaging-templates` tool. <br> _Example prompt_: "Show me my WhatsApp templates."                                                                             |
+| **create-whatsapp-template**                | Create a WhatsApp message template, as a draft or submitted for review. <br> _Example prompt_: "Create a WhatsApp UTILITY template named order_confirmation in English with body text 'Your order {{1}} has shipped.'"                                                                      | whatsapp, configuration |
+| **update-whatsapp-template**                | Update a WhatsApp message template draft (or reset an APPROVED/REJECTED/PAUSED/DISABLED template to draft) by name and language. <br> _Example prompt_: "Update the order_confirmation EN WhatsApp template's body text to 'Your order {{1}} has shipped today.' and submit it for review." | whatsapp, configuration |
+| **delete-single-whatsapp-template-language** | Delete a single language variant of a WhatsApp message template by name and language — other languages of the same template name are unaffected. <br> _Example prompt_: "Delete the draft of the order_confirmation EN WhatsApp template."                                                  | whatsapp, configuration |
+| **delete-all-whatsapp-template-languages**   | Delete every language variant of a WhatsApp message template by name in one call. <br> _Example prompt_: "Delete all language variants of the order_confirmation WhatsApp template."                                                                                                        | whatsapp, configuration |
 
 ### Numbers Tools
 
@@ -121,7 +123,7 @@ To use the APIs used by the MCP tools, you will need the following credentials:
   - (Required) `KEY_ID`: Select or create a new access key in the [Access keys section](https://dashboard.sinch.com/settings/access-keys) of the Sinch Build dashboard.
   - (Required) `KEY_SECRET`: This is the secret associated with the `Access Key` you selected or created in the previous step. Be careful, the `Access Key Secret` is only shown once when you create the `Access Key`. If you lose it, you will need to create a new `Access Key`.
   - `CONVERSATION_APP_ID`: This is the ID of the conversation app you want to use. You can find it in the [Conversation API / Apps section](https://dashboard.sinch.com/convapi/apps) of the Sinch Build dashboard. If you don't set it, you will have to specify it in the prompt.
-  - `CONVERSATION_REGION`: This is the region where your conversation app and templates are located. It can be `us`, `eu`, or `br`. If you don't set it, it defaults to `us`.
+  - `CONVERSATION_REGION`: This is the region where your conversation app and templates are located. It can be `us`, `eu`, or `br`. If you don't set it, it defaults to `us` (except in [multi-tenant mode](#multi-tenant-each-client-brings-a-sinch-account), where it is required and never defaulted).
   - When using the SMS channel, you can also set the `DEFAULT_SMS_ORIGINATOR` environment variable to the phone number that will be used as the sender for SMS messages. Depending on your country, this setting may be required.
   - You can also set the `GEOCODING_API_KEY` environment variable to your Google Geocoding API key if you want to use the location feature. This is needed to convert an address to a latitude/longitude pair.
 - Verification API credentials: navigate to the [Verification / Apps section](https://dashboard.sinch.com/verification/apps) of the Sinch Build dashboard and create a new app or select an existing one. You will need the following credentials:
@@ -378,6 +380,8 @@ Remote clients send **one header** on every request:
 | `X-Sinch-Credentials` | Base64-encoded `projectId:keyId:keySecret` |
 
 The server does **not** read `PROJECT_ID`, `KEY_ID`, or `KEY_SECRET` from its environment for OAuth-backed tools in this mode. OAuth clients are cached in memory with **LRU eviction** (default 256 entries, configurable via `OAUTH_TOKEN_CACHE_MAX_ENTRIES`).
+
+In multi-tenant mode, `CONVERSATION_REGION` is **required**: the server refuses to start without it, and it is never defaulted to `us`. Each deployment is pinned to a single region, and the region cannot be overridden per request or from the prompt.
 
 #### `X-Sinch-Credentials` format (multi-tenant only)
 

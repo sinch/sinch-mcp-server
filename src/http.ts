@@ -8,7 +8,7 @@ import { setHttpCredentialSource } from './auth/http-credential-mode';
 import { createMcpApiKeyMiddleware, loadMcpApiKeys } from './auth/mcp-api-key';
 import { env } from './env';
 import { buildJsonRpcErrorResponse } from './json-rpc';
-import { instantiateMcpServer, parseArgs, registerCapabilities } from './server';
+import { getToolsFilter, instantiateMcpServer, registerCapabilities } from './server';
 import {
   createSession,
   deleteSession,
@@ -55,7 +55,7 @@ const getSessionId = (req: Request): string | undefined => {
 
 const buildTransport = async (): Promise<StreamableHTTPServerTransport> => {
   const mcpServer = instantiateMcpServer();
-  registerCapabilities(mcpServer, parseArgs(process.argv));
+  registerCapabilities(mcpServer, getToolsFilter(process.argv));
 
   const transport = new StreamableHTTPServerTransport({ sessionIdGenerator: undefined });
   await mcpServer.connect(transport);
@@ -79,6 +79,16 @@ export const createHttpApp = () => {
   if (isSingleTenant) {
     setHttpCredentialSource('env');
   } else {
+    // Multi-tenant: each deployment is pinned to one Conversation API region. Defaulting to a
+    // region silently could route traffic to the wrong region, so refuse to start instead.
+    if (!env.CONVERSATION_REGION) {
+      throw new Error(
+        'The server is starting in multi-tenant mode because neither MCP_API_KEY nor MCP_API_KEYS is set. ' +
+          'In multi-tenant mode, the CONVERSATION_REGION environment variable is required: ' +
+          'refusing to start rather than defaulting to a region. ' +
+          'Either set CONVERSATION_REGION, or set MCP_API_KEY to run in single-tenant mode.',
+      );
+    }
     setHttpCredentialSource('request-header');
   }
 

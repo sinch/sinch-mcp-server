@@ -18,6 +18,7 @@ export type MockServerEnv = {
   LOG_LEVEL?: 'fatal' | 'error' | 'warn' | 'info' | 'debug' | 'trace' | 'silent';
   REDIS_URL?: string;
   MCP_SESSION_TTL_SECONDS?: string;
+  MCP_TAGS?: string;
 };
 
 export const mockEnv: MockServerEnv = {};

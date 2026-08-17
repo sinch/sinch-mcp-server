@@ -24,7 +24,8 @@ export const registerNumberLookup = (server: McpServer, tags: Tags[]) => {
     server,
     TOOL_NAME,
     {
-      description: 'Look up a phone number for its status and capabilities.',
+      description:
+        'Look up line/carrier information for a phone number (E.164) via Number Lookup — validity, type, and related metadata. Use when the user asks whether a number is valid or what carrier/type it is. Do NOT use this for RCS device feature support (use get-rcs-number-capabilities), SMS verification codes (use start-sms-verification), or searching Sinch virtual numbers to rent (use search-for-available-numbers).',
       inputSchema: NumberLookupSchema,
     },
     numberLookupHandler,

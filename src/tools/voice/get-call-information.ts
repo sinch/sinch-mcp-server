@@ -24,7 +24,8 @@ export const registerGetCallInformation = (server: McpServer, tags: Tags[]) => {
     server,
     TOOL_NAME,
     {
-      description: 'Get information about a call using its ID',
+      description:
+        'Get status and details for an existing voice call by call ID. Use when the user asks about a specific call. Do not use this to place a new call (use tts-callout or conference-callout) or to send an SMS.',
       inputSchema: GetCallInformationSchema,
     },
     getCallInformationHandler,

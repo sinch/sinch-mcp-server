@@ -50,7 +50,9 @@
     "launch-rcs-sender",
     "list-whatsapp-templates",
     "create-whatsapp-template",
-    "update-whatsapp-template"
+    "update-whatsapp-template",
+    "delete-single-whatsapp-template-language",
+    "delete-all-whatsapp-template-languages"
   ],
   "expectedPrompts": [
     "conversation-app-id"

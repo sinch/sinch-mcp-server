@@ -9,6 +9,7 @@ import { registerNumbersTools } from './tools/numbers';
 import { registerRcsTools } from './tools/rcs';
 import { registerWhatsAppTools } from './tools/whatsapp';
 import { Tags } from './types';
+import { env } from './env';
 import pkg from '../package.json';
 const mcpServerVersion = pkg.version;
 
@@ -24,9 +25,16 @@ export const instantiateMcpServer = () => {
   });
 };
 
-export const parseArgs = (args: string[]): Tags[] => {
+const parseTagList = (tagList: string | undefined): Tags[] => {
+  return tagList ? tagList.split(',') : [];
+};
+
+export const getToolsFilter = (args: string[]): Tags[] => {
   const args1 = args.slice(2);
-  return args1.includes('--tags') ? args1[args1.indexOf('--tags') + 1].split(',') : [];
+  if (args1.includes('--tags')) {
+    return parseTagList(args1[args1.indexOf('--tags') + 1]);
+  }
+  return parseTagList(env.MCP_TAGS);
 };
 
 export const registerCapabilities = (server: McpServer, tags: Tags[]) => {
