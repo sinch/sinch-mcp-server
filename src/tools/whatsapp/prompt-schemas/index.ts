@@ -346,7 +346,11 @@ export const WhatsAppTemplateDetails = z
 
 export const CreateWhatsAppTemplateSchema = {
   name: z.string().describe('Template name.'),
-  language: WhatsAppTemplateLanguage.describe('Template language.'),
+  language: z
+    .union([WhatsAppTemplateLanguage, z.string()])
+    .describe(
+      'Template language — typically one of the listed codes, but any value Meta accepts is allowed since this list may not cover every language Meta supports.',
+    ),
   category: WhatsAppTemplateCategory.describe('Template category.'),
   details: WhatsAppTemplateDetails,
   status: WhatsAppTemplateStatus.optional().describe('Create as draft or submit for review. Defaults to submit.'),
@@ -367,7 +371,11 @@ export const CreateWhatsAppTemplateSchema = {
 
 export const UpdateWhatsAppTemplateSchema = {
   templateName: z.string().describe('The unique name of the template.'),
-  languageCode: WhatsAppTemplateLanguage.describe('The language code of the specific template.'),
+  languageCode: z
+    .union([WhatsAppTemplateLanguage, z.string()])
+    .describe(
+      'The language code of the specific template — typically one of the listed codes, but any value Meta accepts is allowed since this list may not cover every language Meta supports.',
+    ),
   status: WhatsAppTemplateStatus.optional().describe('Update as draft or submit for review. Defaults to draft.'),
   category: WhatsAppTemplateCategory.optional().describe(
     'New template category. Only applied if the template is a draft, or was rejected due to an incorrect category.',
@@ -388,9 +396,9 @@ export const UpdateWhatsAppTemplateSchema = {
 export const DeleteSingleWhatsAppTemplateLanguageSchema = {
   templateName: z.string().describe('The unique name of the template.'),
   languageCode: z
-    .string()
+    .union([WhatsAppTemplateLanguage, z.string()])
     .describe(
-      'The language code of the specific template variant to delete (e.g. EN, ES_MX). Other language variants of this template name are left untouched.',
+      'The language code of the specific template variant to delete — typically one of the listed codes, but any value Meta accepts is allowed since this list may not cover every language Meta supports. Other language variants of this template name are left untouched.',
     ),
   deleteSubmitted: z
     .boolean()
