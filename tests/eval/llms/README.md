@@ -53,9 +53,28 @@ Step assertions (all optional, combine as needed):
 
 - `accept` — passes if one of these tools was called.
 - `expectNoTool` — passes if **no** tool was called (the model just replies).
+- `allowNoTool` — with `accept`, a turn with no tool call also passes (clarify
+  **or** call one of `accept`).
+- `reject` — fails if any of these tools was called (ban a sibling, e.g. rent
+  when search/clarify is expected).
 - `responseIncludes` — the final assistant message contains each substring
-  (case-insensitive). Use this to check the model _surfaced_ something (e.g. an
-  unmet requirement) rather than claiming success.
+  (case-insensitive). Use this for tool-aware clarification (the model asks for
+  schema fields like phone/channel) or to check it _surfaced_ an unmet
+  requirement rather than claiming success.
+
+### Where to add new cases (maintenance)
+
+Use this as the authoring checklist when extending coverage:
+
+- Clear happy-paths and trickier single-turn paraphrases →
+  [`fixtures/tool-cases.ts`](../../integration/llms/fixtures/tool-cases.ts)
+  (integration).
+- Under-specified / probabilistic clarify flows → an `*.eval.test.ts` here.
+  Pair `expectNoTool` with `responseIncludes` for missing required fields
+  (e.g. `phone`, `region`) so the reply is tool-aware, then assert `accept` on
+  the follow-up turn.
+- Multi-step RCS launch/update uses **stateful** mocks (`enforceLaunch`), not
+  prompt-only checks — see `rcs-launch-recovery.eval.test.ts`.
 
 ## Config
 

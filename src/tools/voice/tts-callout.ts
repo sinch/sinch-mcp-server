@@ -27,7 +27,8 @@ export const registerTtsCallout = (server: McpServer, tags: Tags[]) => {
     server,
     TOOL_NAME,
     {
-      description: 'Make a callout with a Text-To-Speech prompt',
+      description:
+        'Place an outbound voice call that speaks a text-to-speech message when answered. Use when the user wants to *call* a phone number and say something aloud. Do NOT use send-text-message for this. Requires phoneNumber and message — ask if either is missing.',
       inputSchema: TtsCalloutSchema,
     },
     ttsCalloutHandler,

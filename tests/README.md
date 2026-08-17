@@ -6,10 +6,11 @@ Three layers:
   tool handlers and helpers in isolation. Run with `npm test`.
 - **LLM integration tests** ([`integration/llms`](integration/llms/README.md)) —
   drive the real MCP server with a real LLM to check tool routing (single pass,
-  CI gate). Run with `npm run test:integration`.
+  CI gate). Includes a **coverage gate** against live `tools/list`. Run with
+  `npm run test:integration`.
 - **LLM evals** ([`eval/llms`](eval/llms/README.md)) — the same, but run many
   iterations and gate on a pass-rate, for probabilistic behaviour like
-  error-recovery. Run with `npm run test:eval`.
+  ambiguity / clarification and error-recovery. Run with `npm run test:eval`.
 
 ## Unit tests
 

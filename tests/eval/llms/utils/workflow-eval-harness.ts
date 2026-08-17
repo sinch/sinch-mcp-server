@@ -17,6 +17,13 @@ export interface EvalStep {
   accept?: string[];
   /** If true, passes only if NO tool is called (the model just responds). */
   expectNoTool?: boolean;
+  /**
+   * With `accept`: a turn with no tool call also passes (clarify OR call one of
+   * accept). Use for under-specified intents where either behaviour is correct.
+   */
+  allowNoTool?: boolean;
+  /** Fails if ANY of these tools is called (e.g. ban rent when search/clarify is expected). */
+  reject?: string[];
   /** Also require the final assistant message to contain each of these (case-insensitive). */
   responseIncludes?: string[];
 }
@@ -71,11 +78,18 @@ const stepPasses = (step: EvalStep, result: PromptResult): boolean => {
     return false;
   }
   const called = result.toolsCalled();
+  if (step.reject?.some((tool) => called.includes(tool))) {
+    return false;
+  }
   if (step.expectNoTool && called.length > 0) {
     return false;
   }
-  if (step.accept && !step.accept.some((tool) => called.includes(tool))) {
-    return false;
+  if (step.accept) {
+    const matched = step.accept.some((tool) => called.includes(tool));
+    const noToolOk = Boolean(step.allowNoTool) && called.length === 0;
+    if (!matched && !noToolOk) {
+      return false;
+    }
   }
   if (step.responseIncludes) {
     const text = finalAssistantText(result).toLowerCase();
