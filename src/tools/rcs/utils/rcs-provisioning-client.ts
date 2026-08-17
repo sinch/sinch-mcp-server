@@ -1,17 +1,13 @@
-import { HttpStatus } from '../../../http-status';
-import { formatUserAgent } from '../../../utils';
+import { BaseProvisioningClient } from '../../../provisioning-client';
 import {
   CapabilitiesResponse,
   CreateSenderRequest,
   ListSendersResponse,
-  RcsApiErrorBody,
   RcsSender,
   TestNumberStateResponse,
   TestNumbersResponse,
   UpdateSenderRequest,
 } from '../types/rcs-api';
-
-const PROVISIONING_HOST = 'https://provisioning.api.sinch.com';
 
 export class RcsApiError extends Error {
   constructor(
@@ -25,52 +21,13 @@ export class RcsApiError extends Error {
   }
 }
 
-export class RcsProvisioningClient {
-  constructor(
-    private readonly projectId: string,
-    private readonly keyId: string,
-    private readonly keySecret: string,
-    private readonly toolName: string,
-  ) {}
-
-  private baseUrl(): string {
-    return `${PROVISIONING_HOST}/v1/projects/${this.projectId}/rcs`;
+export class RcsProvisioningClient extends BaseProvisioningClient {
+  constructor(projectId: string, keyId: string, keySecret: string, toolName: string) {
+    super('rcs', projectId, keyId, keySecret, toolName);
   }
 
-  private headers(): Record<string, string> {
-    return {
-      'Content-Type': 'application/json',
-      Authorization: 'Basic ' + Buffer.from(`${this.keyId}:${this.keySecret}`).toString('base64'),
-      'User-Agent': formatUserAgent(this.toolName, this.projectId),
-    };
-  }
-
-  private async parseError(response: Response): Promise<RcsApiError> {
-    let body: RcsApiErrorBody = {};
-    try {
-      body = (await response.json()) as RcsApiErrorBody;
-    } catch {
-      // ignore JSON parse errors
-    }
-    return new RcsApiError(response.status, body.message ?? response.statusText, body.errorCode, body.resolution);
-  }
-
-  private async request<T>(method: string, path: string, body?: unknown): Promise<T> {
-    const response = await fetch(`${this.baseUrl()}${path}`, {
-      method,
-      headers: this.headers(),
-      ...(body !== undefined && { body: JSON.stringify(body) }),
-    });
-
-    if (!response.ok) {
-      throw await this.parseError(response);
-    }
-
-    if (response.status === HttpStatus.NO_CONTENT) {
-      return undefined as T;
-    }
-
-    return (await response.json()) as T;
+  protected buildApiError(status: number, statusText: string, errorCode?: string, resolution?: string): RcsApiError {
+    return new RcsApiError(status, statusText, errorCode, resolution);
   }
 
   listSenders(pageToken?: string): Promise<ListSendersResponse> {
