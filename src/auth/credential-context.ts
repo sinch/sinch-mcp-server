@@ -1,11 +1,19 @@
 import { AsyncLocalStorage } from 'node:async_hooks';
 import type { IncomingHttpHeaders } from 'node:http';
-import { AGENT_ID_HEADER, parseAgentIdHeader } from './agent-id';
 import {
   parseSinchCredentialsHeader,
   SINCH_CREDENTIALS_HEADER,
   type SinchOAuthCredentials,
 } from './sinch-oauth-credentials';
+import { extractHeaderValue } from '../utils';
+
+/**
+ * Custom header carrying the agent installation identifier (e.g. the Gemini
+ * Enterprise Marketplace OrderId). Temporary mechanism until a token-exchange
+ * capability is available over M2M authentication; the MCP server will use it
+ * to resolve the Sinch credentials for the calling installation.
+ */
+export const AGENT_ID_HEADER = 'x-agent-id';
 
 type RequestAuthContext = {
   credentials?: SinchOAuthCredentials;
@@ -25,7 +33,7 @@ export const getRequestAgentId = (): string | undefined => {
 export const runWithHttpCredentialHeaders = <T>(headers: IncomingHttpHeaders, fn: () => T): T => {
   const context: RequestAuthContext = {
     credentials: parseSinchCredentialsHeader(headers[SINCH_CREDENTIALS_HEADER]),
-    agentId: parseAgentIdHeader(headers[AGENT_ID_HEADER]),
+    agentId: extractHeaderValue(headers[AGENT_ID_HEADER]),
   };
   return requestAuthStorage.run(context, fn);
 };

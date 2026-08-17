@@ -1,4 +1,23 @@
-import { matchesAnyTag } from '../src/utils';
+import { extractHeaderValue, matchesAnyTag } from '../src/utils';
+
+describe('extractHeaderValue', () => {
+  test('returns the trimmed header value', () => {
+    expect(extractHeaderValue('  order-123  ')).toBe('order-123');
+  });
+
+  test('takes the first value when the header is repeated', () => {
+    expect(extractHeaderValue(['order-a', 'order-b'])).toBe('order-a');
+  });
+
+  test('returns undefined for a missing header', () => {
+    expect(extractHeaderValue(undefined)).toBeUndefined();
+  });
+
+  test('returns undefined for an empty or whitespace-only header', () => {
+    expect(extractHeaderValue('')).toBeUndefined();
+    expect(extractHeaderValue('   ')).toBeUndefined();
+  });
+});
 
 describe('hasMatchingTag', () => {
   test('should return true when there is a common tag', () => {
