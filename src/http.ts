@@ -6,10 +6,16 @@ import dotenv from 'dotenv';
 import { runWithHttpCredentialHeaders } from './auth/credential-context';
 import { setHttpCredentialSource } from './auth/http-credential-mode';
 import { createMcpApiKeyMiddleware, loadMcpApiKeys } from './auth/mcp-api-key';
-import { getMaxMcpSessions, isMcpSessionCapacityReached } from './auth/http-session-limits';
 import { env } from './env';
 import { buildJsonRpcErrorResponse } from './json-rpc';
-import { instantiateMcpServer, getToolsFilter, registerCapabilities } from './server';
+import { getToolsFilter, instantiateMcpServer, registerCapabilities } from './server';
+import {
+  createSession,
+  deleteSession,
+  pingSessionStore,
+  SessionStoreUnavailableError,
+  validateAndTouchSession,
+} from './session-store';
 
 dotenv.config();
 
@@ -17,31 +23,14 @@ const MCP_PATH = '/mcp';
 const HEALTH_LIVE_PATH = '/health/live';
 const HEALTH_READY_PATH = '/health/ready';
 const DEFAULT_PORT = 8000;
+const SESSION_STORE_UNAVAILABLE_CODE = -32003;
 
 const startedAtMs = Date.now();
 let isShuttingDown = false;
 
-type SessionEntry = {
-  transport: StreamableHTTPServerTransport;
-};
-
-const sessions = new Map<string, SessionEntry>();
-
 /** Exposed for unit tests. */
 export const setShuttingDownForTests = (value: boolean): void => {
   isShuttingDown = value;
-};
-
-/** Exposed for unit tests — inserts a placeholder session entry. */
-export const seedSessionForTests = (sessionId = 'test-session'): void => {
-  sessions.set(sessionId, {
-    transport: {} as StreamableHTTPServerTransport,
-  });
-};
-
-/** Exposed for unit tests. */
-export const clearSessionsForTests = (): void => {
-  sessions.clear();
 };
 
 const isInitializationBody = (body: unknown): boolean => {
@@ -64,46 +53,23 @@ const getSessionId = (req: Request): string | undefined => {
   return undefined;
 };
 
-const removeSession = async (sessionId: string): Promise<void> => {
-  const entry = sessions.get(sessionId);
-  if (!entry) {
-    return;
-  }
-
-  sessions.delete(sessionId);
-  try {
-    await entry.transport.close();
-  } catch (error) {
-    console.error(`Error closing transport for session ${sessionId}:`, error);
-  }
-};
-
-const createSession = async (): Promise<SessionEntry> => {
+const buildTransport = async (): Promise<StreamableHTTPServerTransport> => {
   const mcpServer = instantiateMcpServer();
   registerCapabilities(mcpServer, getToolsFilter(process.argv));
 
-  let sessionId = '';
-
-  const transport = new StreamableHTTPServerTransport({
-    sessionIdGenerator: () => randomUUID(),
-    onsessioninitialized: (id) => {
-      sessionId = id;
-      sessions.set(id, { transport });
-    },
-    onsessionclosed: async (id) => {
-      await removeSession(id);
-    },
-  });
-
-  transport.onclose = async () => {
-    if (sessionId) {
-      await removeSession(sessionId);
-    }
-  };
-
+  const transport = new StreamableHTTPServerTransport({ sessionIdGenerator: undefined });
   await mcpServer.connect(transport);
 
-  return { transport };
+  return transport;
+};
+
+const respondSessionStoreUnavailable = (res: Response, body: unknown): void => {
+  res
+    .setHeader('Retry-After', '2')
+    .status(503)
+    .json(
+      buildJsonRpcErrorResponse(SESSION_STORE_UNAVAILABLE_CODE, 'Service Unavailable: session store unreachable', body),
+    );
 };
 
 export const createHttpApp = () => {
@@ -135,34 +101,72 @@ export const createHttpApp = () => {
 
   const handleMcpRequest = async (req: Request, res: Response): Promise<void> => {
     const sessionId = getSessionId(req);
+    const isInitRequest = isInitializationBody(req.body);
 
-    if (sessionId) {
-      const entry = sessions.get(sessionId);
-      if (!entry) {
-        res.status(404).json(buildJsonRpcErrorResponse(-32001, 'Session not found', req.body));
+    if (isInitRequest) {
+      if (sessionId) {
+        res
+          .status(400)
+          .json(buildJsonRpcErrorResponse(-32600, 'Invalid Request: server already initialized', req.body));
         return;
       }
 
-      await runWithCredentials(req, () => entry.transport.handleRequest(req, res, req.body));
+      const newSessionId = randomUUID();
+      try {
+        await createSession(newSessionId);
+      } catch (error) {
+        if (error instanceof SessionStoreUnavailableError) {
+          respondSessionStoreUnavailable(res, req.body);
+          return;
+        }
+        throw error;
+      }
+
+      res.setHeader('mcp-session-id', newSessionId);
+      const transport = await buildTransport();
+      res.on('close', () => void transport.close());
+      await runWithCredentials(req, () => transport.handleRequest(req, res, req.body));
       return;
     }
 
-    if (!isInitializationBody(req.body)) {
+    if (!sessionId) {
       res.status(400).json(buildJsonRpcErrorResponse(-32000, 'Bad Request: No valid session ID provided', req.body));
       return;
     }
 
-    if (isMcpSessionCapacityReached(sessions.size)) {
-      res
-        .status(503)
-        .json(
-          buildJsonRpcErrorResponse(-32000, 'Service Unavailable: maximum number of MCP sessions reached', req.body),
-        );
+    let sessionValid: boolean;
+    try {
+      sessionValid = await validateAndTouchSession(sessionId);
+    } catch (error) {
+      if (error instanceof SessionStoreUnavailableError) {
+        respondSessionStoreUnavailable(res, req.body);
+        return;
+      }
+      throw error;
+    }
+
+    if (!sessionValid) {
+      res.status(404).json(buildJsonRpcErrorResponse(-32001, 'Session not found', req.body));
       return;
     }
 
-    const entry = await createSession();
-    await runWithCredentials(req, () => entry.transport.handleRequest(req, res, req.body));
+    if (req.method === 'DELETE') {
+      try {
+        await deleteSession(sessionId);
+      } catch (error) {
+        if (error instanceof SessionStoreUnavailableError) {
+          respondSessionStoreUnavailable(res, req.body);
+          return;
+        }
+        throw error;
+      }
+      res.status(200).end();
+      return;
+    }
+
+    const transport = await buildTransport();
+    res.on('close', () => void transport.close());
+    await runWithCredentials(req, () => transport.handleRequest(req, res, req.body));
   };
 
   const app = express();
@@ -177,26 +181,19 @@ export const createHttpApp = () => {
   });
 
   app.get(HEALTH_READY_PATH, (_req, res) => {
-    if (isShuttingDown) {
-      res.status(503).json({ status: 'not_ready', reason: 'shutting_down' });
-      return;
-    }
+    void (async () => {
+      if (isShuttingDown) {
+        res.status(503).json({ status: 'not_ready', reason: 'shutting_down' });
+        return;
+      }
 
-    if (isMcpSessionCapacityReached(sessions.size)) {
-      res.status(503).json({
-        status: 'not_ready',
-        reason: 'session_capacity_reached',
-        activeSessions: sessions.size,
-        maxSessions: getMaxMcpSessions(),
-      });
-      return;
-    }
+      if (!(await pingSessionStore())) {
+        res.status(503).json({ status: 'not_ready', reason: 'session_store_unreachable' });
+        return;
+      }
 
-    res.status(200).json({
-      status: 'ready',
-      activeSessions: sessions.size,
-      maxSessions: getMaxMcpSessions(),
-    });
+      res.status(200).json({ status: 'ready' });
+    })();
   });
 
   if (isSingleTenant) {
@@ -213,8 +210,21 @@ export const createHttpApp = () => {
   };
 
   app.post(MCP_PATH, routeHandler);
-  app.get(MCP_PATH, routeHandler);
   app.delete(MCP_PATH, routeHandler);
+
+  // GET/SSE unsupported: per-request transports can't receive a later push, so the stream is dead weight.
+  app.get(MCP_PATH, (_req, res) => {
+    res.setHeader('Allow', 'POST, DELETE');
+    res
+      .status(405)
+      .json(
+        buildJsonRpcErrorResponse(
+          -32000,
+          'Method Not Allowed: server-initiated notifications are not supported; use POST for all MCP requests',
+          null,
+        ),
+      );
+  });
 
   return app;
 };
@@ -226,14 +236,31 @@ const getShutdownDrainMs = (): number => {
 
 const sleep = (ms: number): Promise<void> => new Promise((resolve) => setTimeout(resolve, ms));
 
+/** Logs only host:port — REDIS_URL may carry credentials. */
+const describeRedisTarget = (redisUrl: string): string => {
+  try {
+    const url = new URL(redisUrl);
+    return `${url.hostname}:${url.port || '6379'}`;
+  } catch {
+    return 'unparseable REDIS_URL';
+  }
+};
+
 export const main = async (): Promise<void> => {
+  const redisUrl = env.REDIS_URL;
+  if (!redisUrl) {
+    console.error('Fatal: REDIS_URL is not set. The HTTP server requires Redis for shared session storage.');
+    process.exit(1);
+    return;
+  }
+
   const port = Number(process.env.PORT ?? DEFAULT_PORT);
   const app = createHttpApp();
 
   await new Promise<void>((resolve, reject) => {
     const server = app.listen(port, () => {
       console.error(
-        `Sinch MCP HTTP server listening on port ${port} (${MCP_PATH}, max sessions: ${getMaxMcpSessions()})`,
+        `Sinch MCP HTTP server listening on port ${port} (${MCP_PATH}), session store: ${describeRedisTarget(redisUrl)}`,
       );
       resolve();
     });
@@ -241,8 +268,7 @@ export const main = async (): Promise<void> => {
     const shutdown = (signal: string) => {
       void (async () => {
         console.error(`Received ${signal}, marking not ready before closing HTTP server`);
-        // Fail readiness first so the Service stops routing, then drain before close.
-        // Pairs with the Deployment preStop sleep for endpoint controller lag.
+        // Mark not-ready before draining, so the Service stops routing before we close.
         isShuttingDown = true;
         const drainMs = getShutdownDrainMs();
         if (drainMs > 0) {
