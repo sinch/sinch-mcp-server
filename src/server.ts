@@ -25,12 +25,16 @@ export const instantiateMcpServer = () => {
   });
 };
 
-export const parseArgs = (args: string[]): Tags[] => {
+const parseTagList = (tagList: string | undefined): Tags[] => {
+  return tagList ? tagList.split(',') : [];
+};
+
+export const getToolsFilter = (args: string[]): Tags[] => {
   const args1 = args.slice(2);
   if (args1.includes('--tags')) {
-    return args1[args1.indexOf('--tags') + 1].split(',');
+    return parseTagList(args1[args1.indexOf('--tags') + 1]);
   }
-  return env.MCP_TAGS ? env.MCP_TAGS.split(',') : [];
+  return parseTagList(env.MCP_TAGS);
 };
 
 export const registerCapabilities = (server: McpServer, tags: Tags[]) => {
