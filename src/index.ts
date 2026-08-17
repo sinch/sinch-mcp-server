@@ -1,14 +1,14 @@
 import './env';
 
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
-import { instantiateMcpServer, parseArgs, registerCapabilities } from './server';
+import { instantiateMcpServer, getToolsFilter, registerCapabilities } from './server';
 import { shutdownTelemetry } from './telemetry';
 import { logger } from './telemetry/logger';
 
 export const main = async () => {
   const transport = new StdioServerTransport();
   const server = instantiateMcpServer();
-  registerCapabilities(server, parseArgs(process.argv));
+  registerCapabilities(server, getToolsFilter(process.argv));
   await server.connect(transport);
 };
 

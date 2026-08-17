@@ -9,7 +9,7 @@ import { createMcpApiKeyMiddleware, loadMcpApiKeys } from './auth/mcp-api-key';
 import { getMaxMcpSessions, isMcpSessionCapacityReached } from './auth/http-session-limits';
 import { env } from './env';
 import { buildJsonRpcErrorResponse } from './json-rpc';
-import { instantiateMcpServer, parseArgs, registerCapabilities } from './server';
+import { instantiateMcpServer, getToolsFilter, registerCapabilities } from './server';
 
 dotenv.config();
 
@@ -80,7 +80,7 @@ const removeSession = async (sessionId: string): Promise<void> => {
 
 const createSession = async (): Promise<SessionEntry> => {
   const mcpServer = instantiateMcpServer();
-  registerCapabilities(mcpServer, parseArgs(process.argv));
+  registerCapabilities(mcpServer, getToolsFilter(process.argv));
 
   let sessionId = '';
 
