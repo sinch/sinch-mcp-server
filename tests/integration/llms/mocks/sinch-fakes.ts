@@ -1,6 +1,7 @@
 import { AsyncLocalStorage } from 'node:async_hooks';
 import { jest } from '@jest/globals';
 import { RcsApiError } from '../../../../src/tools/rcs/utils/rcs-provisioning-client';
+import { WhatsAppApiError } from '../../../../src/tools/whatsapp/utils/whatsapp-provisioning-client';
 
 // Scopes the fake RCS sender store per eval iteration. Eval suites run several
 // iterations concurrently against the same mocked module (see
@@ -12,8 +13,15 @@ const sendersContext = new AsyncLocalStorage<Map<string, any>>();
 const sharedSenders = new Map<string, any>();
 const currentSenders = (): Map<string, any> => sendersContext.getStore() ?? sharedSenders;
 
-/** Runs `fn` with its own isolated RCS sender store — use per eval iteration. */
-export const withIsolatedSinchState = <T>(fn: () => Promise<T>): Promise<T> => sendersContext.run(new Map(), fn);
+// Same isolation need as the RCS senders above, for the fake WhatsApp template store.
+const templatesContext = new AsyncLocalStorage<Map<string, any>>();
+const sharedTemplates = new Map<string, any>();
+const currentTemplates = (): Map<string, any> => templatesContext.getStore() ?? sharedTemplates;
+const templateKey = (name: string, language: string): string => `${name}::${language}`;
+
+/** Runs `fn` with its own isolated RCS sender + WhatsApp template store — use per eval iteration. */
+export const withIsolatedSinchState = <T>(fn: () => Promise<T>): Promise<T> =>
+  sendersContext.run(new Map(), () => templatesContext.run(new Map(), fn));
 
 const isPlainObject = (value: unknown): value is Record<string, unknown> =>
   typeof value === 'object' && value !== null && !Array.isArray(value);
@@ -90,7 +98,7 @@ export const registerSinchMocks = (opts: { enforceLaunch?: boolean } = {}): void
       get: async ({ app_id }: { app_id: string }) => ({
         id: app_id,
         display_name: 'Mock App',
-        channel_credentials: [{ channel: 'SMS' }],
+        channel_credentials: [{ channel: 'SMS' }, { channel: 'WHATSAPP' }],
       }),
       update: async ({ app_id, appUpdateRequestBody }: any) => ({
         id: app_id,
@@ -101,6 +109,7 @@ export const registerSinchMocks = (opts: { enforceLaunch?: boolean } = {}): void
     },
     messages: {
       sendTextMessage: async () => ({ message_id: 'msg_mock_1' }),
+      sendTemplateMessage: async () => ({ message_id: 'msg_mock_whatsapp_1' }),
     },
   };
   // Must mirror ALL exports of the real module — a whole-module mock replaces it,
@@ -110,5 +119,68 @@ export const registerSinchMocks = (opts: { enforceLaunch?: boolean } = {}): void
     setConversationRegion: () => 'us',
     setTemplateRegion: () => 'us',
     getConversationAppId: (appId?: string) => appId ?? 'app_mock',
+  }));
+
+  // WhatsApp template management: stateful fake (create → name/language key → reuse across turns).
+  const whatsapp = {
+    listTemplates: async () => {
+      const templates = [...currentTemplates().values()];
+      return { totalSize: templates.length, pageSize: templates.length, templates };
+    },
+    createTemplate: async (body: any) => {
+      const template = {
+        name: body.name,
+        language: body.language,
+        category: body.category,
+        analytics: [],
+        isMetaGenerated: false,
+        state: body.status === 'DRAFT' ? 'DRAFT' : 'PENDING',
+        details: body.details,
+      };
+      currentTemplates().set(templateKey(body.name, body.language), template);
+      return template;
+    },
+    updateTemplate: async (templateName: string, languageCode: string, body: any) => {
+      const key = templateKey(templateName, languageCode);
+      const existing = currentTemplates().get(key) ?? {
+        name: templateName,
+        language: languageCode,
+        category: 'UTILITY',
+        analytics: [],
+        isMetaGenerated: false,
+        state: 'DRAFT',
+      };
+      const updated = {
+        ...existing,
+        ...body,
+        state: body.status === 'SUBMIT' ? 'PENDING' : 'DRAFT',
+      };
+      currentTemplates().set(key, updated);
+      return updated;
+    },
+    // Mirrors the real 409: a submitted (non-draft) template needs deleteSubmitted=true.
+    deleteTemplate: async (templateName: string, languageCode: string, deleteSubmitted?: boolean) => {
+      const key = templateKey(templateName, languageCode);
+      const existing = currentTemplates().get(key);
+      if (existing && existing.state !== 'DRAFT' && !deleteSubmitted) {
+        throw new WhatsAppApiError(
+          409,
+          'Conflict',
+          'template_not_deletable_due_to_input_config',
+          'Only draft templates will be deleted by name and language code if deleteSubmitted is false or not provided.',
+        );
+      }
+      currentTemplates().delete(key);
+    },
+    deleteTemplateByName: async (templateName: string) => {
+      for (const key of [...currentTemplates().keys()]) {
+        if (key.startsWith(`${templateName}::`)) {
+          currentTemplates().delete(key);
+        }
+      }
+    },
+  };
+  jest.unstable_mockModule('../../../../src/tools/whatsapp/utils/whatsapp-service-helper', () => ({
+    getWhatsAppProvisioningClient: () => whatsapp,
   }));
 };

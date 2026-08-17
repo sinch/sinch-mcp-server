@@ -1,14 +1,10 @@
 import { z } from 'zod';
-import {
-  WhatsAppTemplateCategory as WhatsAppTemplateCategorySchema,
-  WhatsAppTemplateLanguage as WhatsAppTemplateLanguageSchema,
-} from '../prompt-schemas';
+import { WhatsAppTemplateCategory as WhatsAppTemplateCategorySchema } from '../prompt-schemas';
 
 // Hand-written stand-ins for WhatsApp models @sinch/sdk-core doesn't expose
 // yet. Remove once the SDK adds native template creation support.
 
 // Derived from the Zod schema so accepted values can't drift from it.
-export type WhatsAppTemplateLanguage = z.infer<typeof WhatsAppTemplateLanguageSchema>;
 export type WhatsAppTemplateCategory = z.infer<typeof WhatsAppTemplateCategorySchema>;
 
 export type WhatsAppTemplateStatus = 'DRAFT' | 'SUBMIT';
@@ -98,7 +94,7 @@ export interface WhatsAppTemplateDetailsRequest {
 
 export interface CreateWhatsAppTemplateRequest {
   name: string;
-  language: WhatsAppTemplateLanguage;
+  language: string;
   category: WhatsAppTemplateCategory;
   details?: WhatsAppTemplateDetailsRequest;
   status?: WhatsAppTemplateStatus;

@@ -1,6 +1,6 @@
 import { z } from 'zod';
 
-export const WhatsAppTemplateLanguage = z.enum([
+const WhatsAppTemplateLanguageCode = z.enum([
   'AF',
   'AR',
   'AZ',
@@ -74,6 +74,8 @@ export const WhatsAppTemplateLanguage = z.enum([
   'ZH_TW',
   'ZU',
 ]);
+
+export const WhatsAppTemplateLanguage = z.union([WhatsAppTemplateLanguageCode, z.string()]);
 
 export const WhatsAppTemplateCategory = z.enum(['AUTHENTICATION', 'MARKETING', 'UTILITY']);
 
@@ -346,7 +348,9 @@ export const WhatsAppTemplateDetails = z
 
 export const CreateWhatsAppTemplateSchema = {
   name: z.string().describe('Template name.'),
-  language: WhatsAppTemplateLanguage.describe('Template language.'),
+  language: WhatsAppTemplateLanguage.describe(
+    'Template language — typically one of the listed codes, but any value Meta accepts is allowed since this list may not cover every language Meta supports.',
+  ),
   category: WhatsAppTemplateCategory.describe('Template category.'),
   details: WhatsAppTemplateDetails,
   status: WhatsAppTemplateStatus.optional().describe('Create as draft or submit for review. Defaults to submit.'),
@@ -367,7 +371,9 @@ export const CreateWhatsAppTemplateSchema = {
 
 export const UpdateWhatsAppTemplateSchema = {
   templateName: z.string().describe('The unique name of the template.'),
-  languageCode: WhatsAppTemplateLanguage.describe('The language code of the specific template.'),
+  languageCode: WhatsAppTemplateLanguage.describe(
+    'The language code of the specific template — typically one of the listed codes, but any value Meta accepts is allowed since this list may not cover every language Meta supports.',
+  ),
   status: WhatsAppTemplateStatus.optional().describe('Update as draft or submit for review. Defaults to draft.'),
   category: WhatsAppTemplateCategory.optional().describe(
     'New template category. Only applied if the template is a draft, or was rejected due to an incorrect category.',
@@ -379,4 +385,33 @@ export const UpdateWhatsAppTemplateSchema = {
       'Allow Meta to change the category if they determine it is wrong; if false, Meta might reject the template instead. Only applied if the template is a draft, or was rejected due to an incorrect category. Defaults to false.',
     ),
   details: WhatsAppTemplateDetails,
+};
+
+// ── delete-single-whatsapp-template-language ─────────────────────────────────
+// DELETE /v1/projects/{projectId}/whatsapp/templates/{templateName}/languages/{languageCode}
+// Deletes a single language variant only — other languages of the same template name are unaffected.
+
+export const DeleteSingleWhatsAppTemplateLanguageSchema = {
+  templateName: z.string().describe('The unique name of the template.'),
+  languageCode: WhatsAppTemplateLanguage.describe(
+    'The language code of the specific template variant to delete — typically one of the listed codes, but any value Meta accepts is allowed since this list may not cover every language Meta supports. Other language variants of this template name are left untouched.',
+  ),
+  deleteSubmitted: z
+    .boolean()
+    .optional()
+    .describe(
+      'Also delete the template already submitted to Meta, not just the draft. Defaults to false, which only deletes a draft and throws an error if the template has been submitted. Deleting an approved template does not free up its name — recreating a template with this same name and language is blocked for 30 days.',
+    ),
+};
+
+// ── delete-all-whatsapp-template-languages ───────────────────────────────────
+// DELETE /v1/projects/{projectId}/whatsapp/templates/{templateName}
+// Deletes every language variant of the template name at once.
+
+export const DeleteAllWhatsAppTemplateLanguagesSchema = {
+  templateName: z
+    .string()
+    .describe(
+      'The unique name of the template. Every language variant of this template name is deleted — to remove only one language, use delete-single-whatsapp-template-language instead.',
+    ),
 };

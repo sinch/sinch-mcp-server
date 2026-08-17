@@ -15,6 +15,14 @@ export const toolsConfig = defineToolsConfig({
     name: 'update-whatsapp-template',
     tags: ['all', 'whatsapp', 'configuration', 'update-whatsapp-template'],
   },
+  deleteSingleWhatsAppTemplateLanguage: {
+    name: 'delete-single-whatsapp-template-language',
+    tags: ['all', 'whatsapp', 'configuration', 'delete-single-whatsapp-template-language'],
+  },
+  deleteAllWhatsAppTemplateLanguages: {
+    name: 'delete-all-whatsapp-template-languages',
+    tags: ['all', 'whatsapp', 'configuration', 'delete-all-whatsapp-template-languages'],
+  },
 });
 
 export type WhatsAppToolKey = keyof typeof toolsConfig;
