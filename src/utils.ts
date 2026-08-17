@@ -19,3 +19,9 @@ export const matchesAnyTag = (tags: string[], filteringTags: string[]): boolean 
 export const formatUserAgent = (toolName: string, userId: string): string => {
   return USER_AGENT.replace('{toolName}', toolName).replace('{userId}', userId);
 };
+
+export const extractHeaderValue = (headerValue: string | string[] | undefined): string | undefined => {
+  const value = Array.isArray(headerValue) ? headerValue[0] : headerValue;
+  const trimmed = value?.trim();
+  return trimmed ? trimmed : undefined;
+};

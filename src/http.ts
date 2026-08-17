@@ -126,13 +126,6 @@ export const createHttpApp = () => {
     setHttpCredentialSource('request-header');
   }
 
-  const runWithCredentials = <T>(req: Request, fn: () => T): T => {
-    if (isSingleTenant) {
-      return fn();
-    }
-    return runWithHttpCredentialHeaders(req.headers, fn);
-  };
-
   const handleMcpRequest = async (req: Request, res: Response): Promise<void> => {
     const sessionId = getSessionId(req);
 
@@ -143,7 +136,7 @@ export const createHttpApp = () => {
         return;
       }
 
-      await runWithCredentials(req, () => entry.transport.handleRequest(req, res, req.body));
+      await runWithHttpCredentialHeaders(req.headers, () => entry.transport.handleRequest(req, res, req.body));
       return;
     }
 
@@ -162,7 +155,7 @@ export const createHttpApp = () => {
     }
 
     const entry = await createSession();
-    await runWithCredentials(req, () => entry.transport.handleRequest(req, res, req.body));
+    await runWithHttpCredentialHeaders(req.headers, () => entry.transport.handleRequest(req, res, req.body));
   };
 
   const app = express();
