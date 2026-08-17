@@ -6,6 +6,7 @@ import {
   type SinchOAuthCredentials,
 } from './sinch-oauth-credentials';
 import { extractHeaderValue } from '../utils';
+import { decodeUserJwtHeader, type SinchUserClaims } from './user-jwt';
 
 /**
  * Custom header carrying the agent installation identifier (e.g. the Gemini
@@ -18,6 +19,7 @@ export const AGENT_ID_HEADER = 'x-agent-id';
 type RequestAuthContext = {
   credentials?: SinchOAuthCredentials;
   agentId?: string;
+  userClaims?: SinchUserClaims;
 };
 
 const requestAuthStorage = new AsyncLocalStorage<RequestAuthContext>();
@@ -30,10 +32,15 @@ export const getRequestAgentId = (): string | undefined => {
   return requestAuthStorage.getStore()?.agentId;
 };
 
+export const getRequestUserClaims = (): SinchUserClaims | undefined => {
+  return requestAuthStorage.getStore()?.userClaims;
+};
+
 export const runWithHttpCredentialHeaders = <T>(headers: IncomingHttpHeaders, fn: () => T): T => {
   const context: RequestAuthContext = {
     credentials: parseSinchCredentialsHeader(headers[SINCH_CREDENTIALS_HEADER]),
     agentId: extractHeaderValue(headers[AGENT_ID_HEADER]),
+    userClaims: decodeUserJwtHeader(headers.authorization),
   };
   return requestAuthStorage.run(context, fn);
 };

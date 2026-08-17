@@ -413,6 +413,18 @@ Agent integrations (e.g. an agent installed in a Gemini Enterprise app) may send
 | ------------ | -------------------------------------------------- |
 | `x-agent-id` | Agent installation identifier (e.g. GE `OrderId`) |
 
+#### `Authorization` user JWT (optional)
+
+After the end-user completes the OAuth login and consent flow, agent integrations may send the resulting Auth0 user JWT on each request:
+
+| Header          | Value               |
+| --------------- | ------------------- |
+| `Authorization` | `Bearer <user JWT>` |
+
+The server base64-decodes the JWT payload and captures the Sinch claims (`https://sinch.com/project_id`, `https://sinch.com/account_id`, `https://sinch.com/email`, `https://sinch.com/global_user_id`, and `sub`) in the request context, logging them for **audit purposes only**. The token signature is **not** verified and the claims are never used to resolve API credentials (the `x-agent-id` header serves that purpose). A missing or malformed token is ignored and the request proceeds normally. In the long term, the user JWT will be exchanged for an M2M JWT, replacing the custom headers.
+
+Note: in **single-tenant** mode the `Authorization` header carries the MCP API key instead; an opaque key is not a JWT, so no claims are captured.
+
 #### MCP_API_KEYS key rotation
 
 Use `MCP_API_KEYS` (comma-separated) in **single-tenant** mode to accept an old and new gateway key during rotation, then remove the retired key.

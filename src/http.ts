@@ -3,13 +3,14 @@ import express, { type Request, type Response } from 'express';
 import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js';
 import { isInitializeRequest } from '@modelcontextprotocol/sdk/types.js';
 import dotenv from 'dotenv';
-import { runWithHttpCredentialHeaders } from './auth/credential-context';
+import { getRequestAgentId, getRequestUserClaims, runWithHttpCredentialHeaders } from './auth/credential-context';
 import { setHttpCredentialSource } from './auth/http-credential-mode';
 import { createMcpApiKeyMiddleware, loadMcpApiKeys } from './auth/mcp-api-key';
 import { getMaxMcpSessions, isMcpSessionCapacityReached } from './auth/http-session-limits';
 import { env } from './env';
 import { buildJsonRpcErrorResponse } from './json-rpc';
 import { instantiateMcpServer, getToolsFilter, registerCapabilities } from './server';
+import { logger } from './telemetry/logger';
 
 dotenv.config();
 
@@ -78,6 +79,25 @@ const removeSession = async (sessionId: string): Promise<void> => {
   }
 };
 
+const logUserJwtAuditTrail = (): void => {
+  const claims = getRequestUserClaims();
+  if (!claims) {
+    return;
+  }
+
+  logger.info(
+    {
+      project_id: claims.projectId,
+      account_id: claims.accountId,
+      email: claims.email,
+      global_user_id: claims.globalUserId,
+      sub: claims.subject,
+      agent_id: getRequestAgentId(),
+    },
+    'Agent user request (unverified JWT claims)',
+  );
+};
+
 const createSession = async (): Promise<SessionEntry> => {
   const mcpServer = instantiateMcpServer();
   registerCapabilities(mcpServer, getToolsFilter(process.argv));
@@ -136,7 +156,10 @@ export const createHttpApp = () => {
         return;
       }
 
-      await runWithHttpCredentialHeaders(req.headers, () => entry.transport.handleRequest(req, res, req.body));
+      await runWithHttpCredentialHeaders(req.headers, () => {
+        logUserJwtAuditTrail();
+        return entry.transport.handleRequest(req, res, req.body);
+      });
       return;
     }
 
@@ -155,7 +178,10 @@ export const createHttpApp = () => {
     }
 
     const entry = await createSession();
-    await runWithHttpCredentialHeaders(req.headers, () => entry.transport.handleRequest(req, res, req.body));
+    await runWithHttpCredentialHeaders(req.headers, () => {
+      logUserJwtAuditTrail();
+      return entry.transport.handleRequest(req, res, req.body);
+    });
   };
 
   const app = express();
