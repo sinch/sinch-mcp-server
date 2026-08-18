@@ -4,7 +4,7 @@ nameOverride: ""
 fullnameOverride: ""
 
 image:
-  repository: 751656163200.dkr.ecr.eu-west-1.amazonaws.com/gitlab/sinch/sinch-projects/product/agent-experience/sinch-mcp-server
+  repository: registry.gitlab.com/sinch/sinch-projects/product/agent-experience/sinch-mcp-server
   # Fallback for local `helm template` / `helm install` only. In every deployed
   # environment this is overridden by the HelmRelease in k8s-manifests-mcp-messaging,
   # which the `update-manifests` CI job bumps to the freshly built image tag.
