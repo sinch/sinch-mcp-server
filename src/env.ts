@@ -24,6 +24,7 @@ export const env = createEnv({
     OTEL_PROPAGATORS: z.string().optional(),
     LOG_LEVEL: z.enum(['fatal', 'error', 'warn', 'info', 'debug', 'trace', 'silent']).optional(),
     MCP_TAGS: z.string().optional(),
+    AGENT_CREDENTIALS: z.string().optional(),
   },
   runtimeEnvStrict: {
     PROJECT_ID: process.env.PROJECT_ID,
@@ -44,6 +45,7 @@ export const env = createEnv({
     OTEL_PROPAGATORS: process.env.OTEL_PROPAGATORS,
     LOG_LEVEL: process.env.LOG_LEVEL,
     MCP_TAGS: process.env.MCP_TAGS,
+    AGENT_CREDENTIALS: process.env.AGENT_CREDENTIALS,
   },
   emptyStringAsUndefined: true,
   onValidationError: (issues: readonly StandardSchemaV1.Issue[]) => {
