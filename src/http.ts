@@ -3,8 +3,9 @@ import express, { type Request, type Response } from 'express';
 import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js';
 import { isInitializeRequest } from '@modelcontextprotocol/sdk/types.js';
 import dotenv from 'dotenv';
+import { loadAgentCredentials, resolveAgentCredentials } from './auth/agent-credentials';
 import { getRequestAgentId, getRequestUserClaims, runWithHttpCredentialHeaders } from './auth/credential-context';
-import { setHttpCredentialSource } from './auth/http-credential-mode';
+import { getHttpCredentialSource, setHttpCredentialSource } from './auth/http-credential-mode';
 import { createMcpApiKeyMiddleware, loadMcpApiKeys } from './auth/mcp-api-key';
 import { getMaxMcpSessions, isMcpSessionCapacityReached } from './auth/http-session-limits';
 import { env } from './env';
@@ -81,18 +82,26 @@ const removeSession = async (sessionId: string): Promise<void> => {
 
 const logUserJwtAuditTrail = (): void => {
   const claims = getRequestUserClaims();
-  if (!claims) {
+  const agentId = getRequestAgentId();
+  if (!claims && !agentId) {
     return;
   }
 
   logger.info(
     {
-      project_id: claims.projectId,
-      account_id: claims.accountId,
-      email: claims.email,
-      global_user_id: claims.globalUserId,
-      sub: claims.subject,
-      agent_id: getRequestAgentId(),
+      project_id: claims?.projectId,
+      account_id: claims?.accountId,
+      email: claims?.email,
+      global_user_id: claims?.globalUserId,
+      sub: claims?.subject,
+      agent_id: agentId,
+      // Tenant the request will act as, resolved from the AGENT_CREDENTIALS map (never secrets).
+      // Only meaningful in multi-tenant mode; in single-tenant mode the map is not validated at
+      // startup, so it must not be parsed here either.
+      tenant_project_id:
+        agentId && getHttpCredentialSource() === 'request-header'
+          ? resolveAgentCredentials(agentId)?.projectId
+          : undefined,
     },
     'Agent user request (unverified JWT claims)',
   );
@@ -143,6 +152,8 @@ export const createHttpApp = () => {
           'Either set CONVERSATION_REGION, or set MCP_API_KEY to run in single-tenant mode.',
       );
     }
+    // Fail fast on a malformed AGENT_CREDENTIALS map rather than on the first request.
+    loadAgentCredentials();
     setHttpCredentialSource('request-header');
   }
 
