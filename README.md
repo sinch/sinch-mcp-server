@@ -405,8 +405,6 @@ The SinchID token's signature is **not** verified in-app — the check only ensu
 
 Two deployments of the same image, each with its own `MCP_AUTH_MODE`, therefore serve the two audiences on separate hostnames without either accepting the other's credentials. `MCP_AUTH_MODE` has no effect over stdio.
 
-> **`sinchid-agent` is not functional yet.** Credential resolution for this mode lands in [DEVEXP-1631](https://sinchenterprise.atlassian.net/browse/DEVEXP-1631); until then its tools return an explanatory prompt instead of running.
-
 #### `Authorization` credentials format (HTTP only)
 
 1. Build a UTF-8 string: `projectId:keyId:keySecret` (see [API credentials](#api-credentials)).
@@ -433,11 +431,26 @@ curl -X POST "http://localhost:8000/mcp" \
 
 #### `x-agent-id` header (`sinchid-agent` only)
 
-Agent integrations (e.g. an agent installed in a Gemini Enterprise app) send an `x-agent-id` header carrying the unique installation identifier (the Marketplace **OrderId**). Its purpose is to distinguish which installation is calling the MCP server, so it is **required** on deployments running with `MCP_AUTH_MODE=sinchid-agent`: it will be used to resolve the caller's Sinch credentials in an upcoming release. Elsewhere it is simply not read — the other modes ignore it, and over stdio credentials always come from the environment. This custom header is a temporary mechanism until a token-exchange capability is available over M2M authentication.
+Agent integrations (e.g. an agent installed in a Gemini Enterprise app) send an `x-agent-id` header carrying the Marketplace **OrderId**. It is **required** when `MCP_AUTH_MODE=sinchid-agent`. The server combines it with the Sinch project id from the user JWT to resolve M2M credentials from `AGENT_CREDENTIALS`. Other modes ignore this header. This custom header is temporary until token exchange is available over M2M authentication.
 
 | Header       | Value                                             |
 | ------------ | ------------------------------------------------- |
 | `x-agent-id` | Agent installation identifier (e.g. GE `OrderId`) |
+
+#### `AGENT_CREDENTIALS` map (`sinchid-agent` only)
+
+`AGENT_CREDENTIALS` is a JSON map keyed by `<orderId>:<projectId>`:
+
+```json
+{
+  "<orderId>:<projectId>": {
+    "accessKeyId": "<Sinch access key id>",
+    "accessKeySecret": "<Sinch access key secret>"
+  }
+}
+```
+
+A malformed value makes a `sinchid-agent` deployment refuse to start. Other modes do not parse it.
 
 #### `Authorization` user JWT (agent deployments)
 
