@@ -156,7 +156,7 @@ publish-chart:
       echo "${CHART_NAME}-${CHART_VERSION} not found in Nexus — packaging and publishing."
       helm package helm/ --version "${CHART_VERSION}" --app-version "${APP_VERSION}"
 
-      curl -sf --fail-with-body -u "${NEXUS_USERNAME}:${NEXUS_PASSWORD}" \
+      curl -s --fail-with-body --show-error -u "${NEXUS_USERNAME}:${NEXUS_PASSWORD}" \
         --upload-file "${CHART_NAME}-${CHART_VERSION}.tgz" \
         "${NEXUS_HELM_REPO}/"
 
