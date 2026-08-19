@@ -51,11 +51,21 @@ kubectl -n mcp-messaging create secret generic sinch-mcp-server \
 
 ## Local image smoke test
 
+REDIS_URL is required — the server exits immediately on startup without it. Run a throwaway
+Redis on the same Docker network so the container can reach it by name:
+
 ```bash
+docker network create mcp-smoke-test
+docker run -d --rm --name redis --network mcp-smoke-test redis:8-alpine
+
 docker build -t sinch-mcp-server:local .
-docker run --rm -p 8000:8000 \
+docker run --rm -p 8000:8000 --network mcp-smoke-test \
   -e MCP_API_KEY=dev \
   -e PROJECT_ID=x -e KEY_ID=x -e KEY_SECRET=x \
+  -e REDIS_URL=redis://redis:6379 \
   sinch-mcp-server:local
 curl -s http://127.0.0.1:8000/health/live
+
+docker stop redis
+docker network rm mcp-smoke-test
 ```
