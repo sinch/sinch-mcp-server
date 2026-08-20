@@ -38,28 +38,29 @@ describe('user-jwt', () => {
       });
     });
 
-    it('falls back to the standard email claim when the Sinch one is absent', () => {
-      const claims = decodeUserJwtHeader(`Bearer ${buildJwt({ email: 'user@example.com' })}`);
-      expect(claims?.email).toBe('user@example.com');
+    it('ignores the standard email claim (only the Sinch-namespaced one is audited)', () => {
+      const claims = decodeUserJwtHeader(`Bearer ${buildJwt({ email: 'user@example.com', sub: 'auth0|123' })}`);
+
+      expect(claims?.email).toBeUndefined();
+      expect(claims?.subject).toBe('auth0|123');
     });
 
-    it('leaves unknown claims undefined', () => {
-      const claims = decodeUserJwtHeader(`Bearer ${buildJwt({ iss: 'https://id.sinch.com/' })}`);
-
-      expect(claims).toEqual({
-        projectId: undefined,
-        accountId: undefined,
-        email: undefined,
-        globalUserId: undefined,
-        subject: undefined,
-      });
+    it('returns undefined when the JWT carries none of the expected claims', () => {
+      expect(decodeUserJwtHeader(`Bearer ${buildJwt({ iss: 'https://id.sinch.com/' })}`)).toBeUndefined();
     });
 
     it('ignores non-string claim values', () => {
-      const claims = decodeUserJwtHeader(`Bearer ${buildJwt({ [SINCH_PROJECT_ID_CLAIM]: 42, sub: null })}`);
+      const claims = decodeUserJwtHeader(
+        `Bearer ${buildJwt({ [SINCH_PROJECT_ID_CLAIM]: 42, sub: null, [SINCH_EMAIL_CLAIM]: 'user@example.com' })}`,
+      );
 
       expect(claims?.projectId).toBeUndefined();
       expect(claims?.subject).toBeUndefined();
+      expect(claims?.email).toBe('user@example.com');
+    });
+
+    it('returns undefined when all claim values are non-string', () => {
+      expect(decodeUserJwtHeader(`Bearer ${buildJwt({ [SINCH_PROJECT_ID_CLAIM]: 42, sub: null })}`)).toBeUndefined();
     });
 
     it('returns undefined for a missing header', () => {

@@ -53,7 +53,8 @@ const stringClaim = (payload: Record<string, unknown>, claim: string): string | 
  *
  * Returns undefined for anything that is not a well-formed three-segment JWT
  * with a JSON object payload (e.g. an opaque MCP API key in single-tenant
- * mode, or a missing header).
+ * mode, or a missing header), and for JWTs that carry none of the expected
+ * claims (nothing useful to audit).
  */
 export const decodeUserJwtHeader = (
   authorizationHeader: string | string[] | undefined,
@@ -68,11 +69,14 @@ export const decodeUserJwtHeader = (
     return undefined;
   }
 
-  return {
+  const claims: SinchUserClaims = {
     projectId: stringClaim(payload, SINCH_PROJECT_ID_CLAIM),
     accountId: stringClaim(payload, SINCH_ACCOUNT_ID_CLAIM),
-    email: stringClaim(payload, SINCH_EMAIL_CLAIM) ?? stringClaim(payload, 'email'),
+    email: stringClaim(payload, SINCH_EMAIL_CLAIM),
     globalUserId: stringClaim(payload, SINCH_GLOBAL_USER_ID_CLAIM),
     subject: stringClaim(payload, 'sub'),
   };
+
+  const hasAnyClaim = Object.values(claims).some((value) => value !== undefined);
+  return hasAnyClaim ? claims : undefined;
 };
