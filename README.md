@@ -429,8 +429,8 @@ The server resolves the `x-agent-id` header against the `AGENT_CREDENTIALS` envi
 
 Resolution order per request:
 
-1. If `x-agent-id` is present and found in `AGENT_CREDENTIALS`, the mapped credentials are used (they take precedence over `X-Sinch-Credentials`).
-2. If `x-agent-id` is present but **unknown**, a warning is logged and the server falls back to `X-Sinch-Credentials` if provided; otherwise the tool call returns an explanatory error.
+1. If `x-agent-id` is present and found in `AGENT_CREDENTIALS`, the mapped credentials are used (`X-Sinch-Credentials` is ignored).
+2. If `x-agent-id` is present but **unknown**, the tool call **fails immediately** with an explanatory error (and a warning is logged) — there is no fallback, so configuration mistakes surface right away.
 3. If no `x-agent-id` is sent, `X-Sinch-Credentials` is used as before.
 
 A malformed `AGENT_CREDENTIALS` value (invalid JSON or missing fields) makes the server **refuse to start** in multi-tenant mode. Mapped credentials share the same OAuth token LRU cache as header-provided ones.
