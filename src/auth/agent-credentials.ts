@@ -27,13 +27,25 @@ const agentCredentialsEntrySchema = z.object({
   accessKeySecret: z.string().trim().min(1),
 });
 
-const agentCredentialsMapSchema = z.record(z.string().min(1), agentCredentialsEntrySchema);
+const agentCredentialsMapSchema = z.record(z.string().trim().min(1), agentCredentialsEntrySchema);
 
 type AgentCredentialsMap = ReadonlyMap<string, SinchOAuthCredentials>;
 
 const EMPTY_MAP: AgentCredentialsMap = new Map();
 
 let cachedCredentialsByAgentId: AgentCredentialsMap | undefined;
+
+const findDuplicateTrimmedKey = (keys: string[]): string | undefined => {
+  const seen = new Set<string>();
+  for (const key of keys) {
+    const trimmed = key.trim();
+    if (seen.has(trimmed)) {
+      return trimmed;
+    }
+    seen.add(trimmed);
+  }
+  return undefined;
+};
 
 const parseAgentCredentials = (rawValue: string): AgentCredentialsMap => {
   let json: unknown;
@@ -51,6 +63,13 @@ const parseAgentCredentials = (rawValue: string): AgentCredentialsMap => {
     // Report offending agent ids and fields only; never echo credential values.
     const issues = parsed.error.issues.map((issue) => `${issue.path.join('.') || '(root)'}: ${issue.message}`);
     throw new Error(`${AGENT_CREDENTIALS_ENV_VAR} has an invalid shape: ${issues.join('; ')}`);
+  }
+
+  // Zod already trims the record keys, silently keeping the last entry when two raw
+  // keys collapse to the same trimmed id — detect that on the raw keys instead.
+  const duplicateAgentId = findDuplicateTrimmedKey(Object.keys(json as Record<string, unknown>));
+  if (duplicateAgentId !== undefined) {
+    throw new Error(`${AGENT_CREDENTIALS_ENV_VAR} contains duplicate agent id "${duplicateAgentId}" after trimming.`);
   }
 
   return new Map(

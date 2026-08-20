@@ -12,8 +12,9 @@ import { PromptResponse } from '../types';
 export const resolveSinchOAuthCredentials = (): SinchOAuthCredentials | PromptResponse => {
   // Multi-tenant HTTP: credentials come from the request, never from the server env.
   if (getHttpCredentialSource() === 'request-header') {
-    // The x-agent-id header takes precedence: a known agent installation is
-    // mapped to its M2M credentials through the AGENT_CREDENTIALS env var.
+    // When x-agent-id is sent, it is the only credential mechanism considered: an
+    // unknown agent id fails immediately (fail-closed) rather than silently falling
+    // back to X-Sinch-Credentials, so configuration mistakes surface right away.
     const agentId = getRequestAgentId();
     if (agentId) {
       const fromAgent = resolveAgentCredentials(agentId);
@@ -24,6 +25,9 @@ export const resolveSinchOAuthCredentials = (): SinchOAuthCredentials | PromptRe
         { agent_id: agentId },
         `Unknown agent id in ${AGENT_ID_HEADER} header: not present in the agent credentials map`,
       );
+      return new PromptResponse(
+        `Unknown agent id "${agentId}": it is not present in the server's agent credentials map.`,
+      );
     }
 
     const fromRequest = getRequestSinchOAuthCredentials();
@@ -31,12 +35,6 @@ export const resolveSinchOAuthCredentials = (): SinchOAuthCredentials | PromptRe
       return fromRequest;
     }
 
-    if (agentId) {
-      return new PromptResponse(
-        `Unknown agent id "${agentId}": it is not present in the server's agent credentials map, ` +
-          `and no ${SINCH_CREDENTIALS_HEADER} header was provided as a fallback.`,
-      );
-    }
     return new PromptResponse(`Missing ${SINCH_CREDENTIALS_HEADER} header (Base64 of projectId:keyId:keySecret).`);
   }
 

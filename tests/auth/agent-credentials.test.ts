@@ -109,6 +109,32 @@ describe('agent-credentials', () => {
       mockEnv.AGENT_CREDENTIALS = JSON.stringify(['order-42']);
       expect(() => loadAgentCredentials()).toThrow(/invalid shape/);
     });
+
+    it('trims whitespace around agent ids', () => {
+      mockEnv.AGENT_CREDENTIALS = JSON.stringify({
+        ' order-42 ': { projectId: 'project-a', accessKeyId: 'key-a', accessKeySecret: 'secret-a' },
+      });
+
+      const credentials = loadAgentCredentials();
+
+      expect(credentials.get('order-42')?.projectId).toBe('project-a');
+      expect(credentials.has(' order-42 ')).toBeFalse();
+    });
+
+    it('throws when an agent id is blank', () => {
+      mockEnv.AGENT_CREDENTIALS = JSON.stringify({
+        '   ': { projectId: 'project-a', accessKeyId: 'key-a', accessKeySecret: 'secret-a' },
+      });
+      expect(() => loadAgentCredentials()).toThrow(/invalid shape/);
+    });
+
+    it('throws when two agent ids collide after trimming', () => {
+      mockEnv.AGENT_CREDENTIALS = JSON.stringify({
+        'order-42': { projectId: 'project-a', accessKeyId: 'key-a', accessKeySecret: 'secret-a' },
+        ' order-42': { projectId: 'project-b', accessKeyId: 'key-b', accessKeySecret: 'secret-b' },
+      });
+      expect(() => loadAgentCredentials()).toThrow(/duplicate agent id "order-42"/);
+    });
   });
 
   describe('resolveAgentCredentials', () => {
