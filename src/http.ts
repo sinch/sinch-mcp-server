@@ -237,9 +237,18 @@ const closeServer = (server: Server): Promise<void> =>
     server.close((error) => (error ? reject(error) : resolve()));
   });
 
+// server.close() only stops accepting new connections; open SSE streams from active
+// MCP sessions keep sockets alive and would block close() indefinitely, so drop them first.
+const closeAllSessions = (): Promise<void[]> => Promise.all(Array.from(sessions.keys()).map(removeSession));
+
 // Fail readiness first so the Service stops routing, then drain before close.
 // Pairs with the Deployment preStop sleep for endpoint controller lag.
 const shutdown = async (server: Server, signal: string): Promise<void> => {
+  // Guards against a second signal (e.g. SIGTERM then SIGINT) re-running the drain
+  // and closing an already-closed server.
+  if (isShuttingDown) {
+    return;
+  }
   console.error(`Received ${signal}, marking not ready before closing HTTP server`);
   isShuttingDown = true;
   const drainMs = getShutdownDrainMs();
@@ -248,6 +257,7 @@ const shutdown = async (server: Server, signal: string): Promise<void> => {
     await sleep(drainMs);
   }
   try {
+    await closeAllSessions();
     await closeServer(server);
     process.exit(0);
   } catch (error) {
