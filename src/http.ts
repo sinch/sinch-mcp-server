@@ -221,8 +221,13 @@ export const getShutdownDrainMs = (): number => {
 
 const sleep = (ms: number): Promise<void> => new Promise((resolve) => setTimeout(resolve, ms));
 
-const waitForListening = (server: Server): Promise<void> =>
+/** Exposed for unit tests. */
+export const waitForListening = (server: Server): Promise<void> =>
   new Promise((resolve, reject) => {
+    if (server.listening) {
+      resolve();
+      return;
+    }
     server.once('listening', resolve);
     server.once('error', reject);
   });
