@@ -1,4 +1,5 @@
-import { createHttpApp } from '../src/http';
+import http from 'node:http';
+import { createHttpApp, waitForListening } from '../src/http';
 import { clearHttpCredentialSourceForTests, getHttpCredentialSource } from '../src/auth/http-credential-mode';
 import { mockEnv, resetMockEnv } from './helpers/mock-env';
 
@@ -50,5 +51,16 @@ describe('createHttpApp startup validation', () => {
     process.env.MCP_API_KEY = 'test-api-key';
     expect(() => createHttpApp()).not.toThrow();
     expect(getHttpCredentialSource()).toBe('env');
+  });
+});
+
+describe('waitForListening', () => {
+  it('resolves when the server is already listening', async () => {
+    const server = http.createServer();
+    await new Promise<void>((resolve) => server.listen(0, '127.0.0.1', () => resolve()));
+
+    await expect(waitForListening(server)).resolves.toBeUndefined();
+
+    await new Promise<void>((resolve) => server.close(() => resolve()));
   });
 });
