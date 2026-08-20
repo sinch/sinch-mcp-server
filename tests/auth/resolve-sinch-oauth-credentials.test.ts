@@ -64,7 +64,7 @@ describe('resolveSinchOAuthCredentials', () => {
       expect(resolved).toMatchObject({ projectId: 'agent-project' });
     });
 
-    it('falls back to x-sinch-credentials for an unknown agent id, with a warning', () => {
+    it('fails closed for an unknown agent id even when x-sinch-credentials is sent', () => {
       mockEnv.AGENT_CREDENTIALS = agentCredentialsMap;
 
       const resolved = runWithHttpCredentialHeaders(
@@ -72,11 +72,11 @@ describe('resolveSinchOAuthCredentials', () => {
         () => resolveSinchOAuthCredentials(),
       );
 
-      expect(resolved).toMatchObject({ projectId: 'header-project' });
+      expect(resolved).toBeInstanceOf(PromptResponse);
       expect(logger.warn).toHaveBeenCalledWith({ agent_id: 'order-99' }, expect.stringContaining('Unknown agent id'));
     });
 
-    it('returns a prompt response for an unknown agent id without a fallback header', () => {
+    it('returns a prompt response naming the unknown agent id', () => {
       mockEnv.AGENT_CREDENTIALS = agentCredentialsMap;
 
       const resolved = runWithHttpCredentialHeaders({ [AGENT_ID_HEADER]: 'order-99' }, () =>
