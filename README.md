@@ -77,11 +77,11 @@ Here is the list of tools available in the MCP server (all the phone numbers mus
 
 ### WhatsApp Template Tools
 
-| Tool                                        | Description                                                                                                                                                                                                                                                                                 | Tags                    |
-| ------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------- |
-| **list-whatsapp-templates**                 | List the WhatsApp channel-specific message templates (managed by Meta). Omni-channel templates can be fetched with the `list-messaging-templates` tool. <br> _Example prompt_: "Show me my WhatsApp templates."                                                                             |
-| **create-whatsapp-template**                | Create a WhatsApp message template, as a draft or submitted for review. <br> _Example prompt_: "Create a WhatsApp UTILITY template named order_confirmation in English with body text 'Your order {{1}} has shipped.'"                                                                      | whatsapp, configuration |
-| **update-whatsapp-template**                | Update a WhatsApp message template draft (or reset an APPROVED/REJECTED/PAUSED/DISABLED template to draft) by name and language. <br> _Example prompt_: "Update the order_confirmation EN WhatsApp template's body text to 'Your order {{1}} has shipped today.' and submit it for review." | whatsapp, configuration |
+| Tool                                         | Description                                                                                                                                                                                                                                                                                 | Tags                    |
+| -------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------- |
+| **list-whatsapp-templates**                  | List the WhatsApp channel-specific message templates (managed by Meta). Omni-channel templates can be fetched with the `list-messaging-templates` tool. <br> _Example prompt_: "Show me my WhatsApp templates."                                                                             |
+| **create-whatsapp-template**                 | Create a WhatsApp message template, as a draft or submitted for review. <br> _Example prompt_: "Create a WhatsApp UTILITY template named order_confirmation in English with body text 'Your order {{1}} has shipped.'"                                                                      | whatsapp, configuration |
+| **update-whatsapp-template**                 | Update a WhatsApp message template draft (or reset an APPROVED/REJECTED/PAUSED/DISABLED template to draft) by name and language. <br> _Example prompt_: "Update the order_confirmation EN WhatsApp template's body text to 'Your order {{1}} has shipped today.' and submit it for review." | whatsapp, configuration |
 | **delete-single-whatsapp-template-language** | Delete a single language variant of a WhatsApp message template by name and language — other languages of the same template name are unaffected. <br> _Example prompt_: "Delete the draft of the order_confirmation EN WhatsApp template."                                                  | whatsapp, configuration |
 | **delete-all-whatsapp-template-languages**   | Delete every language variant of a WhatsApp message template by name in one call. <br> _Example prompt_: "Delete all language variants of the order_confirmation WhatsApp template."                                                                                                        | whatsapp, configuration |
 
@@ -407,11 +407,33 @@ curl -X POST "http://localhost:8000/mcp" \
 
 #### `x-agent-id` header (multi-tenant only)
 
-Agent integrations (e.g. an agent installed in a Gemini Enterprise app) may send an `x-agent-id` header carrying the unique installation identifier (the Marketplace **OrderId**). Its purpose is to distinguish which installation is calling the MCP server, so it is meant for **multi-tenant** deployments only: it will be used to resolve the caller's Sinch credentials in an upcoming release. In single-tenant mode credentials always come from the server environment, so the header serves no purpose there. This custom header is a temporary mechanism until a token-exchange capability is available over M2M authentication.
+Agent integrations (e.g. an agent installed in a Gemini Enterprise app) may send an `x-agent-id` header carrying the unique installation identifier (the Marketplace **OrderId**). It is used to resolve the caller's Sinch M2M credentials from the server-side `AGENT_CREDENTIALS` map (see below), so it is meant for **multi-tenant** deployments only. In single-tenant mode credentials always come from the server environment, so the header serves no purpose there. This custom header is a temporary mechanism until a token-exchange capability is available over M2M authentication.
 
-| Header       | Value                                              |
-| ------------ | -------------------------------------------------- |
+| Header       | Value                                             |
+| ------------ | ------------------------------------------------- |
 | `x-agent-id` | Agent installation identifier (e.g. GE `OrderId`) |
+
+#### `AGENT_CREDENTIALS` map (multi-tenant only)
+
+The server resolves the `x-agent-id` header against the `AGENT_CREDENTIALS` environment variable, a JSON map of known agent installations to their Sinch M2M credentials:
+
+```json
+{
+  "<agentId>": {
+    "projectId": "<Sinch project id>",
+    "accessKeyId": "<Sinch access key id>",
+    "accessKeySecret": "<Sinch access key secret>"
+  }
+}
+```
+
+Resolution order per request:
+
+1. If `x-agent-id` is present and found in `AGENT_CREDENTIALS`, the mapped credentials are used (`X-Sinch-Credentials` is ignored).
+2. If `x-agent-id` is present but **unknown**, the tool call **fails immediately** with an explanatory error (and a warning is logged) — there is no fallback, so configuration mistakes surface right away.
+3. If no `x-agent-id` is sent, `X-Sinch-Credentials` is used as before.
+
+A malformed `AGENT_CREDENTIALS` value (invalid JSON or missing fields) makes the server **refuse to start** in multi-tenant mode. Mapped credentials share the same OAuth token LRU cache as header-provided ones.
 
 #### `Authorization` user JWT (optional)
 

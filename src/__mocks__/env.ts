@@ -17,6 +17,7 @@ export type MockServerEnv = {
   OTEL_PROPAGATORS?: string;
   LOG_LEVEL?: 'fatal' | 'error' | 'warn' | 'info' | 'debug' | 'trace' | 'silent';
   MCP_TAGS?: string;
+  AGENT_CREDENTIALS?: string;
 };
 
 export const mockEnv: MockServerEnv = {};
