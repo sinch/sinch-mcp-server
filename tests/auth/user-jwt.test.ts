@@ -1,10 +1,4 @@
-import {
-  decodeUserJwtHeader,
-  SINCH_ACCOUNT_ID_CLAIM,
-  SINCH_EMAIL_CLAIM,
-  SINCH_GLOBAL_USER_ID_CLAIM,
-  SINCH_PROJECT_ID_CLAIM,
-} from '../../src/auth/user-jwt';
+import { decodeUserJwtHeader, SINCH_EMAIL_CLAIM, SINCH_PROJECT_ID_CLAIM } from '../../src/auth/user-jwt';
 import { AGENT_ID_HEADER, getRequestUserClaims, runWithHttpCredentialHeaders } from '../../src/auth/credential-context';
 
 const base64Url = (value: object): string => Buffer.from(JSON.stringify(value)).toString('base64url');
@@ -14,14 +8,22 @@ const buildJwt = (payload: object): string => {
   return `${header}.${base64Url(payload)}.fake-signature`;
 };
 
+// Full raw payload shape as issued by Auth0, using mock (non-PII) values.
 const examplePayload = {
-  [SINCH_ACCOUNT_ID_CLAIM]: '244b24e9dd2a45a19547f8c372d6fcab',
-  [SINCH_PROJECT_ID_CLAIM]: 'd1b9c2af-fca6-49a7-8c84-7bdc9c4c50e4',
-  email: 'antoine.sein@mailgun.com',
-  [SINCH_EMAIL_CLAIM]: 'antoine.sein@mailgun.com',
-  [SINCH_GLOBAL_USER_ID_CLAIM]: '81ac881a-5777-4300-aafc-3d3ca6f73115',
+  'https://sinch.com/account_id': 'mock-account-id',
+  'https://sinch.com/project_id': 'mock-project-id',
+  email: 'mock-user@example.com',
+  'https://sinch.com/email': 'mock-user@example.com',
+  'https://sinch.com/global_user_id': 'mock-global-user-id',
+  'https://sinch.com/used_mfa': true,
+  'https://sinch.com/email_verified': true,
   iss: 'https://id.sinch.com/',
-  sub: 'auth0|664336b8d1aa73fd26ec6068',
+  sub: 'auth0|mock-subject-id',
+  aud: ['https://agent-auth-api-test.sinch.com', 'https://sinch.eu.auth0.com/userinfo'],
+  iat: 1700000000,
+  exp: 1700086400,
+  scope: 'openid profile email read:test',
+  azp: 'mock-client-id',
 };
 
 describe('user-jwt', () => {
@@ -30,11 +32,12 @@ describe('user-jwt', () => {
       const claims = decodeUserJwtHeader(`Bearer ${buildJwt(examplePayload)}`);
 
       expect(claims).toEqual({
-        projectId: 'd1b9c2af-fca6-49a7-8c84-7bdc9c4c50e4',
-        accountId: '244b24e9dd2a45a19547f8c372d6fcab',
-        email: 'antoine.sein@mailgun.com',
-        globalUserId: '81ac881a-5777-4300-aafc-3d3ca6f73115',
-        subject: 'auth0|664336b8d1aa73fd26ec6068',
+        projectId: 'mock-project-id',
+        accountId: 'mock-account-id',
+        email: 'mock-user@example.com',
+        globalUserId: 'mock-global-user-id',
+        subject: 'auth0|mock-subject-id',
+        scope: 'openid profile email read:test',
       });
     });
 
@@ -97,8 +100,8 @@ describe('user-jwt', () => {
         getRequestUserClaims(),
       );
 
-      expect(claims?.projectId).toBe('d1b9c2af-fca6-49a7-8c84-7bdc9c4c50e4');
-      expect(claims?.email).toBe('antoine.sein@mailgun.com');
+      expect(claims?.projectId).toBe('mock-project-id');
+      expect(claims?.email).toBe('mock-user@example.com');
     });
 
     it('returns undefined outside a request scope', () => {
@@ -118,7 +121,7 @@ describe('user-jwt', () => {
         },
         () => getRequestUserClaims(),
       );
-      expect(context?.globalUserId).toBe('81ac881a-5777-4300-aafc-3d3ca6f73115');
+      expect(context?.globalUserId).toBe('mock-global-user-id');
 
       const withoutJwt = runWithHttpCredentialHeaders({ [AGENT_ID_HEADER]: 'order-42' }, () => getRequestUserClaims());
       expect(withoutJwt).toBeUndefined();

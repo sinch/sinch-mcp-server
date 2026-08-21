@@ -16,6 +16,7 @@ export type SinchUserClaims = {
   email?: string;
   globalUserId?: string;
   subject?: string;
+  scope?: string;
 };
 
 const decodeJwtPayload = (token: string): Record<string, unknown> | undefined => {
@@ -75,6 +76,7 @@ export const decodeUserJwtHeader = (
     email: stringClaim(payload, SINCH_EMAIL_CLAIM),
     globalUserId: stringClaim(payload, SINCH_GLOBAL_USER_ID_CLAIM),
     subject: stringClaim(payload, 'sub'),
+    scope: stringClaim(payload, 'scope'),
   };
 
   const hasAnyClaim = Object.values(claims).some((value) => value !== undefined);

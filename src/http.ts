@@ -89,9 +89,8 @@ const logUserJwtAuditTrail = (): void => {
     {
       project_id: claims.projectId,
       account_id: claims.accountId,
-      email: claims.email,
       global_user_id: claims.globalUserId,
-      sub: claims.subject,
+      scope: claims.scope,
       agent_id: getRequestAgentId(),
     },
     'Agent user request (unverified JWT claims)',
