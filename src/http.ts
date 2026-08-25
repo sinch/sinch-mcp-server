@@ -4,6 +4,7 @@ import express, { type Request, type Response } from 'express';
 import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js';
 import { isInitializeRequest } from '@modelcontextprotocol/sdk/types.js';
 import dotenv from 'dotenv';
+import { loadAgentCredentials } from './auth/agent-credentials';
 import { getRequestAgentId, getRequestUserClaims, runWithHttpCredentialHeaders } from './auth/credential-context';
 import { setHttpCredentialSource } from './auth/http-credential-mode';
 import { createMcpApiKeyMiddleware, loadMcpApiKeys } from './auth/mcp-api-key';
@@ -82,17 +83,18 @@ const removeSession = async (sessionId: string): Promise<void> => {
 
 const logUserJwtAuditTrail = (): void => {
   const claims = getRequestUserClaims();
-  if (!claims) {
+  const agentId = getRequestAgentId();
+  if (!claims && !agentId) {
     return;
   }
 
   logger.info(
     {
-      project_id: claims.projectId,
-      account_id: claims.accountId,
-      global_user_id: claims.globalUserId,
-      scope: claims.scope,
-      agent_id: getRequestAgentId(),
+      project_id: claims?.projectId,
+      account_id: claims?.accountId,
+      global_user_id: claims?.globalUserId,
+      scope: claims?.scope,
+      agent_id: agentId,
     },
     'Agent user request (unverified JWT claims)',
   );
@@ -143,6 +145,8 @@ export const createHttpApp = () => {
           'Either set CONVERSATION_REGION, or set MCP_API_KEY to run in single-tenant mode.',
       );
     }
+    // Fail fast on a malformed AGENT_CREDENTIALS map rather than on the first request.
+    loadAgentCredentials();
     setHttpCredentialSource('request-header');
   }
 
