@@ -4,11 +4,13 @@ import { buildCredentialCacheKey, type SinchOAuthCredentials } from './sinch-oau
 
 /**
  * The AGENT_CREDENTIALS environment variable holds the map of known agent
- * installations (keyed by the identifier sent in the x-agent-id header, e.g.
- * the Gemini Enterprise Marketplace OrderId) to their Sinch M2M credentials:
+ * installations to their Sinch M2M credentials, keyed by
+ * "<agentId>:<projectId>" (the identifier sent in the x-agent-id header, e.g.
+ * the Gemini Enterprise Marketplace OrderId, and the Sinch project it acts
+ * on):
  *
  *   {
- *     "<agentId>": {
+ *     "<agentId>:<projectId>": {
  *       "projectId": "...",
  *       "accessKeyId": "...",
  *       "accessKeySecret": "..."

@@ -407,11 +407,11 @@ curl -X POST "http://localhost:8000/mcp" \
 
 #### `x-agent-id` header (multi-tenant only)
 
-Agent integrations (e.g. an agent installed in a Gemini Enterprise app) may send an `x-agent-id` header carrying the unique installation identifier (the Marketplace **OrderId**). It is used to resolve the caller's Sinch M2M credentials from the server-side `AGENT_CREDENTIALS` map (see below), so it is meant for **multi-tenant** deployments only. In single-tenant mode credentials always come from the server environment, so the header serves no purpose there. This custom header is a temporary mechanism until a token-exchange capability is available over M2M authentication.
+Agent integrations (e.g. an agent installed in a Gemini Enterprise app) may send an `x-agent-id` header carrying the unique installation identifier: the Marketplace **OrderId** and the Sinch project it acts on, joined by a colon (`<orderId>:<projectId>`). It is used to resolve the caller's Sinch M2M credentials from the server-side `AGENT_CREDENTIALS` map (see below), so it is meant for **multi-tenant** deployments only. In single-tenant mode credentials always come from the server environment, so the header serves no purpose there. This custom header is a temporary mechanism until a token-exchange capability is available over M2M authentication.
 
-| Header       | Value                                             |
-| ------------ | ------------------------------------------------- |
-| `x-agent-id` | Agent installation identifier (e.g. GE `OrderId`) |
+| Header       | Value                                                       |
+| ------------ | ------------------------------------------------------------ |
+| `x-agent-id` | `<orderId>:<projectId>` (e.g. GE `OrderId`:Sinch project id) |
 
 #### `AGENT_CREDENTIALS` map (multi-tenant only)
 
@@ -419,7 +419,7 @@ The server resolves the `x-agent-id` header against the `AGENT_CREDENTIALS` envi
 
 ```json
 {
-  "<agentId>": {
+  "<orderId>:<projectId>": {
     "projectId": "<Sinch project id>",
     "accessKeyId": "<Sinch access key id>",
     "accessKeySecret": "<Sinch access key secret>"
