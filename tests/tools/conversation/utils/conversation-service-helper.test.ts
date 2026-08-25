@@ -1,8 +1,9 @@
-import { ApiFetchClient } from '@sinch/sdk-client';
+import { ApiFetchClient, SupportedConversationRegion } from '@sinch/sdk-client';
 import { ConversationService } from '@sinch/conversation';
 import {
   getConversationService,
   getConversationAppId,
+  resolveConversationRegionsToList,
   setConversationRegion,
   setTemplateRegion,
 } from '../../../../src/tools/conversation/utils/conversation-service-helper';
@@ -86,6 +87,10 @@ describe('getConversationService / getConversationTemplateService', () => {
     );
   });
 
+  test('resolveConversationRegionsToList returns every supported region', () => {
+    expect(resolveConversationRegionsToList()).toEqual(Object.values(SupportedConversationRegion));
+  });
+
   test('returns PromptResponse when env vars are missing', () => {
     mockEnv.PROJECT_ID = undefined;
     const result = getConversationService(TOOL_NAME);
@@ -137,6 +142,18 @@ describe('region resolution in multi-tenant mode', () => {
     expect(usedRegion).toBe('br');
     expect(service.lazyConversationTemplateClient.apiFetchClient!.apiClientOptions.hostname).toBe(
       'https://br.template.api.sinch.com',
+    );
+  });
+
+  test('resolveConversationRegionsToList returns only the pinned region', () => {
+    mockEnv.CONVERSATION_REGION = 'eu';
+    expect(resolveConversationRegionsToList()).toEqual(['eu']);
+  });
+
+  test('resolveConversationRegionsToList throws when CONVERSATION_REGION is not set', () => {
+    mockEnv.CONVERSATION_REGION = undefined;
+    expect(() => resolveConversationRegionsToList()).toThrow(
+      'CONVERSATION_REGION must be set in multi-tenant mode; no default region is applied.',
     );
   });
 
