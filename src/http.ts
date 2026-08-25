@@ -7,6 +7,7 @@ import dotenv from 'dotenv';
 import { getRequestAgentId, getRequestUserClaims, runWithHttpCredentialHeaders } from './auth/credential-context';
 import { setHttpCredentialSource } from './auth/http-credential-mode';
 import { createMcpApiKeyMiddleware, loadMcpApiKeys } from './auth/mcp-api-key';
+import { createSinchCredentialsMiddleware } from './auth/sinch-credentials-middleware';
 import { getMaxMcpSessions, isMcpSessionCapacityReached } from './auth/http-session-limits';
 import { env } from './env';
 import { buildJsonRpcErrorResponse } from './json-rpc';
@@ -220,6 +221,8 @@ export const createHttpApp = () => {
 
   if (isSingleTenant) {
     app.use(MCP_PATH, createMcpApiKeyMiddleware(mcpApiKeys));
+  } else {
+    app.use(MCP_PATH, createSinchCredentialsMiddleware());
   }
 
   const routeHandler = (req: Request, res: Response) => {

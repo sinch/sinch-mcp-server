@@ -3,8 +3,11 @@ import type { AddressInfo } from 'net';
 import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { StreamableHTTPClientTransport } from '@modelcontextprotocol/sdk/client/streamableHttp.js';
 import { clearMaxMcpSessionsForTests, setMaxMcpSessionsForTests } from '../src/auth/http-session-limits';
+import { SINCH_CREDENTIALS_HEADER } from '../src/auth/sinch-oauth-credentials';
 import { clearSessionsForTests, createHttpApp, seedSessionForTests } from '../src/http';
 import { mockEnv, resetMockEnv } from './helpers/mock-env';
+
+const VALID_CREDENTIALS_HEADER = Buffer.from('proj:key:secret').toString('base64');
 
 jest.mock(
   '@sinch/sdk-core/package.json',
@@ -67,7 +70,9 @@ describe('MCP request routing', () => {
   });
 
   it('creates a session on initialize and serves subsequent requests for that session', async () => {
-    const transport = new StreamableHTTPClientTransport(new URL(`${baseUrl}/mcp`));
+    const transport = new StreamableHTTPClientTransport(new URL(`${baseUrl}/mcp`), {
+      requestInit: { headers: { [SINCH_CREDENTIALS_HEADER]: VALID_CREDENTIALS_HEADER } },
+    });
     const client = new Client({ name: 'test-client', version: '1.0.0' });
 
     await client.connect(transport);
@@ -81,15 +86,51 @@ describe('MCP request routing', () => {
     await client.close();
   });
 
-  it('returns 404 when the mcp-session-id header does not match a known session', async () => {
+  it('returns 401 and creates no session when X-Sinch-Credentials is missing on initialize', async () => {
     const response = await fetch(`${baseUrl}/mcp`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(INITIALIZE_BODY),
+    });
+
+    expect(response.status).toBe(401);
+    const body = (await response.json()) as { error: { message: string } };
+    expect(body.error.message).toContain(SINCH_CREDENTIALS_HEADER);
+
+    setMaxMcpSessionsForTests(1);
+    const authedResponse = await fetch(`${baseUrl}/mcp`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', [SINCH_CREDENTIALS_HEADER]: VALID_CREDENTIALS_HEADER },
+      body: JSON.stringify(INITIALIZE_BODY),
+    });
+    expect(authedResponse.status).not.toBe(503);
+  });
+
+  it('returns 401 when X-Sinch-Credentials is missing on a request with an existing session id', async () => {
+    seedSessionForTests('existing-session');
+
+    const response = await fetch(`${baseUrl}/mcp`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'mcp-session-id': 'existing-session' },
+      body: JSON.stringify({ jsonrpc: '2.0', method: 'ping', id: 1 }),
+    });
+
+    expect(response.status).toBe(401);
+  });
+
+  it('returns 404 when the mcp-session-id header does not match a known session', async () => {
+    const response = await fetch(`${baseUrl}/mcp`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', [SINCH_CREDENTIALS_HEADER]: VALID_CREDENTIALS_HEADER },
       body: JSON.stringify({ jsonrpc: '2.0', method: 'ping', id: 1 }),
     });
     const withUnknownSession = await fetch(`${baseUrl}/mcp`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'mcp-session-id': 'does-not-exist' },
+      headers: {
+        'Content-Type': 'application/json',
+        'mcp-session-id': 'does-not-exist',
+        [SINCH_CREDENTIALS_HEADER]: VALID_CREDENTIALS_HEADER,
+      },
       body: JSON.stringify({ jsonrpc: '2.0', method: 'ping', id: 1 }),
     });
 
@@ -104,7 +145,7 @@ describe('MCP request routing', () => {
   it('returns 400 when no session id is provided and the body is not an initialize request', async () => {
     const response = await fetch(`${baseUrl}/mcp`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', [SINCH_CREDENTIALS_HEADER]: VALID_CREDENTIALS_HEADER },
       body: JSON.stringify({ jsonrpc: '2.0', method: 'ping', id: 1 }),
     });
 
@@ -116,7 +157,11 @@ describe('MCP request routing', () => {
   it('accepts a JSON-RPC batch array containing an initialize request', async () => {
     const response = await fetch(`${baseUrl}/mcp`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', Accept: 'application/json, text/event-stream' },
+      headers: {
+        'Content-Type': 'application/json',
+        Accept: 'application/json, text/event-stream',
+        [SINCH_CREDENTIALS_HEADER]: VALID_CREDENTIALS_HEADER,
+      },
       body: JSON.stringify([INITIALIZE_BODY]),
     });
 
@@ -131,7 +176,7 @@ describe('MCP request routing', () => {
 
     const response = await fetch(`${baseUrl}/mcp`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', [SINCH_CREDENTIALS_HEADER]: VALID_CREDENTIALS_HEADER },
       body: JSON.stringify(INITIALIZE_BODY),
     });
 
@@ -145,7 +190,11 @@ describe('MCP request routing', () => {
 
     const response = await fetch(`${baseUrl}/mcp`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'mcp-session-id': 'broken-session' },
+      headers: {
+        'Content-Type': 'application/json',
+        'mcp-session-id': 'broken-session',
+        [SINCH_CREDENTIALS_HEADER]: VALID_CREDENTIALS_HEADER,
+      },
       body: JSON.stringify({ jsonrpc: '2.0', method: 'ping', id: 1 }),
     });
 
