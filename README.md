@@ -405,6 +405,26 @@ curl -X POST "http://localhost:8000/mcp" \
 
 **Scope:** `X-Sinch-Credentials` applies to **Conversation**, **Numbers**, and **Number Lookup** tools. **Voice**, **Verification**, and **Mailgun** still use server environment variables for now. **Local stdio** (Option 1) always uses server environment variables.
 
+#### `x-agent-id` header (multi-tenant only)
+
+Agent integrations (e.g. an agent installed in a Gemini Enterprise app) may send an `x-agent-id` header carrying the unique installation identifier (the Marketplace **OrderId**). Its purpose is to distinguish which installation is calling the MCP server, so it is meant for **multi-tenant** deployments only: it will be used to resolve the caller's Sinch credentials in an upcoming release. In single-tenant mode credentials always come from the server environment, so the header serves no purpose there. This custom header is a temporary mechanism until a token-exchange capability is available over M2M authentication.
+
+| Header       | Value                                              |
+| ------------ | -------------------------------------------------- |
+| `x-agent-id` | Agent installation identifier (e.g. GE `OrderId`) |
+
+#### `Authorization` user JWT (optional)
+
+After the end-user completes the OAuth login and consent flow, agent integrations may send the resulting Auth0 user JWT on each request:
+
+| Header          | Value               |
+| --------------- | ------------------- |
+| `Authorization` | `Bearer <user JWT>` |
+
+The server base64-decodes the JWT payload and captures the Sinch claims (`https://sinch.com/project_id`, `https://sinch.com/account_id`, `https://sinch.com/email`, `https://sinch.com/global_user_id`, and `sub`) in the request context, logging them for **audit purposes only**. The token signature is **not** verified and the claims are never used to resolve API credentials (the `x-agent-id` header serves that purpose). A missing or malformed token is ignored and the request proceeds normally. In the long term, the user JWT will be exchanged for an M2M JWT, replacing the custom headers.
+
+Note: in **single-tenant** mode the `Authorization` header carries the MCP API key instead; an opaque key is not a JWT, so no claims are captured.
+
 #### MCP_API_KEYS key rotation
 
 Use `MCP_API_KEYS` (comma-separated) in **single-tenant** mode to accept an old and new gateway key during rotation, then remove the retired key.

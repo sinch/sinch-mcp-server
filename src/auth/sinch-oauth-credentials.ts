@@ -1,5 +1,6 @@
 import { createHash } from 'node:crypto';
 import { env } from '../env';
+import { extractHeaderValue } from '../utils';
 
 export const SINCH_CREDENTIALS_HEADER = 'x-sinch-credentials';
 
@@ -59,7 +60,7 @@ export const parseSinchCredentialsValue = (encodedValue: string): SinchOAuthCred
 export const parseSinchCredentialsHeader = (
   headerValue: string | string[] | undefined,
 ): SinchOAuthCredentials | undefined => {
-  const value = Array.isArray(headerValue) ? headerValue[0] : headerValue;
+  const value = extractHeaderValue(headerValue);
   if (!value) {
     return undefined;
   }

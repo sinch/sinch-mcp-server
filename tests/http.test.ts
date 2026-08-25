@@ -1,12 +1,14 @@
-import http from 'http';
+import http from 'node:http';
 import type { AddressInfo } from 'net';
 
 jest.mock('ioredis', () => jest.requireActual('ioredis-mock'));
 
+import { Client } from '@modelcontextprotocol/sdk/client/index.js';
+import { StreamableHTTPClientTransport } from '@modelcontextprotocol/sdk/client/streamableHttp.js';
 import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js';
 import { clearHttpCredentialSourceForTests, getHttpCredentialSource } from '../src/auth/http-credential-mode';
 import { mockEnv, resetMockEnv } from '../src/__mocks__/env';
-import { createHttpApp, main } from '../src/http';
+import { createHttpApp, main, waitForListening } from '../src/http';
 import { getSessionStoreClientForTests, resetSessionStoreClientForTests } from '../src/session-store';
 
 jest.mock(
@@ -210,6 +212,74 @@ describe('HTTP MCP session handling (Redis-backed)', () => {
       await close();
     }
   });
+
+  it('returns 400 when no session id is provided and the body is not an initialize request', async () => {
+    const { baseUrl, close } = await listen(createHttpApp());
+    try {
+      const response = await post(baseUrl, { jsonrpc: '2.0', method: 'ping', id: 1 });
+      expect(response.status).toBe(400);
+      const body = await parseJsonRpcError(response);
+      expect(body.error.message).toBe('Bad Request: No valid session ID provided');
+    } finally {
+      await close();
+    }
+  });
+
+  it('accepts a JSON-RPC batch array containing an initialize request', async () => {
+    const { baseUrl, close } = await listen(createHttpApp());
+    try {
+      const response = await post(baseUrl, [initializeBody]);
+      expect(response.status).not.toBe(400);
+      expect(response.status).not.toBe(503);
+    } finally {
+      await close();
+    }
+  });
+
+  it('returns 500 when the session transport throws while handling a request', async () => {
+    const { baseUrl, close } = await listen(createHttpApp());
+    try {
+      const initResponse = await post(baseUrl, initializeBody);
+      const sessionId = initResponse.headers.get('mcp-session-id')!;
+
+      const handleRequestSpy = jest
+        .spyOn(StreamableHTTPServerTransport.prototype, 'handleRequest')
+        .mockRejectedValueOnce(new Error('boom'));
+
+      try {
+        const response = await post(baseUrl, toolsListBody, { 'Mcp-Session-Id': sessionId });
+        expect(response.status).toBe(500);
+        const body = await parseJsonRpcError(response);
+        expect(body.error.message).toBe('Internal server error');
+      } finally {
+        handleRequestSpy.mockRestore();
+      }
+    } finally {
+      await close();
+    }
+  });
+
+  it('creates a session on initialize and serves subsequent requests for that session (real MCP client)', async () => {
+    const { baseUrl, close } = await listen(createHttpApp());
+    try {
+      const clientTransport = new StreamableHTTPClientTransport(new URL(`${baseUrl}/mcp`), {
+        requestInit: { headers: { Authorization: 'Bearer test-http-key' } },
+      });
+      const client = new Client({ name: 'test-client', version: '1.0.0' });
+
+      await client.connect(clientTransport);
+      expect(clientTransport.sessionId).toBeDefined();
+
+      const { tools } = await client.listTools();
+      expect(Array.isArray(tools)).toBeTrue();
+      expect(tools.length).toBeGreaterThan(0);
+
+      await clientTransport.terminateSession();
+      await client.close();
+    } finally {
+      await close();
+    }
+  });
 });
 
 describe('main() startup', () => {
@@ -275,5 +345,16 @@ describe('createHttpApp startup validation', () => {
     process.env.MCP_API_KEY = 'test-api-key';
     expect(() => createHttpApp()).not.toThrow();
     expect(getHttpCredentialSource()).toBe('env');
+  });
+});
+
+describe('waitForListening', () => {
+  it('resolves when the server is already listening', async () => {
+    const server = http.createServer();
+    await new Promise<void>((resolve) => server.listen(0, '127.0.0.1', () => resolve()));
+
+    await expect(waitForListening(server)).resolves.toBeUndefined();
+
+    await new Promise<void>((resolve) => server.close(() => resolve()));
   });
 });

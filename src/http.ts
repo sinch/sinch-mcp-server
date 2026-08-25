@@ -1,9 +1,10 @@
 import { randomUUID } from 'node:crypto';
+import type { Server } from 'node:http';
 import express, { type Request, type Response } from 'express';
 import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js';
 import { isInitializeRequest } from '@modelcontextprotocol/sdk/types.js';
 import dotenv from 'dotenv';
-import { runWithHttpCredentialHeaders } from './auth/credential-context';
+import { getRequestAgentId, getRequestUserClaims, runWithHttpCredentialHeaders } from './auth/credential-context';
 import { setHttpCredentialSource } from './auth/http-credential-mode';
 import { createMcpApiKeyMiddleware, loadMcpApiKeys } from './auth/mcp-api-key';
 import { env } from './env';
@@ -16,6 +17,7 @@ import {
   SessionStoreUnavailableError,
   validateAndTouchSession,
 } from './session-store';
+import { logger } from './telemetry/logger';
 
 dotenv.config();
 
@@ -63,6 +65,24 @@ const buildTransport = async (): Promise<StreamableHTTPServerTransport> => {
   return transport;
 };
 
+const logUserJwtAuditTrail = (): void => {
+  const claims = getRequestUserClaims();
+  if (!claims) {
+    return;
+  }
+
+  logger.info(
+    {
+      project_id: claims.projectId,
+      account_id: claims.accountId,
+      global_user_id: claims.globalUserId,
+      scope: claims.scope,
+      agent_id: getRequestAgentId(),
+    },
+    'Agent user request (unverified JWT claims)',
+  );
+};
+
 const respondSessionStoreUnavailable = (res: Response, body: unknown): void => {
   res
     .setHeader('Retry-After', '2')
@@ -92,13 +112,6 @@ export const createHttpApp = () => {
     setHttpCredentialSource('request-header');
   }
 
-  const runWithCredentials = <T>(req: Request, fn: () => T): T => {
-    if (isSingleTenant) {
-      return fn();
-    }
-    return runWithHttpCredentialHeaders(req.headers, fn);
-  };
-
   const handleMcpRequest = async (req: Request, res: Response): Promise<void> => {
     const sessionId = getSessionId(req);
     const isInitRequest = isInitializationBody(req.body);
@@ -125,7 +138,10 @@ export const createHttpApp = () => {
       res.setHeader('mcp-session-id', newSessionId);
       const transport = await buildTransport();
       res.on('close', () => void transport.close());
-      await runWithCredentials(req, () => transport.handleRequest(req, res, req.body));
+      await runWithHttpCredentialHeaders(req.headers, () => {
+        logUserJwtAuditTrail();
+        return transport.handleRequest(req, res, req.body);
+      });
       return;
     }
 
@@ -166,7 +182,10 @@ export const createHttpApp = () => {
 
     const transport = await buildTransport();
     res.on('close', () => void transport.close());
-    await runWithCredentials(req, () => transport.handleRequest(req, res, req.body));
+    await runWithHttpCredentialHeaders(req.headers, () => {
+      logUserJwtAuditTrail();
+      return transport.handleRequest(req, res, req.body);
+    });
   };
 
   const app = express();
@@ -229,7 +248,8 @@ export const createHttpApp = () => {
   return app;
 };
 
-const getShutdownDrainMs = (): number => {
+/** Exposed for unit tests. */
+export const getShutdownDrainMs = (): number => {
   const configured = Number(process.env.SHUTDOWN_DRAIN_MS ?? 10_000);
   return Number.isFinite(configured) && configured >= 0 ? Math.floor(configured) : 10_000;
 };
@@ -246,6 +266,46 @@ const describeRedisTarget = (redisUrl: string): string => {
   }
 };
 
+/** Exposed for unit tests. */
+export const waitForListening = (server: Server): Promise<void> =>
+  new Promise((resolve, reject) => {
+    if (server.listening) {
+      resolve();
+      return;
+    }
+    server.once('listening', resolve);
+    server.once('error', reject);
+  });
+
+const closeServer = (server: Server): Promise<void> =>
+  new Promise((resolve, reject) => {
+    server.close((error) => (error ? reject(error) : resolve()));
+  });
+
+// Fail readiness first so the Service stops routing, then drain before close.
+// Pairs with the Deployment preStop sleep for endpoint controller lag.
+const shutdown = async (server: Server, signal: string): Promise<void> => {
+  // Guards against a second signal (e.g. SIGTERM then SIGINT) re-running the drain
+  // and closing an already-closed server.
+  if (isShuttingDown) {
+    return;
+  }
+  console.error(`Received ${signal}, marking not ready before closing HTTP server`);
+  isShuttingDown = true;
+  const drainMs = getShutdownDrainMs();
+  if (drainMs > 0) {
+    console.error(`Draining for ${drainMs}ms before closing listeners`);
+    await sleep(drainMs);
+  }
+  try {
+    await closeServer(server);
+    process.exit(0);
+  } catch (error) {
+    console.error('Error during HTTP server shutdown:', error);
+    process.exit(1);
+  }
+};
+
 export const main = async (): Promise<void> => {
   const redisUrl = env.REDIS_URL;
   if (!redisUrl) {
@@ -256,40 +316,16 @@ export const main = async (): Promise<void> => {
 
   const port = Number(process.env.PORT ?? DEFAULT_PORT);
   const app = createHttpApp();
+  const server = app.listen(port);
 
-  await new Promise<void>((resolve, reject) => {
-    const server = app.listen(port, () => {
-      console.error(
-        `Sinch MCP HTTP server listening on port ${port} (${MCP_PATH}), session store: ${describeRedisTarget(redisUrl)}`,
-      );
-      resolve();
-    });
+  process.on('SIGTERM', () => void shutdown(server, 'SIGTERM'));
+  process.on('SIGINT', () => void shutdown(server, 'SIGINT'));
 
-    const shutdown = (signal: string) => {
-      void (async () => {
-        console.error(`Received ${signal}, marking not ready before closing HTTP server`);
-        // Mark not-ready before draining, so the Service stops routing before we close.
-        isShuttingDown = true;
-        const drainMs = getShutdownDrainMs();
-        if (drainMs > 0) {
-          console.error(`Draining for ${drainMs}ms before closing listeners`);
-          await sleep(drainMs);
-        }
-        server.close((error) => {
-          if (error) {
-            console.error('Error during HTTP server shutdown:', error);
-            process.exit(1);
-          }
-          process.exit(0);
-        });
-      })();
-    };
+  await waitForListening(server);
 
-    process.on('SIGTERM', () => shutdown('SIGTERM'));
-    process.on('SIGINT', () => shutdown('SIGINT'));
-
-    server.on('error', reject);
-  });
+  console.error(
+    `Sinch MCP HTTP server listening on port ${port} (${MCP_PATH}), session store: ${describeRedisTarget(redisUrl)}`,
+  );
 };
 
 if (require.main === module) {
