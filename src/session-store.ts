@@ -22,14 +22,23 @@ const getSessionTtlSeconds = (): number => {
 
 let client: Redis | undefined;
 
-// REDIS_URL is required to reach this point — src/http.ts's main() fails fast on startup when it's unset.
+const REDIS_CLIENT_OPTIONS = {
+  enableOfflineQueue: false,
+  maxRetriesPerRequest: 1,
+  commandTimeout: REDIS_COMMAND_TIMEOUT_MS,
+  retryStrategy: (times: number) => Math.min(times * 100, 2000),
+};
+
+// REDIS_HOST/REDIS_PORT are required to reach this point — src/http.ts's main() fails fast
+// on startup otherwise. TLS turns on automatically with a password (AWS ElastiCache requires it).
 const getClient = (): Redis => {
   if (!client) {
-    client = new Redis(env.REDIS_URL!, {
-      enableOfflineQueue: false,
-      maxRetriesPerRequest: 1,
-      commandTimeout: REDIS_COMMAND_TIMEOUT_MS,
-      retryStrategy: (times) => Math.min(times * 100, 2000),
+    client = new Redis({
+      host: env.REDIS_HOST,
+      port: Number(env.REDIS_PORT),
+      password: env.REDIS_PASSWORD,
+      tls: env.REDIS_PASSWORD ? {} : undefined,
+      ...REDIS_CLIENT_OPTIONS,
     });
     client.on('error', (error) => console.error('Redis client error:', error));
   }

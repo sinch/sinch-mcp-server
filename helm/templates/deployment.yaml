@@ -54,6 +54,24 @@ spec:
             - name: MCP_TAGS
               value: {{ .Values.toolTags | quote }}
             {{- end }}
+            # Required, not optional: the server refuses to start without Redis for shared
+            # session storage. Keys must match the connection secret exactly (e.g. a
+            # Crossplane-provisioned ElastiCache connection secret): endpoint, port, password.
+            - name: REDIS_HOST
+              valueFrom:
+                secretKeyRef:
+                  name: {{ required "redisConnectionSecret is required — the server needs Redis for shared session storage and refuses to start without it." .Values.redisConnectionSecret }}
+                  key: endpoint
+            - name: REDIS_PORT
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.redisConnectionSecret }}
+                  key: port
+            - name: REDIS_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.redisConnectionSecret }}
+                  key: password
             {{- if .Values.existingSecret }}
             {{- range .Values.secretKeys }}
             - name: {{ . }}

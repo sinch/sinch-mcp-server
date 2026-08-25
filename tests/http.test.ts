@@ -88,12 +88,14 @@ describe('HTTP MCP session handling (Redis-backed)', () => {
 
   beforeEach(() => {
     process.env.MCP_API_KEY = 'test-http-key';
-    mockEnv.REDIS_URL = 'redis://127.0.0.1:6379';
+    mockEnv.REDIS_HOST = '127.0.0.1';
+    mockEnv.REDIS_PORT = '6379';
   });
 
   afterEach(async () => {
     resetSessionStoreClientForTests();
-    mockEnv.REDIS_URL = undefined;
+    mockEnv.REDIS_HOST = undefined;
+    mockEnv.REDIS_PORT = undefined;
     if (originalApiKey === undefined) {
       delete process.env.MCP_API_KEY;
     } else {
@@ -287,11 +289,13 @@ describe('main() startup', () => {
 
   afterEach(() => {
     process.exit = originalExit;
-    mockEnv.REDIS_URL = undefined;
+    mockEnv.REDIS_HOST = undefined;
+    mockEnv.REDIS_PORT = undefined;
   });
 
-  it('fails fast with a clear error when REDIS_URL is not set', async () => {
-    mockEnv.REDIS_URL = undefined;
+  it('fails fast with a clear error when REDIS_HOST is not set', async () => {
+    mockEnv.REDIS_HOST = undefined;
+    mockEnv.REDIS_PORT = '6379';
     const exitSpy = jest.fn() as unknown as typeof process.exit;
     process.exit = exitSpy;
     const errorSpy = jest.spyOn(console, 'error').mockImplementation(() => undefined);
@@ -299,7 +303,37 @@ describe('main() startup', () => {
     await main();
 
     expect(exitSpy).toHaveBeenCalledWith(1);
-    expect(errorSpy).toHaveBeenCalledWith(expect.stringContaining('REDIS_URL is not set'));
+    expect(errorSpy).toHaveBeenCalledWith(expect.stringContaining('REDIS_HOST not set'));
+
+    errorSpy.mockRestore();
+  });
+
+  it('fails fast with a clear error when REDIS_PORT is not set', async () => {
+    mockEnv.REDIS_HOST = '127.0.0.1';
+    mockEnv.REDIS_PORT = undefined;
+    const exitSpy = jest.fn() as unknown as typeof process.exit;
+    process.exit = exitSpy;
+    const errorSpy = jest.spyOn(console, 'error').mockImplementation(() => undefined);
+
+    await main();
+
+    expect(exitSpy).toHaveBeenCalledWith(1);
+    expect(errorSpy).toHaveBeenCalledWith(expect.stringContaining('REDIS_PORT not set'));
+
+    errorSpy.mockRestore();
+  });
+
+  it('fails fast listing both when neither REDIS_HOST nor REDIS_PORT is set', async () => {
+    mockEnv.REDIS_HOST = undefined;
+    mockEnv.REDIS_PORT = undefined;
+    const exitSpy = jest.fn() as unknown as typeof process.exit;
+    process.exit = exitSpy;
+    const errorSpy = jest.spyOn(console, 'error').mockImplementation(() => undefined);
+
+    await main();
+
+    expect(exitSpy).toHaveBeenCalledWith(1);
+    expect(errorSpy).toHaveBeenCalledWith(expect.stringContaining('REDIS_HOST, REDIS_PORT not set'));
 
     errorSpy.mockRestore();
   });

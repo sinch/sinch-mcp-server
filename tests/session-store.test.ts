@@ -15,13 +15,15 @@ import {
 
 describe('session-store', () => {
   beforeEach(() => {
-    mockEnv.REDIS_URL = 'redis://127.0.0.1:6379';
+    mockEnv.REDIS_HOST = '127.0.0.1';
+    mockEnv.REDIS_PORT = '6379';
   });
 
   afterEach(() => {
     jest.restoreAllMocks();
     resetSessionStoreClientForTests();
-    mockEnv.REDIS_URL = undefined;
+    mockEnv.REDIS_HOST = undefined;
+    mockEnv.REDIS_PORT = undefined;
   });
 
   it('validates a session created moments earlier', async () => {
@@ -74,5 +76,17 @@ describe('session-store', () => {
       .mockImplementationOnce(realExpire);
 
     await expect(validateAndTouchSession(sessionId)).resolves.toBeTrue();
+  });
+
+  it('enables TLS automatically when REDIS_PASSWORD is set (AWS ElastiCache requires it)', () => {
+    mockEnv.REDIS_PASSWORD = 'test-password';
+    const client = getSessionStoreClientForTests();
+    expect(client.options.tls).toBeTruthy();
+    mockEnv.REDIS_PASSWORD = undefined;
+  });
+
+  it('does not enable TLS when no password is configured', () => {
+    const client = getSessionStoreClientForTests();
+    expect(client.options.tls).toBeFalsy();
   });
 });

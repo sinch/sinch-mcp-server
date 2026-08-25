@@ -26,9 +26,15 @@
 
 #
 
-# Note: MCP session state is stored in Redis (REDIS_URL, part of the existingSecret),
+# Note: MCP session state is stored in Redis, not in pod memory, so requests can land on
 
-# not in pod memory, so requests can land on any pod — no sticky sessions needed.
+# any pod — no sticky sessions needed. Redis connection details (REDIS_HOST/REDIS_PORT/
+
+# REDIS_PASSWORD) come from `redisConnectionSecret` (chart value) — a separate,
+
+# infra-managed secret (e.g. a Crossplane-provisioned AWS ElastiCache connection secret
+
+# with `endpoint`/`port`/`password` keys), not the app's own `existingSecret`.
 
 # All overlays run replicaCount: 2 with a PodDisruptionBudget.
 
@@ -37,7 +43,6 @@
 ```bash
 kubectl -n mcp-messaging create secret generic sinch-mcp-server \
   --from-literal=MCP_API_KEY='...' \
-  --from-literal=REDIS_URL='redis://...' \
   --from-literal=PROJECT_ID='...' \
   --from-literal=KEY_ID='...' \
   --from-literal=KEY_SECRET='...' \
@@ -49,9 +54,14 @@ kubectl -n mcp-messaging create secret generic sinch-mcp-server \
   --from-literal=MAILGUN_SENDER_ADDRESS='...'
 ```
 
+Redis is separate: `redisConnectionSecret` (a Helm value, not part of the secret above) must
+name a secret with `endpoint`/`port`/`password` keys — normally provisioned automatically
+(e.g. by Crossplane), not created by hand. See `k8s-manifests-mcp-messaging` for the actual
+`RedisCluster` resource per site.
+
 ## Local image smoke test
 
-REDIS_URL is required — the server exits immediately on startup without it. Run a throwaway
+REDIS_HOST is required — the server exits immediately on startup without it. Run a throwaway
 Redis on the same Docker network so the container can reach it by name:
 
 ```bash
@@ -62,7 +72,7 @@ docker build -t sinch-mcp-server:local .
 docker run --rm -p 8000:8000 --network mcp-smoke-test \
   -e MCP_API_KEY=dev \
   -e PROJECT_ID=x -e KEY_ID=x -e KEY_SECRET=x \
-  -e REDIS_URL=redis://redis:6379 \
+  -e REDIS_HOST=redis \
   sinch-mcp-server:local
 curl -s http://127.0.0.1:8000/health/live
 

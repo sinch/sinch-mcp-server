@@ -256,15 +256,8 @@ export const getShutdownDrainMs = (): number => {
 
 const sleep = (ms: number): Promise<void> => new Promise((resolve) => setTimeout(resolve, ms));
 
-/** Logs only host:port — REDIS_URL may carry credentials. */
-const describeRedisTarget = (redisUrl: string): string => {
-  try {
-    const url = new URL(redisUrl);
-    return `${url.hostname}:${url.port || '6379'}`;
-  } catch {
-    return 'unparseable REDIS_URL';
-  }
-};
+/** Logs only host:port — never the password. */
+const describeRedisTarget = (): string => `${env.REDIS_HOST}:${env.REDIS_PORT}`;
 
 /** Exposed for unit tests. */
 export const waitForListening = (server: Server): Promise<void> =>
@@ -307,9 +300,11 @@ const shutdown = async (server: Server, signal: string): Promise<void> => {
 };
 
 export const main = async (): Promise<void> => {
-  const redisUrl = env.REDIS_URL;
-  if (!redisUrl) {
-    console.error('Fatal: REDIS_URL is not set. The HTTP server requires Redis for shared session storage.');
+  const missingRedisVars = (['REDIS_HOST', 'REDIS_PORT'] as const).filter((key) => !env[key]);
+  if (missingRedisVars.length > 0) {
+    console.error(
+      `Fatal: ${missingRedisVars.join(', ')} not set. The HTTP server requires Redis for shared session storage.`,
+    );
     process.exit(1);
     return;
   }
@@ -324,7 +319,7 @@ export const main = async (): Promise<void> => {
   await waitForListening(server);
 
   console.error(
-    `Sinch MCP HTTP server listening on port ${port} (${MCP_PATH}), session store: ${describeRedisTarget(redisUrl)}`,
+    `Sinch MCP HTTP server listening on port ${port} (${MCP_PATH}), session store: ${describeRedisTarget()}`,
   );
 };
 
