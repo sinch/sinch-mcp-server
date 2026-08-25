@@ -18,6 +18,8 @@ dotenv.config();
 const MCP_PATH = '/mcp';
 const HEALTH_LIVE_PATH = '/health/live';
 const HEALTH_READY_PATH = '/health/ready';
+const HEALTH_LIVE_PATHS = [HEALTH_LIVE_PATH, `${MCP_PATH}${HEALTH_LIVE_PATH}`];
+const HEALTH_READY_PATHS = [HEALTH_READY_PATH, `${MCP_PATH}${HEALTH_READY_PATH}`];
 const DEFAULT_PORT = 8000;
 
 const startedAtMs = Date.now();
@@ -188,14 +190,14 @@ export const createHttpApp = () => {
   app.use(express.json({ limit: '4mb' }));
 
   // Unauthenticated probes for Kubernetes (must stay outside MCP auth middleware).
-  app.get(HEALTH_LIVE_PATH, (_req, res) => {
+  app.get(HEALTH_LIVE_PATHS, (_req, res) => {
     res.status(200).json({
       status: 'ok',
       uptimeSeconds: Math.floor((Date.now() - startedAtMs) / 1000),
     });
   });
 
-  app.get(HEALTH_READY_PATH, (_req, res) => {
+  app.get(HEALTH_READY_PATHS, (_req, res) => {
     if (isShuttingDown) {
       res.status(503).json({ status: 'not_ready', reason: 'shutting_down' });
       return;

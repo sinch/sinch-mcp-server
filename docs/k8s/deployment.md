@@ -9,7 +9,9 @@
 # GKA / namespace DevOps checklist lives in Confluence under Platform Foundation → MCPs.
 #
 # Runtime: Streamable HTTP on port 8000, path `/mcp`.
-# Probes: `/health/live`, `/health/ready` (no auth).
+# Probes: `/health/live`, `/health/ready` (no auth). Also served at `/mcp/health/live` and
+#         `/mcp/health/ready` — the ingress only routes the `/mcp` prefix, so the bare paths
+#         are in-cluster only and external monitoring must use the `/mcp`-prefixed ones.
 # Auth (staging v1): single-tenant — Secret `sinch-mcp-server` with MCP_API_KEY + Sinch creds.
 #
 # Note: MCP sessions are in-memory per pod. Production overlays keep replicaCount: 1
