@@ -51,6 +51,13 @@ secretKeys: []
 # Set per site in k8s-manifests-mcp-messaging.
 conversationRegion: ""
 
+# Name of the Secret holding the Redis connection details for shared session storage.
+# REQUIRED — the server refuses to start without Redis. This is deliberately separate from
+# existingSecret/secretKeys above: it's typically infra-managed (e.g. a Crossplane-provisioned
+# AWS ElastiCache connection secret), not an application credential we own.
+# Must contain the keys: endpoint, port, password.
+redisConnectionSecret: ""
+
 # Allow-list of tool tags to register (MCP_TAGS). Only tools whose credentials can be
 # supplied per request belong on a multi-tenant deployment.
 # Empty string = no filter = all tools (correct for local/stdio use, wrong for remote).

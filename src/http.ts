@@ -7,10 +7,16 @@ import dotenv from 'dotenv';
 import { getRequestAgentId, getRequestUserClaims, runWithHttpCredentialHeaders } from './auth/credential-context';
 import { setHttpCredentialSource } from './auth/http-credential-mode';
 import { createMcpApiKeyMiddleware, loadMcpApiKeys } from './auth/mcp-api-key';
-import { getMaxMcpSessions, isMcpSessionCapacityReached } from './auth/http-session-limits';
 import { env } from './env';
 import { buildJsonRpcErrorResponse } from './json-rpc';
-import { instantiateMcpServer, getToolsFilter, registerCapabilities } from './server';
+import { getToolsFilter, instantiateMcpServer, registerCapabilities } from './server';
+import {
+  createSession,
+  deleteSession,
+  pingSessionStore,
+  SessionStoreUnavailableError,
+  validateAndTouchSession,
+} from './session-store';
 import { logger } from './telemetry/logger';
 
 dotenv.config();
@@ -19,31 +25,14 @@ const MCP_PATH = '/mcp';
 const HEALTH_LIVE_PATH = '/health/live';
 const HEALTH_READY_PATH = '/health/ready';
 const DEFAULT_PORT = 8000;
+const SESSION_STORE_UNAVAILABLE_CODE = -32003;
 
 const startedAtMs = Date.now();
 let isShuttingDown = false;
 
-type SessionEntry = {
-  transport: StreamableHTTPServerTransport;
-};
-
-const sessions = new Map<string, SessionEntry>();
-
 /** Exposed for unit tests. */
 export const setShuttingDownForTests = (value: boolean): void => {
   isShuttingDown = value;
-};
-
-/** Exposed for unit tests — inserts a placeholder session entry. */
-export const seedSessionForTests = (sessionId = 'test-session'): void => {
-  sessions.set(sessionId, {
-    transport: {} as StreamableHTTPServerTransport,
-  });
-};
-
-/** Exposed for unit tests. */
-export const clearSessionsForTests = (): void => {
-  sessions.clear();
 };
 
 const isInitializationBody = (body: unknown): boolean => {
@@ -66,18 +55,14 @@ const getSessionId = (req: Request): string | undefined => {
   return undefined;
 };
 
-const removeSession = async (sessionId: string): Promise<void> => {
-  const entry = sessions.get(sessionId);
-  if (!entry) {
-    return;
-  }
+const buildTransport = async (): Promise<StreamableHTTPServerTransport> => {
+  const mcpServer = instantiateMcpServer();
+  registerCapabilities(mcpServer, getToolsFilter(process.argv));
 
-  sessions.delete(sessionId);
-  try {
-    await entry.transport.close();
-  } catch (error) {
-    console.error(`Error closing transport for session ${sessionId}:`, error);
-  }
+  const transport = new StreamableHTTPServerTransport({ sessionIdGenerator: undefined });
+  await mcpServer.connect(transport);
+
+  return transport;
 };
 
 const logUserJwtAuditTrail = (): void => {
@@ -98,32 +83,13 @@ const logUserJwtAuditTrail = (): void => {
   );
 };
 
-const createSession = async (): Promise<SessionEntry> => {
-  const mcpServer = instantiateMcpServer();
-  registerCapabilities(mcpServer, getToolsFilter(process.argv));
-
-  let sessionId = '';
-
-  const transport = new StreamableHTTPServerTransport({
-    sessionIdGenerator: () => randomUUID(),
-    onsessioninitialized: (id) => {
-      sessionId = id;
-      sessions.set(id, { transport });
-    },
-    onsessionclosed: async (id) => {
-      await removeSession(id);
-    },
-  });
-
-  transport.onclose = async () => {
-    if (sessionId) {
-      await removeSession(sessionId);
-    }
-  };
-
-  await mcpServer.connect(transport);
-
-  return { transport };
+const respondSessionStoreUnavailable = (res: Response, body: unknown): void => {
+  res
+    .setHeader('Retry-After', '2')
+    .status(503)
+    .json(
+      buildJsonRpcErrorResponse(SESSION_STORE_UNAVAILABLE_CODE, 'Service Unavailable: session store unreachable', body),
+    );
 };
 
 export const createHttpApp = () => {
@@ -148,39 +114,77 @@ export const createHttpApp = () => {
 
   const handleMcpRequest = async (req: Request, res: Response): Promise<void> => {
     const sessionId = getSessionId(req);
+    const isInitRequest = isInitializationBody(req.body);
 
-    if (sessionId) {
-      const entry = sessions.get(sessionId);
-      if (!entry) {
-        res.status(404).json(buildJsonRpcErrorResponse(-32001, 'Session not found', req.body));
+    if (isInitRequest) {
+      if (sessionId) {
+        res
+          .status(400)
+          .json(buildJsonRpcErrorResponse(-32600, 'Invalid Request: server already initialized', req.body));
         return;
       }
 
+      const newSessionId = randomUUID();
+      try {
+        await createSession(newSessionId);
+      } catch (error) {
+        if (error instanceof SessionStoreUnavailableError) {
+          respondSessionStoreUnavailable(res, req.body);
+          return;
+        }
+        throw error;
+      }
+
+      res.setHeader('mcp-session-id', newSessionId);
+      const transport = await buildTransport();
+      res.on('close', () => void transport.close());
       await runWithHttpCredentialHeaders(req.headers, () => {
         logUserJwtAuditTrail();
-        return entry.transport.handleRequest(req, res, req.body);
+        return transport.handleRequest(req, res, req.body);
       });
       return;
     }
 
-    if (!isInitializationBody(req.body)) {
+    if (!sessionId) {
       res.status(400).json(buildJsonRpcErrorResponse(-32000, 'Bad Request: No valid session ID provided', req.body));
       return;
     }
 
-    if (isMcpSessionCapacityReached(sessions.size)) {
-      res
-        .status(503)
-        .json(
-          buildJsonRpcErrorResponse(-32000, 'Service Unavailable: maximum number of MCP sessions reached', req.body),
-        );
+    let sessionValid: boolean;
+    try {
+      sessionValid = await validateAndTouchSession(sessionId);
+    } catch (error) {
+      if (error instanceof SessionStoreUnavailableError) {
+        respondSessionStoreUnavailable(res, req.body);
+        return;
+      }
+      throw error;
+    }
+
+    if (!sessionValid) {
+      res.status(404).json(buildJsonRpcErrorResponse(-32001, 'Session not found', req.body));
       return;
     }
 
-    const entry = await createSession();
+    if (req.method === 'DELETE') {
+      try {
+        await deleteSession(sessionId);
+      } catch (error) {
+        if (error instanceof SessionStoreUnavailableError) {
+          respondSessionStoreUnavailable(res, req.body);
+          return;
+        }
+        throw error;
+      }
+      res.status(200).end();
+      return;
+    }
+
+    const transport = await buildTransport();
+    res.on('close', () => void transport.close());
     await runWithHttpCredentialHeaders(req.headers, () => {
       logUserJwtAuditTrail();
-      return entry.transport.handleRequest(req, res, req.body);
+      return transport.handleRequest(req, res, req.body);
     });
   };
 
@@ -196,26 +200,19 @@ export const createHttpApp = () => {
   });
 
   app.get(HEALTH_READY_PATH, (_req, res) => {
-    if (isShuttingDown) {
-      res.status(503).json({ status: 'not_ready', reason: 'shutting_down' });
-      return;
-    }
+    void (async () => {
+      if (isShuttingDown) {
+        res.status(503).json({ status: 'not_ready', reason: 'shutting_down' });
+        return;
+      }
 
-    if (isMcpSessionCapacityReached(sessions.size)) {
-      res.status(503).json({
-        status: 'not_ready',
-        reason: 'session_capacity_reached',
-        activeSessions: sessions.size,
-        maxSessions: getMaxMcpSessions(),
-      });
-      return;
-    }
+      if (!(await pingSessionStore())) {
+        res.status(503).json({ status: 'not_ready', reason: 'session_store_unreachable' });
+        return;
+      }
 
-    res.status(200).json({
-      status: 'ready',
-      activeSessions: sessions.size,
-      maxSessions: getMaxMcpSessions(),
-    });
+      res.status(200).json({ status: 'ready' });
+    })();
   });
 
   if (isSingleTenant) {
@@ -232,8 +229,21 @@ export const createHttpApp = () => {
   };
 
   app.post(MCP_PATH, routeHandler);
-  app.get(MCP_PATH, routeHandler);
   app.delete(MCP_PATH, routeHandler);
+
+  // GET/SSE unsupported: per-request transports can't receive a later push, so the stream is dead weight.
+  app.get(MCP_PATH, (_req, res) => {
+    res.setHeader('Allow', 'POST, DELETE');
+    res
+      .status(405)
+      .json(
+        buildJsonRpcErrorResponse(
+          -32000,
+          'Method Not Allowed: server-initiated notifications are not supported; use POST for all MCP requests',
+          null,
+        ),
+      );
+  });
 
   return app;
 };
@@ -245,6 +255,9 @@ export const getShutdownDrainMs = (): number => {
 };
 
 const sleep = (ms: number): Promise<void> => new Promise((resolve) => setTimeout(resolve, ms));
+
+/** Logs only host:port — never the password. */
+const describeRedisTarget = (): string => `${env.REDIS_HOST}:${env.REDIS_PORT}`;
 
 /** Exposed for unit tests. */
 export const waitForListening = (server: Server): Promise<void> =>
@@ -262,10 +275,6 @@ const closeServer = (server: Server): Promise<void> =>
     server.close((error) => (error ? reject(error) : resolve()));
   });
 
-// server.close() only stops accepting new connections; open SSE streams from active
-// MCP sessions keep sockets alive and would block close() indefinitely, so drop them first.
-const closeAllSessions = (): Promise<void[]> => Promise.all(Array.from(sessions.keys()).map(removeSession));
-
 // Fail readiness first so the Service stops routing, then drain before close.
 // Pairs with the Deployment preStop sleep for endpoint controller lag.
 const shutdown = async (server: Server, signal: string): Promise<void> => {
@@ -282,7 +291,6 @@ const shutdown = async (server: Server, signal: string): Promise<void> => {
     await sleep(drainMs);
   }
   try {
-    await closeAllSessions();
     await closeServer(server);
     process.exit(0);
   } catch (error) {
@@ -292,6 +300,15 @@ const shutdown = async (server: Server, signal: string): Promise<void> => {
 };
 
 export const main = async (): Promise<void> => {
+  const missingRedisVars = (['REDIS_HOST', 'REDIS_PORT'] as const).filter((key) => !env[key]);
+  if (missingRedisVars.length > 0) {
+    console.error(
+      `Fatal: ${missingRedisVars.join(', ')} not set. The HTTP server requires Redis for shared session storage.`,
+    );
+    process.exit(1);
+    return;
+  }
+
   const port = Number(process.env.PORT ?? DEFAULT_PORT);
   const app = createHttpApp();
   const server = app.listen(port);
@@ -301,7 +318,9 @@ export const main = async (): Promise<void> => {
 
   await waitForListening(server);
 
-  console.error(`Sinch MCP HTTP server listening on port ${port} (${MCP_PATH}, max sessions: ${getMaxMcpSessions()})`);
+  console.error(
+    `Sinch MCP HTTP server listening on port ${port} (${MCP_PATH}), session store: ${describeRedisTarget()}`,
+  );
 };
 
 if (require.main === module) {

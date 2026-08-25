@@ -77,11 +77,11 @@ Here is the list of tools available in the MCP server (all the phone numbers mus
 
 ### WhatsApp Template Tools
 
-| Tool                                        | Description                                                                                                                                                                                                                                                                                 | Tags                    |
-| ------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------- |
-| **list-whatsapp-templates**                 | List the WhatsApp channel-specific message templates (managed by Meta). Omni-channel templates can be fetched with the `list-messaging-templates` tool. <br> _Example prompt_: "Show me my WhatsApp templates."                                                                             |
-| **create-whatsapp-template**                | Create a WhatsApp message template, as a draft or submitted for review. <br> _Example prompt_: "Create a WhatsApp UTILITY template named order_confirmation in English with body text 'Your order {{1}} has shipped.'"                                                                      | whatsapp, configuration |
-| **update-whatsapp-template**                | Update a WhatsApp message template draft (or reset an APPROVED/REJECTED/PAUSED/DISABLED template to draft) by name and language. <br> _Example prompt_: "Update the order_confirmation EN WhatsApp template's body text to 'Your order {{1}} has shipped today.' and submit it for review." | whatsapp, configuration |
+| Tool                                         | Description                                                                                                                                                                                                                                                                                 | Tags                    |
+| -------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------- |
+| **list-whatsapp-templates**                  | List the WhatsApp channel-specific message templates (managed by Meta). Omni-channel templates can be fetched with the `list-messaging-templates` tool. <br> _Example prompt_: "Show me my WhatsApp templates."                                                                             |
+| **create-whatsapp-template**                 | Create a WhatsApp message template, as a draft or submitted for review. <br> _Example prompt_: "Create a WhatsApp UTILITY template named order_confirmation in English with body text 'Your order {{1}} has shipped.'"                                                                      | whatsapp, configuration |
+| **update-whatsapp-template**                 | Update a WhatsApp message template draft (or reset an APPROVED/REJECTED/PAUSED/DISABLED template to draft) by name and language. <br> _Example prompt_: "Update the order_confirmation EN WhatsApp template's body text to 'Your order {{1}} has shipped today.' and submit it for review." | whatsapp, configuration |
 | **delete-single-whatsapp-template-language** | Delete a single language variant of a WhatsApp message template by name and language — other languages of the same template name are unaffected. <br> _Example prompt_: "Delete the draft of the order_confirmation EN WhatsApp template."                                                  | whatsapp, configuration |
 | **delete-all-whatsapp-template-languages**   | Delete every language variant of a WhatsApp message template by name in one call. <br> _Example prompt_: "Delete all language variants of the order_confirmation WhatsApp template."                                                                                                        | whatsapp, configuration |
 
@@ -409,8 +409,8 @@ curl -X POST "http://localhost:8000/mcp" \
 
 Agent integrations (e.g. an agent installed in a Gemini Enterprise app) may send an `x-agent-id` header carrying the unique installation identifier (the Marketplace **OrderId**). Its purpose is to distinguish which installation is calling the MCP server, so it is meant for **multi-tenant** deployments only: it will be used to resolve the caller's Sinch credentials in an upcoming release. In single-tenant mode credentials always come from the server environment, so the header serves no purpose there. This custom header is a temporary mechanism until a token-exchange capability is available over M2M authentication.
 
-| Header       | Value                                              |
-| ------------ | -------------------------------------------------- |
+| Header       | Value                                             |
+| ------------ | ------------------------------------------------- |
 | `x-agent-id` | Agent installation identifier (e.g. GE `OrderId`) |
 
 #### `Authorization` user JWT (optional)
@@ -437,9 +437,11 @@ npm run start:http:server
 
 The server listens on `http://localhost:8000/mcp` by default (override with `PORT`).
 
-#### Session limits (memory)
+#### Session storage (Redis)
 
-Each MCP client session creates an in-memory `McpServer` instance (all registered tools) plus a `StreamableHTTPServerTransport`. To avoid unbounded memory growth, the server caps **concurrent sessions** at **256** by default (`MCP_MAX_SESSIONS`). When the limit is reached, new `initialize` requests receive **503 Service Unavailable** until a client closes a session (`DELETE /mcp` with `mcp-session-id`) or the transport is torn down.
+Session identity is stored in Redis, not in process memory, so any pod behind a load balancer can validate any session — no sticky sessions required. Each request builds its own short-lived `McpServer` and `StreamableHTTPServerTransport`, closed once the response finishes; nothing is held in memory between requests. Redis is required — the server exits immediately on startup unless both `REDIS_HOST` and `REDIS_PORT` are set (`REDIS_PASSWORD` is optional; TLS turns on automatically once it's set, e.g. for AWS ElastiCache). If Redis is unreachable after a short retry, the server returns **503 Service Unavailable** with JSON-RPC error code `-32003`, distinct from `-32001 Session not found`.
+
+Because there's no persistent per-session transport, the server doesn't support the standalone GET/SSE stream — `GET /mcp` returns **405**. Server-initiated notifications sent during a POST (e.g. tool progress) work as usual; a notification pushed independently of any request would have nowhere to go once transports are per-request.
 
 ### Step 4: Example MCP client configuration
 

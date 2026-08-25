@@ -16,6 +16,10 @@ export type MockServerEnv = {
   OTEL_SERVICE_NAME?: string;
   OTEL_PROPAGATORS?: string;
   LOG_LEVEL?: 'fatal' | 'error' | 'warn' | 'info' | 'debug' | 'trace' | 'silent';
+  REDIS_HOST?: string;
+  REDIS_PORT?: string;
+  REDIS_PASSWORD?: string;
+  MCP_SESSION_TTL_SECONDS?: string;
   MCP_TAGS?: string;
 };
 
