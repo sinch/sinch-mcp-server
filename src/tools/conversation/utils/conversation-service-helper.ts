@@ -7,6 +7,7 @@ import {
   ConversationRegion,
   formatRegionalizedHostname,
   REGION_PATTERN,
+  SupportedConversationRegion,
 } from '@sinch/sdk-client';
 import { ConversationService } from '@sinch/conversation';
 import { getHttpCredentialSource } from '../../../auth/http-credential-mode';
@@ -27,6 +28,13 @@ export const resolveConversationRegion = (promptRegion: string | undefined): str
     return region;
   }
   return promptRegion ?? env.CONVERSATION_REGION ?? ConversationRegion.UNITED_STATES;
+};
+
+export const resolveConversationRegionsToList = (): string[] => {
+  if (getHttpCredentialSource() === 'request-header') {
+    return [resolveConversationRegion(undefined)];
+  }
+  return Object.values(SupportedConversationRegion);
 };
 
 export const getConversationService = (toolName: string): ConversationService | PromptResponse => {
