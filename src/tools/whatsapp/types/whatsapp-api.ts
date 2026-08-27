@@ -166,3 +166,48 @@ export interface WhatsAppTemplateListResponse {
   pageSize: number;
   templates: WhatsAppTemplateResponse[];
 }
+
+// ── account ──────────────────────────────────────────────────────────────
+
+export type WhatsAppAccountState = 'ONBOARDED' | 'PENDING_FACEBOOK_VERIFICATION' | 'REJECTED' | string;
+
+export type WhatsAppAccountBanState = 'DISABLE' | 'REINSTATE' | 'SCHEDULE_FOR_DISABLE' | 'UNRECOGNIZED' | string;
+
+export type WhatsAppAccountChangesStatus =
+  'DRAFT' | 'IN_PROGRESS' | 'PENDING_FACEBOOK_VERIFICATION' | 'REJECTED' | string;
+
+export interface WhatsAppAccountSenderDetails {
+  displayName: string;
+  businessCategory: string;
+  region: string;
+  metaLocalStorage: string;
+}
+
+export interface WhatsAppAccountDetails {
+  clientBusinessManagerId?: string;
+  wabaName?: string;
+  senderDetails?: WhatsAppAccountSenderDetails;
+  companyLegalName?: string;
+}
+
+export interface WhatsAppAccountChanges {
+  status: WhatsAppAccountChangesStatus;
+  details?: WhatsAppAccountDetails[];
+}
+
+export interface WhatsAppAccountResponse {
+  isEmbeddedSignup: boolean;
+  businessManager: string;
+  compatibleRegions: string[];
+  state?: WhatsAppAccountState;
+  wabaId?: string;
+  changes?: WhatsAppAccountChanges;
+  details?: WhatsAppAccountDetails;
+  wabaBanState?: WhatsAppAccountBanState;
+  wabaBanDate?: string;
+  wabaEnabledForInsights?: boolean;
+  wabaEnabledForDirectSend?: boolean;
+  primaryBusinessLocation?: string;
+  businessDailyLimit?: string;
+  currency?: string;
+}
