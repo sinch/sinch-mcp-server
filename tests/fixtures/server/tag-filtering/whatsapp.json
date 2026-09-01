@@ -1,6 +1,7 @@
 {
   "tag": "whatsapp",
   "expectedTools": [
+    "get-whatsapp-account",
     "list-whatsapp-templates",
     "create-whatsapp-template",
     "update-whatsapp-template",

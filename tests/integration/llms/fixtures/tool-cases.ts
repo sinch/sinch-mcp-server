@@ -356,8 +356,13 @@ const ambiguityCases: ToolTestCase[] = [
   },
 ];
 
-// WhatsApp templates: list templates, create/update draft templates.
+// WhatsApp: WABA account details, list templates, create/update draft templates.
 const whatsappTemplateCases: ToolTestCase[] = [
+  {
+    prompt: 'What is the current status of my WhatsApp Business Account?',
+    expectedToolName: 'get-whatsapp-account',
+    expectedArguments: undefined,
+  },
   {
     prompt: 'Show me my WhatsApp templates.',
     expectedToolName: 'list-whatsapp-templates',

@@ -3,6 +3,10 @@ import { ToolsConfig } from '../../../types';
 const defineToolsConfig = <T extends Record<string, ToolsConfig>>(config: T) => config;
 
 export const toolsConfig = defineToolsConfig({
+  getWhatsAppAccount: {
+    name: 'get-whatsapp-account',
+    tags: ['all', 'whatsapp', 'configuration', 'get-whatsapp-account'],
+  },
   listWhatsAppTemplates: {
     name: 'list-whatsapp-templates',
     tags: ['all', 'whatsapp', 'configuration', 'list-whatsapp-templates'],
