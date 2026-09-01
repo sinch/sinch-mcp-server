@@ -1,8 +1,8 @@
 import { BaseProvisioningClient } from '../../../provisioning-client';
 import {
   CreateWhatsAppTemplateRequest,
-  WhatsAppAccountResponse,
   UpdateWhatsAppTemplateRequest,
+  WhatsAppAccountResponse,
   WhatsAppTemplateListResponse,
   WhatsAppTemplateResponse,
 } from '../types/whatsapp-api';
