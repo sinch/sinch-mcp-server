@@ -193,19 +193,27 @@ update-manifests:
       git config user.name "sinch-mcp-server CI"
 
       export TAG="${ARTIFACT_VERSION}"
+      # Both releases run the same image and differ only in authMode, so bumping one
+      # without the other drifts them apart. Missing files are skipped so this keeps
+      # working before the agent overrides land on the manifests repo's main.
       for site in eu1tst us1tst; do
-        f="staging/${site}/overrides/sinch-mcp-server.yaml"
-        yq -i '.spec.values.image.version = strenv(TAG)' "$f"
-        echo "updated ${f} -> ${TAG}"
+        for release in sinch-mcp-server sinch-mcp-server-agent; do
+          f="staging/${site}/overrides/${release}.yaml"
+          if [ ! -f "$f" ]; then
+            echo "skipping ${f} — not present in the manifests repo"
+            continue
+          fi
+          yq -i '.spec.values.image.version = strenv(TAG)' "$f"
+          git add "$f"
+          echo "updated ${f} -> ${TAG}"
+        done
       done
 
-      if git diff --quiet; then
+      if git diff --cached --quiet; then
         echo "Manifests already at ${TAG}, nothing to commit."
         exit 0
       fi
 
-      git add staging/eu1tst/overrides/sinch-mcp-server.yaml \
-              staging/us1tst/overrides/sinch-mcp-server.yaml
       git commit \
         -m "chore(staging): deploy sinch-mcp-server ${TAG}" \
         -m "Source commit: ${CI_PROJECT_PATH}@${CI_COMMIT_SHA}" \

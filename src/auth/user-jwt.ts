@@ -39,6 +39,15 @@ const decodeJwtPayload = (token: string): Record<string, unknown> | undefined =>
   return payload as Record<string, unknown>;
 };
 
+/**
+ * True when Authorization carries a `Bearer` token whose payload decodes as a
+ * three-segment JWT. Shape only — no signature, issuer, or expiry check.
+ */
+export const isJwtShapedBearerToken = (authorizationHeader: string | string[] | undefined): boolean => {
+  const token = extractBearerToken(authorizationHeader);
+  return token !== undefined && decodeJwtPayload(token) !== undefined;
+};
+
 const stringClaim = (payload: Record<string, unknown>, claim: string): string | undefined => {
   const value = payload[claim];
   return typeof value === 'string' && value.trim() ? value : undefined;
@@ -81,4 +90,18 @@ export const decodeUserJwtHeader = (
 
   const hasAnyClaim = Object.values(claims).some((value) => value !== undefined);
   return hasAnyClaim ? claims : undefined;
+};
+
+/**
+ * True when the bearer token carries Sinch-namespaced user claims — the agent token shape.
+ * Generic `sub`/`scope` alone do not count, so an M2M or unrelated JWT is not mistaken
+ * for one.
+ */
+export const isSinchUserToken = (authorizationHeader: string | string[] | undefined): boolean => {
+  const claims = decodeUserJwtHeader(authorizationHeader);
+  if (!claims) {
+    return false;
+  }
+
+  return [claims.globalUserId, claims.accountId, claims.projectId, claims.email].some((claim) => claim !== undefined);
 };

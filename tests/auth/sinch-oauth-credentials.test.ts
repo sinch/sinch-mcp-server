@@ -1,6 +1,7 @@
 import { parseSinchCredentialsValue, sinchOAuthCredentialsFromEnv } from '../../src/auth/sinch-oauth-credentials';
 import { resolveSinchOAuthCredentials } from '../../src/auth/resolve-sinch-oauth-credentials';
 import { runWithHttpCredentialHeaders } from '../../src/auth/credential-context';
+import { clearAuthModeForTests, setAuthMode } from '../../src/auth/auth-mode';
 import { clearHttpCredentialSourceForTests, setHttpCredentialSource } from '../../src/auth/http-credential-mode';
 import { PromptResponse } from '../../src/types';
 import { mockEnv, resetMockEnv } from '../helpers/mock-env';
@@ -9,6 +10,7 @@ describe('sinch-oauth-credentials', () => {
   beforeEach(() => {
     resetMockEnv();
     clearHttpCredentialSourceForTests();
+    clearAuthModeForTests();
   });
 
   it('parses Base64 projectId:keyId:keySecret', () => {
@@ -74,5 +76,32 @@ describe('sinch-oauth-credentials', () => {
   it('returns PromptResponse when credentials are missing', () => {
     const result = resolveSinchOAuthCredentials();
     expect(result).toBeInstanceOf(PromptResponse);
+  });
+
+  describe('sinchid-agent mode', () => {
+    const promptText = (response: PromptResponse): string => response.promptResponse.content[0].text;
+
+    it('does not tell the caller to send a header this deployment rejects', () => {
+      setHttpCredentialSource('request-header');
+      setAuthMode('sinchid-agent');
+
+      const resolved = runWithHttpCredentialHeaders({}, () => resolveSinchOAuthCredentials());
+
+      expect(resolved).toBeInstanceOf(PromptResponse);
+      const text = promptText(resolved as PromptResponse);
+      expect(text).toContain('does not accept x-sinch-credentials');
+      expect(text).toContain('x-agent-id');
+      expect(text).not.toContain('Base64 of projectId:keyId:keySecret');
+    });
+
+    it('still points client-credentials callers at the blob header', () => {
+      setHttpCredentialSource('request-header');
+      setAuthMode('client-credentials');
+
+      const resolved = runWithHttpCredentialHeaders({}, () => resolveSinchOAuthCredentials());
+
+      expect(resolved).toBeInstanceOf(PromptResponse);
+      expect(promptText(resolved as PromptResponse)).toContain('Base64 of projectId:keyId:keySecret');
+    });
   });
 });

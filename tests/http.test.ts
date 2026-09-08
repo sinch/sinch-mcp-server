@@ -6,8 +6,9 @@ jest.mock('ioredis', () => jest.requireActual('ioredis-mock'));
 import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { StreamableHTTPClientTransport } from '@modelcontextprotocol/sdk/client/streamableHttp.js';
 import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js';
+import { clearAuthModeForTests } from '../src/auth/auth-mode';
 import { clearHttpCredentialSourceForTests, getHttpCredentialSource } from '../src/auth/http-credential-mode';
-import { mockEnv, resetMockEnv } from '../src/__mocks__/env';
+import { mockEnv, resetMockEnv, type MockServerEnv } from '../src/__mocks__/env';
 import { createHttpApp, main, waitForListening } from '../src/http';
 import { getSessionStoreClientForTests, resetSessionStoreClientForTests } from '../src/session-store';
 
@@ -351,6 +352,7 @@ describe('createHttpApp startup validation', () => {
 
   afterEach(() => {
     clearHttpCredentialSourceForTests();
+    clearAuthModeForTests();
   });
 
   afterAll(() => {
@@ -369,16 +371,188 @@ describe('createHttpApp startup validation', () => {
     );
   });
 
-  test('starts in multi-tenant mode when CONVERSATION_REGION is set', () => {
+  test('starts in multi-tenant mode when CONVERSATION_REGION and MCP_AUTH_MODE are set', () => {
     mockEnv.CONVERSATION_REGION = 'eu';
+    mockEnv.MCP_AUTH_MODE = 'client-credentials';
     expect(() => createHttpApp()).not.toThrow();
     expect(getHttpCredentialSource()).toBe('request-header');
   });
 
-  test('does not require CONVERSATION_REGION in single-tenant mode', () => {
+  test('throws in multi-tenant mode when MCP_AUTH_MODE is not set', () => {
+    mockEnv.CONVERSATION_REGION = 'eu';
+    expect(() => createHttpApp()).toThrow(
+      'In multi-tenant mode, the MCP_AUTH_MODE environment variable is required ' +
+        '(one of: client-credentials, sinchid-agent)',
+    );
+  });
+
+  test('throws in multi-tenant mode when MCP_AUTH_MODE is not recognised', () => {
+    mockEnv.CONVERSATION_REGION = 'eu';
+    mockEnv.MCP_AUTH_MODE = 'sinchid_agent' as MockServerEnv['MCP_AUTH_MODE'];
+    expect(() => createHttpApp()).toThrow('In multi-tenant mode, the MCP_AUTH_MODE environment variable is required');
+  });
+
+  test('accepts sinchid-agent as an auth mode', () => {
+    mockEnv.CONVERSATION_REGION = 'eu';
+    mockEnv.MCP_AUTH_MODE = 'sinchid-agent';
+    expect(() => createHttpApp()).not.toThrow();
+  });
+
+  test('does not require CONVERSATION_REGION or MCP_AUTH_MODE in single-tenant mode', () => {
     process.env.MCP_API_KEY = 'test-api-key';
     expect(() => createHttpApp()).not.toThrow();
     expect(getHttpCredentialSource()).toBe('env');
+  });
+});
+
+describe('multi-tenant auth mode enforcement', () => {
+  const originalMcpApiKey = process.env.MCP_API_KEY;
+  const originalMcpApiKeys = process.env.MCP_API_KEYS;
+
+  const credentialsBlob = Buffer.from('project-1:key-1:secret-1').toString('base64');
+  const encodeSegment = (payload: Record<string, unknown>) =>
+    Buffer.from(JSON.stringify(payload)).toString('base64url');
+  const sinchIdToken = `Bearer ${encodeSegment({ alg: 'RS256' })}.${encodeSegment({ sub: 'user-1' })}.sig`;
+
+  beforeEach(() => {
+    resetMockEnv();
+    delete process.env.MCP_API_KEY;
+    delete process.env.MCP_API_KEYS;
+    mockEnv.CONVERSATION_REGION = 'eu';
+  });
+
+  afterEach(() => {
+    clearHttpCredentialSourceForTests();
+    clearAuthModeForTests();
+  });
+
+  afterAll(() => {
+    if (originalMcpApiKey !== undefined) {
+      process.env.MCP_API_KEY = originalMcpApiKey;
+    }
+    if (originalMcpApiKeys !== undefined) {
+      process.env.MCP_API_KEYS = originalMcpApiKeys;
+    }
+  });
+
+  test('client-credentials deployment rejects x-agent-id with 401 and a challenge', async () => {
+    mockEnv.MCP_AUTH_MODE = 'client-credentials';
+    const { baseUrl, close } = await listen(createHttpApp());
+
+    try {
+      const response = await post(baseUrl, initializeBody, { 'x-agent-id': 'order-42' });
+
+      expect(response.status).toBe(401);
+      expect(response.headers.get('www-authenticate')).toContain('Bearer realm="sinch-mcp"');
+      expect(await response.json()).toMatchObject({ error: 'invalid_token' });
+    } finally {
+      await close();
+    }
+  });
+
+  test('sinchid-agent deployment rejects a base64 credential blob with 401 and a challenge', async () => {
+    mockEnv.MCP_AUTH_MODE = 'sinchid-agent';
+    const { baseUrl, close } = await listen(createHttpApp());
+
+    try {
+      const response = await post(baseUrl, initializeBody, { 'x-sinch-credentials': credentialsBlob });
+
+      expect(response.status).toBe(401);
+      expect(response.headers.get('www-authenticate')).toContain('Bearer realm="sinch-mcp"');
+      expect(await response.json()).toMatchObject({ error: 'invalid_token' });
+    } finally {
+      await close();
+    }
+  });
+
+  test('client-credentials deployment accepts its own auth shape', async () => {
+    mockEnv.MCP_AUTH_MODE = 'client-credentials';
+    const { baseUrl, close } = await listen(createHttpApp());
+
+    try {
+      const response = await post(baseUrl, initializeBody, { 'x-sinch-credentials': credentialsBlob });
+
+      expect(response.status).toBe(200);
+      expect(response.headers.get('mcp-session-id')).toBeTruthy();
+    } finally {
+      await close();
+    }
+  });
+
+  test('sinchid-agent deployment rejects a request with no Authorization token', async () => {
+    mockEnv.MCP_AUTH_MODE = 'sinchid-agent';
+    const { baseUrl, close } = await listen(createHttpApp());
+
+    try {
+      const response = await fetch(`${baseUrl}/mcp`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Accept: ACCEPT_HEADER, 'x-agent-id': 'order-42' },
+        body: JSON.stringify(initializeBody),
+      });
+
+      expect(response.status).toBe(401);
+      expect(response.headers.get('www-authenticate')).toBe('Bearer realm="sinch-mcp"');
+      expect(await response.json()).toEqual({
+        error: 'Unauthorized',
+        error_description: 'Missing SinchID access token in the Authorization header',
+      });
+    } finally {
+      await close();
+    }
+  });
+
+  test('sinchid-agent deployment accepts a SinchID token with x-agent-id', async () => {
+    mockEnv.MCP_AUTH_MODE = 'sinchid-agent';
+    const { baseUrl, close } = await listen(createHttpApp());
+
+    try {
+      const response = await post(baseUrl, initializeBody, {
+        Authorization: sinchIdToken,
+        'x-agent-id': 'order-42',
+      });
+
+      expect(response.status).toBe(200);
+      expect(response.headers.get('mcp-session-id')).toBeTruthy();
+    } finally {
+      await close();
+    }
+  });
+
+  test('client-credentials deployment rejects an anonymous request', async () => {
+    mockEnv.MCP_AUTH_MODE = 'client-credentials';
+    const { baseUrl, close } = await listen(createHttpApp());
+
+    try {
+      const response = await fetch(`${baseUrl}/mcp`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Accept: ACCEPT_HEADER },
+        body: JSON.stringify(initializeBody),
+      });
+
+      expect(response.status).toBe(401);
+      expect(response.headers.get('mcp-session-id')).toBeNull();
+      expect(await response.json()).toEqual({
+        error: 'Unauthorized',
+        error_description: 'Missing x-sinch-credentials header (Base64 of projectId:keyId:keySecret)',
+      });
+    } finally {
+      await close();
+    }
+  });
+
+  test('health probes stay reachable regardless of auth shape', async () => {
+    mockEnv.MCP_AUTH_MODE = 'sinchid-agent';
+    const { baseUrl, close } = await listen(createHttpApp());
+
+    try {
+      const response = await fetch(`${baseUrl}/health/live`, {
+        headers: { 'x-sinch-credentials': credentialsBlob },
+      });
+
+      expect(response.status).toBe(200);
+    } finally {
+      await close();
+    }
   });
 });
 

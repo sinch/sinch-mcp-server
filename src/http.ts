@@ -1,9 +1,16 @@
 import { randomUUID } from 'node:crypto';
 import type { Server } from 'node:http';
-import express, { type Request, type Response } from 'express';
+import express, { type Request, type RequestHandler, type Response } from 'express';
 import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js';
 import { isInitializeRequest } from '@modelcontextprotocol/sdk/types.js';
 import dotenv from 'dotenv';
+import {
+  createAuthModeMiddleware,
+  isMcpAuthMode,
+  MCP_AUTH_MODES,
+  setAuthMode,
+  type McpAuthMode,
+} from './auth/auth-mode';
 import { getRequestAgentId, getRequestUserClaims, runWithHttpCredentialHeaders } from './auth/credential-context';
 import { setHttpCredentialSource } from './auth/http-credential-mode';
 import { createMcpApiKeyMiddleware, loadMcpApiKeys } from './auth/mcp-api-key';
@@ -92,25 +99,57 @@ const respondSessionStoreUnavailable = (res: Response, body: unknown): void => {
     );
 };
 
+/**
+ * Each deployment is pinned to one Conversation API region. Defaulting silently could route
+ * traffic to the wrong region, so refuse to start instead.
+ */
+const requireConversationRegion = (): void => {
+  if (env.CONVERSATION_REGION) {
+    return;
+  }
+
+  throw new Error(
+    'The server is starting in multi-tenant mode because neither MCP_API_KEY nor MCP_API_KEYS is set. ' +
+      'In multi-tenant mode, the CONVERSATION_REGION environment variable is required: ' +
+      'refusing to start rather than defaulting to a region. ' +
+      'Either set CONVERSATION_REGION, or set MCP_API_KEY to run in single-tenant mode.',
+  );
+};
+
+/**
+ * Each deployment is pinned to one inbound auth shape. Both endpoints are
+ * edge-unauthenticated, so defaulting here would let either shape in on either one.
+ */
+const requireAuthMode = (): McpAuthMode => {
+  if (isMcpAuthMode(env.MCP_AUTH_MODE)) {
+    return env.MCP_AUTH_MODE;
+  }
+
+  throw new Error(
+    'The server is starting in multi-tenant mode because neither MCP_API_KEY nor MCP_API_KEYS is set. ' +
+      `In multi-tenant mode, the MCP_AUTH_MODE environment variable is required (one of: ${MCP_AUTH_MODES.join(', ')}): ` +
+      'refusing to start rather than accepting every auth shape. ' +
+      'Either set MCP_AUTH_MODE, or set MCP_API_KEY to run in single-tenant mode.',
+  );
+};
+
+const configureSingleTenant = (mcpApiKeys: string[]): RequestHandler => {
+  setAuthMode(undefined);
+  setHttpCredentialSource('env');
+  return createMcpApiKeyMiddleware(mcpApiKeys);
+};
+
+const configureMultiTenant = (): RequestHandler => {
+  requireConversationRegion();
+  const authMode = requireAuthMode();
+  setAuthMode(authMode);
+  setHttpCredentialSource('request-header');
+  return createAuthModeMiddleware(authMode);
+};
+
 export const createHttpApp = () => {
   const mcpApiKeys = loadMcpApiKeys();
-  const isSingleTenant = mcpApiKeys.length > 0;
-
-  if (isSingleTenant) {
-    setHttpCredentialSource('env');
-  } else {
-    // Multi-tenant: each deployment is pinned to one Conversation API region. Defaulting to a
-    // region silently could route traffic to the wrong region, so refuse to start instead.
-    if (!env.CONVERSATION_REGION) {
-      throw new Error(
-        'The server is starting in multi-tenant mode because neither MCP_API_KEY nor MCP_API_KEYS is set. ' +
-          'In multi-tenant mode, the CONVERSATION_REGION environment variable is required: ' +
-          'refusing to start rather than defaulting to a region. ' +
-          'Either set CONVERSATION_REGION, or set MCP_API_KEY to run in single-tenant mode.',
-      );
-    }
-    setHttpCredentialSource('request-header');
-  }
+  const authMiddleware = mcpApiKeys.length > 0 ? configureSingleTenant(mcpApiKeys) : configureMultiTenant();
 
   const handleMcpRequest = async (req: Request, res: Response): Promise<void> => {
     const sessionId = getSessionId(req);
@@ -215,9 +254,7 @@ export const createHttpApp = () => {
     })();
   });
 
-  if (isSingleTenant) {
-    app.use(MCP_PATH, createMcpApiKeyMiddleware(mcpApiKeys));
-  }
+  app.use(MCP_PATH, authMiddleware);
 
   const routeHandler = (req: Request, res: Response) => {
     void handleMcpRequest(req, res).catch((error) => {

@@ -51,6 +51,13 @@ secretKeys: []
 # Set per site in k8s-manifests-mcp-messaging.
 conversationRegion: ""
 
+# Inbound auth shape accepted by this deployment — one of:
+#   client-credentials  callers send X-Sinch-Credentials (base64 projectId:keyId:keySecret)
+#   sinchid-agent       callers send a SinchID access token plus x-agent-id
+# REQUIRED; there is no default. Both endpoints are unauthenticated at the edge, so a
+# deployment that accepted every shape would defeat the point of splitting them.
+authMode: ""
+
 # Name of the Secret holding the Redis connection details for shared session storage.
 # REQUIRED — the server refuses to start without Redis. This is deliberately separate from
 # existingSecret/secretKeys above: it's typically infra-managed (e.g. a Crossplane-provisioned
