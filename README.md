@@ -395,7 +395,7 @@ In multi-tenant mode, `MCP_AUTH_MODE` is **required** alongside `CONVERSATION_RE
 
 Requests are checked against the configured shape and rejected with `401` plus a `WWW-Authenticate: Bearer` challenge otherwise:
 
-- **`client-credentials`** **requires** `X-Sinch-Credentials`, and rejects `x-agent-id` or an `Authorization` bearer that decodes as a SinchID user token. Anonymous requests do not reach the tools.
+- **`client-credentials`** rejects `x-agent-id`, and rejects an `Authorization` bearer that decodes as a SinchID user token.
 - **`sinchid-agent`** **requires** `Authorization: Bearer <JWT>` — a missing token, an opaque token, or a base64 credential blob smuggled into `Authorization` is a `401`. It also rejects `X-Sinch-Credentials`.
 
 A request with no credentials at all gets the RFC 6750 realm-only challenge (`Bearer realm="sinch-mcp"`) with the missing header named in the response body; a request with the wrong *kind* of credential gets `error="invalid_token"` plus a description.

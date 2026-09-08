@@ -112,16 +112,10 @@ describe('createAuthModeMiddleware', () => {
       expect(next).toHaveBeenCalled();
     });
 
-    it('rejects a request carrying no credentials with a realm-only challenge', () => {
-      const { res, next } = run('client-credentials', {});
+    it('lets a request carrying no credentials through to the tools', () => {
+      const { next } = run('client-credentials', {});
 
-      expect(next).not.toHaveBeenCalled();
-      expect(res.statusCode).toBe(401);
-      expect(res.headers['WWW-Authenticate']).toBe('Bearer realm="sinch-mcp"');
-      expect(res.body).toEqual({
-        error: 'Unauthorized',
-        error_description: `Missing ${SINCH_CREDENTIALS_HEADER} header (Base64 of projectId:keyId:keySecret)`,
-      });
+      expect(next).toHaveBeenCalled();
     });
   });
 

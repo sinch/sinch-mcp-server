@@ -518,28 +518,6 @@ describe('multi-tenant auth mode enforcement', () => {
     }
   });
 
-  test('client-credentials deployment rejects an anonymous request', async () => {
-    mockEnv.MCP_AUTH_MODE = 'client-credentials';
-    const { baseUrl, close } = await listen(createHttpApp());
-
-    try {
-      const response = await fetch(`${baseUrl}/mcp`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', Accept: ACCEPT_HEADER },
-        body: JSON.stringify(initializeBody),
-      });
-
-      expect(response.status).toBe(401);
-      expect(response.headers.get('mcp-session-id')).toBeNull();
-      expect(await response.json()).toEqual({
-        error: 'Unauthorized',
-        error_description: 'Missing x-sinch-credentials header (Base64 of projectId:keyId:keySecret)',
-      });
-    } finally {
-      await close();
-    }
-  });
-
   test('health probes stay reachable regardless of auth shape', async () => {
     mockEnv.MCP_AUTH_MODE = 'sinchid-agent';
     const { baseUrl, close } = await listen(createHttpApp());

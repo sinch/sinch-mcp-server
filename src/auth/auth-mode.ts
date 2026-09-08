@@ -34,9 +34,7 @@ type AuthShapeCheck = { ok: true } | { ok: false; reason: string; invalidToken: 
 const OK: AuthShapeCheck = { ok: true };
 
 /**
- * Callers authenticate with a base64 credential blob. Agent-shaped auth — x-agent-id, or a
- * SinchID user token — belongs to the other endpoint, and a request with no credentials at
- * all has no business reaching the tools.
+ * Agent-shaped auth — x-agent-id, or a SinchID user token — belongs to the other endpoint.
  */
 const checkClientCredentials = (req: Request): AuthShapeCheck => {
   if (extractHeaderValue(req.headers[AGENT_ID_HEADER]) !== undefined) {
@@ -52,14 +50,6 @@ const checkClientCredentials = (req: Request): AuthShapeCheck => {
       ok: false,
       invalidToken: true,
       reason: `a SinchID user token is not accepted by a client-credentials deployment; send ${SINCH_CREDENTIALS_HEADER} instead`,
-    };
-  }
-
-  if (extractHeaderValue(req.headers[SINCH_CREDENTIALS_HEADER]) === undefined) {
-    return {
-      ok: false,
-      invalidToken: false,
-      reason: `Missing ${SINCH_CREDENTIALS_HEADER} header (Base64 of projectId:keyId:keySecret)`,
     };
   }
 
