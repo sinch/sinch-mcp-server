@@ -24,6 +24,8 @@
 
 # Auth (staging v1): single-tenant — Secret `sinch-mcp-server` with MCP_API_KEY + Sinch creds.
 
+# Client credentials always arrive in the `Authorization` header (see "Auth contract" below); `X-Sinch-Credentials` is no longer read.
+
 #
 
 # Note: MCP session state is stored in Redis, not in pod memory, so requests can land on
@@ -37,6 +39,27 @@
 # with `endpoint`/`port`/`password` keys), not the app's own `existingSecret`.
 
 # All overlays run replicaCount: 2 with a PodDisruptionBudget.
+
+## Auth contract (`Authorization` header)
+
+Every request to `/mcp` authenticates through the standard `Authorization: Bearer <token>` header.
+What the token means depends on the deployment mode, which is selected by whether `MCP_API_KEY`
+(or `MCP_API_KEYS`) is present in the app secret:
+
+| Mode          | Server secret                                                  | `Authorization` header value                                               |
+| ------------- | -------------------------------------------------------------- | -------------------------------------------------------------------------- |
+| Single-tenant | `MCP_API_KEY` **set**, plus `PROJECT_ID`/`KEY_ID`/`KEY_SECRET` | `Bearer <MCP_API_KEY>` (gateway key; Sinch creds from env)                 |
+| Multi-tenant  | `MCP_API_KEY` **unset**, `CONVERSATION_REGION` required        | `Bearer <base64(projectId:keyId:keySecret)>` (client-supplied Sinch creds) |
+
+Multi-tenant notes:
+
+- Encode `projectId:keyId:keySecret` with standard Base64 (no line breaks, not base64url) and
+  send it on every request, including after `initialize`.
+- A missing/malformed header is not rejected at the HTTP layer; OAuth-backed tools answer with a
+  prompt response: `Missing or invalid Authorization header (expected "Bearer <Base64 of projectId:keyId:keySecret>").`
+- The former `X-Sinch-Credentials` header is **not** accepted (no deprecation window). Any
+  ingress/gateway rules that forward or strip that header can be dropped; make sure
+  `Authorization` is passed through to the pod untouched.
 
 ## Secret skeleton (create in namespace before first deploy)
 
