@@ -58,8 +58,8 @@ describe('credential-context', () => {
       expect(credentials?.keySecret).toBe('secret');
     });
 
-    it('does not read credentials from the legacy X-Sinch-Credentials header', () => {
-      const credentials = runWithHttpCredentialHeaders({ 'x-sinch-credentials': encoded }, () =>
+    it('does not read credentials from unrelated headers', () => {
+      const credentials = runWithHttpCredentialHeaders({ 'other-header': encoded }, () =>
         getRequestSinchOAuthCredentials(),
       );
       expect(credentials).toBeUndefined();

@@ -352,27 +352,18 @@ npm run build
 
 #### Single-tenant (one Sinch account per server)
 
-Use when every client of this MCP instance shares the same Sinch project. Configure credentials **on the server**; clients only authenticate to the MCP gateway.
+Use when every client of this MCP instance shares the same Sinch project. Configure credentials **on the server**; clients do not send Sinch credentials per request.
 
 ```dotenv
-MCP_API_KEY=your-secret-mcp-api-key
 PORT=8000
 PROJECT_ID=
 KEY_ID=
 KEY_SECRET=
 ```
 
-Remote clients send **one header** on every request:
-
-| Header          | Value                  |
-| --------------- | ---------------------- |
-| `Authorization` | `Bearer <MCP_API_KEY>` |
-
-`MCP_API_KEY` (or comma-separated `MCP_API_KEYS` for [key rotation](#mcp_api_keys-key-rotation)) authorizes access to the MCP server. `PROJECT_ID`, `KEY_ID`, and `KEY_SECRET` are read from the server environment only — **Sinch credentials sent by the client are ignored** in this mode (no client override of server credentials).
-
 #### Multi-tenant (each client brings a Sinch account)
 
-Use when different clients must use different Sinch projects. **Do not set `MCP_API_KEY`** on the server. Each client sends its own credentials on every request.
+Use when different clients must use different Sinch projects. Each client sends its own credentials on every request.
 
 Remote clients send **one header** on every request:
 
@@ -383,8 +374,6 @@ Remote clients send **one header** on every request:
 The server does **not** read `PROJECT_ID`, `KEY_ID`, or `KEY_SECRET` from its environment for OAuth-backed tools in this mode. OAuth clients are cached in memory with **LRU eviction** (default 256 entries, configurable via `OAUTH_TOKEN_CACHE_MAX_ENTRIES`).
 
 In multi-tenant mode, `CONVERSATION_REGION` is **required**: the server refuses to start without it, and it is never defaulted to `us`. Each deployment is pinned to a single region, and the region cannot be overridden per request or from the prompt.
-
-> **Breaking change:** the custom `X-Sinch-Credentials` header is **no longer read**. Clients still sending it receive a tool response asking for the `Authorization` header. There is no deprecation window; update clients to `Authorization: Bearer <base64>`.
 
 #### `Authorization` credentials format (multi-tenant only)
 
@@ -428,13 +417,14 @@ After the end-user completes the OAuth login and consent flow, agent integration
 
 The server base64-decodes the JWT payload and captures the Sinch claims (`https://sinch.com/project_id`, `https://sinch.com/account_id`, `https://sinch.com/global_user_id`) and the standard `scope` claim in the request context, logging them for **audit purposes only**. The token signature is **not** verified and the claims are never used to resolve API credentials (the `x-agent-id` header serves that purpose). A missing or malformed token is ignored and the request proceeds normally. In the long term, the user JWT will be exchanged for an M2M JWT, replacing the custom headers.
 
-A request carries a single `Authorization` header, so in multi-tenant mode it holds **either** the Base64 Sinch credentials **or** a user JWT. The two token shapes are disjoint (a JWT contains `.` separators, which are not part of the Base64 alphabet), so each is only interpreted as its own kind: a JWT never resolves to Sinch credentials, and encoded credentials never yield audit claims.
+`Authorization` is shared by the dual HTTP deployment modes:
 
-Note: in **single-tenant** mode the `Authorization` header carries the MCP API key instead; an opaque key is not a JWT, so no claims are captured.
-
-#### MCP_API_KEYS key rotation
-
-Use `MCP_API_KEYS` (comma-separated) in **single-tenant** mode to accept an old and new gateway key during rotation, then remove the retired key.
+| Deployment mode | Bearer token shape                                 | Server behavior                                              |
+| --------------- | -------------------------------------------------- | ------------------------------------------------------------ |
+| Single-tenant   | Gateway token, when gateway auth is configured     | Uses server-side `PROJECT_ID`, `KEY_ID`, and `KEY_SECRET`    |
+| Multi-tenant    | Standard Base64 `projectId:keyId:keySecret`        | Uses the request credentials for OAuth-backed tools          |
+| User JWT audit  | Three-segment JWT (`header.payload.signature`)     | Captures user claims for audit logging only                  |
+| Other value     | Missing, malformed, or not one of the shapes above | Ignored by parsers that do not recognize that specific shape |
 
 ### Step 3: Start the HTTP server
 
@@ -451,21 +441,6 @@ Session identity is stored in Redis, not in process memory, so any pod behind a 
 Because there's no persistent per-session transport, the server doesn't support the standalone GET/SSE stream — `GET /mcp` returns **405**. Server-initiated notifications sent during a POST (e.g. tool progress) work as usual; a notification pushed independently of any request would have nowhere to go once transports are per-request.
 
 ### Step 4: Example MCP client configuration
-
-**Single-tenant:**
-
-```json
-{
-  "mcpServers": {
-    "sinch-remote": {
-      "url": "https://your-host.example.com/mcp",
-      "headers": {
-        "Authorization": "Bearer <MCP_API_KEY>"
-      }
-    }
-  }
-}
-```
 
 **Multi-tenant:**
 

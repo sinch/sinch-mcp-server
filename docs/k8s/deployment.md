@@ -24,7 +24,7 @@
 
 # Auth (staging v1): single-tenant — Secret `sinch-mcp-server` with MCP_API_KEY + Sinch creds.
 
-# Client credentials always arrive in the `Authorization` header (see "Auth contract" below); `X-Sinch-Credentials` is no longer read.
+# Client credentials always arrive in the `Authorization` header (see "Auth contract" below).
 
 #
 
@@ -57,9 +57,7 @@ Multi-tenant notes:
   send it on every request, including after `initialize`.
 - A missing/malformed header is not rejected at the HTTP layer; OAuth-backed tools answer with a
   prompt response: `Missing or invalid Authorization header (expected "Bearer <Base64 of projectId:keyId:keySecret>").`
-- The former `X-Sinch-Credentials` header is **not** accepted (no deprecation window). Any
-  ingress/gateway rules that forward or strip that header can be dropped; make sure
-  `Authorization` is passed through to the pod untouched.
+- Make sure `Authorization` is passed through to the pod untouched.
 
 ## Secret skeleton (create in namespace before first deploy)
 

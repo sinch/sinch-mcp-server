@@ -117,23 +117,21 @@ describe('sinch-oauth-credentials', () => {
       expect(resolved.projectId).toBe('hdr');
     });
 
-    it('no longer accepts the legacy X-Sinch-Credentials header in multi-tenant mode', () => {
+    it('does not read credentials from unrelated headers in multi-tenant mode', () => {
       setHttpCredentialSource('request-header');
 
-      const resolved = runWithHttpCredentialHeaders({ 'x-sinch-credentials': encoded }, () =>
-        resolveSinchOAuthCredentials(),
-      );
+      const resolved = runWithHttpCredentialHeaders({ 'other-header': encoded }, () => resolveSinchOAuthCredentials());
 
       expect(expectPromptText(resolved)).toBe(MISSING_AUTHORIZATION_CREDENTIALS_MESSAGE);
     });
 
-    it('ignores X-Sinch-Credentials even when Authorization also carries credentials', () => {
+    it('ignores unrelated headers even when Authorization also carries credentials', () => {
       setHttpCredentialSource('request-header');
 
       const resolved = runWithHttpCredentialHeaders(
         {
           authorization: `Bearer ${encoded}`,
-          'x-sinch-credentials': encodeCredentials('legacy:lkey:lsecret'),
+          'other-header': encodeCredentials('other:lkey:lsecret'),
         },
         () => resolveSinchOAuthCredentials(),
       );
@@ -152,7 +150,7 @@ describe('sinch-oauth-credentials', () => {
       const text = expectPromptText(resolved);
       expect(text).toBe(MISSING_AUTHORIZATION_CREDENTIALS_MESSAGE);
       expect(text).toContain('Authorization');
-      expect(text.toLowerCase()).not.toContain('x-sinch-credentials');
+      expect(text.toLowerCase()).not.toContain('other-header');
     });
 
     it.each([
