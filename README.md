@@ -442,6 +442,18 @@ Because there's no persistent per-session transport, the server doesn't support 
 
 ### Step 4: Example MCP client configuration
 
+**Single-tenant:**
+
+```json
+{
+  "mcpServers": {
+    "sinch-remote": {
+      "url": "https://your-host.example.com/mcp"
+    }
+  }
+}
+```
+
 **Multi-tenant:**
 
 ```json
