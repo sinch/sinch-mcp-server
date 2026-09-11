@@ -106,7 +106,15 @@ jobs:
             (.clones[]? | "\(.timestamp | category),\(.count)")
           ' clones.json > clones.csv
 
-          filename="Clones in last 14 days.csv"
+          date_range=$(jq -r '
+            (.clones // [] | map(.timestamp | split("T")[0]) | sort) as $dates |
+            if ($dates | length) > 0 then
+              "\($dates[0]) to \($dates[-1])"
+            else
+              "no-data"
+            end
+          ' clones.json)
+          filename="Clones in last 14 days - ${date_range}.csv"
           file_size=$(wc -c < clones.csv | tr -d ' ')
 
           upload_response=$(curl -fsS -X POST "https://slack.com/api/files.getUploadURLExternal" \
@@ -136,7 +144,7 @@ jobs:
             -H "Authorization: Bearer ${SLACK_BOT_TOKEN}" \
             -H "Content-Type: application/x-www-form-urlencoded" \
             --data-urlencode "channel_id=${SLACK_CHANNEL_ID}" \
-            --data-urlencode "initial_comment=Clones in last 14 days for ${REPO}" \
+            --data-urlencode "initial_comment=Clones in last 14 days (${date_range}) for ${REPO}" \
             --data-urlencode "files=${files_payload}")
 
           if ! echo "${complete_response}" | jq -e '.ok == true' >/dev/null; then
