@@ -1,10 +1,6 @@
 import { AsyncLocalStorage } from 'node:async_hooks';
 import type { IncomingHttpHeaders } from 'node:http';
-import {
-  parseSinchCredentialsHeader,
-  SINCH_CREDENTIALS_HEADER,
-  type SinchOAuthCredentials,
-} from './sinch-oauth-credentials';
+import { parseSinchCredentialsAuthorizationHeader, type SinchOAuthCredentials } from './sinch-oauth-credentials';
 import { extractHeaderValue } from '../utils';
 import { decodeUserJwtHeader, type SinchUserClaims } from './user-jwt';
 
@@ -37,8 +33,10 @@ export const getRequestUserClaims = (): SinchUserClaims | undefined => {
 };
 
 export const runWithHttpCredentialHeaders = <T>(headers: IncomingHttpHeaders, fn: () => T): T => {
+  // Both the multi-tenant Sinch credentials (Bearer <Base64 projectId:keyId:keySecret>) and the
+  // optional user JWT travel in Authorization; each parser only accepts its own token shape.
   const context: RequestAuthContext = {
-    credentials: parseSinchCredentialsHeader(headers[SINCH_CREDENTIALS_HEADER]),
+    credentials: parseSinchCredentialsAuthorizationHeader(headers.authorization),
     agentId: extractHeaderValue(headers[AGENT_ID_HEADER]),
     userClaims: decodeUserJwtHeader(headers.authorization),
   };
