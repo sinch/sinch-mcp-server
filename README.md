@@ -452,10 +452,7 @@ Because there's no persistent per-session transport, the server doesn't support 
 {
   "mcpServers": {
     "sinch-remote": {
-      "url": "https://your-host.example.com/mcp",
-      "headers": {
-        "Authorization": "Bearer <MCP_API_KEY>"
-      }
+      "url": "https://your-host.example.com/mcp"
     }
   }
 }
