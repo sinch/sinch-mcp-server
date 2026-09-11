@@ -1,8 +1,8 @@
 import type { NextFunction, Request, Response } from 'express';
 import { AGENT_ID_HEADER } from './credential-context';
 import { buildBearerWwwAuthenticateHeader } from './mcp-api-key';
-import { SINCH_CREDENTIALS_HEADER } from './sinch-oauth-credentials';
-import { isJwtShapedBearerToken, isSinchUserToken } from './user-jwt';
+import { parseSinchCredentialsAuthorizationHeader } from './sinch-oauth-credentials';
+import { isJwtShapedBearerToken } from './user-jwt';
 import { extractHeaderValue } from '../utils';
 
 export const MCP_AUTH_MODES = ['client-credentials', 'sinchid-agent'] as const;
@@ -34,22 +34,31 @@ type AuthShapeCheck = { ok: true } | { ok: false; reason: string; invalidToken: 
 const OK: AuthShapeCheck = { ok: true };
 
 /**
- * Agent-shaped auth — x-agent-id, or a SinchID user token — belongs to the other endpoint.
+ * Credentials arrive as `Authorization: Bearer <Base64 of projectId:keyId:keySecret>`. A SinchID
+ * token is a JWT, so it fails that parse and belongs to the other deployment.
  */
 const checkClientCredentials = (req: Request): AuthShapeCheck => {
   if (extractHeaderValue(req.headers[AGENT_ID_HEADER]) !== undefined) {
     return {
       ok: false,
       invalidToken: true,
-      reason: `${AGENT_ID_HEADER} is not accepted by a client-credentials deployment; send ${SINCH_CREDENTIALS_HEADER} instead`,
+      reason: `${AGENT_ID_HEADER} is not accepted by a client-credentials deployment; send Sinch API credentials in Authorization instead`,
     };
   }
 
-  if (isSinchUserToken(req.headers.authorization)) {
+  if (extractHeaderValue(req.headers.authorization) === undefined) {
+    return {
+      ok: false,
+      invalidToken: false,
+      reason: 'Missing Sinch API credentials in the Authorization header',
+    };
+  }
+
+  if (parseSinchCredentialsAuthorizationHeader(req.headers.authorization) === undefined) {
     return {
       ok: false,
       invalidToken: true,
-      reason: `a SinchID user token is not accepted by a client-credentials deployment; send ${SINCH_CREDENTIALS_HEADER} instead`,
+      reason: 'Authorization must carry Base64 projectId:keyId:keySecret as a Bearer token',
     };
   }
 
@@ -57,19 +66,10 @@ const checkClientCredentials = (req: Request): AuthShapeCheck => {
 };
 
 /**
- * The SinchID access token in Authorization is the credential, so it is required and must
- * be JWT-shaped. That rejects a base64 credential blob wherever it arrives, and keeps the
- * contract on the header ZAP will validate once it can.
+ * The SinchID access token in Authorization is the credential, so it is required and must be
+ * JWT-shaped. That rejects a Base64 credential triple, which is not a JWT.
  */
 const checkSinchidAgent = (req: Request): AuthShapeCheck => {
-  if (extractHeaderValue(req.headers[SINCH_CREDENTIALS_HEADER]) !== undefined) {
-    return {
-      ok: false,
-      invalidToken: true,
-      reason: `${SINCH_CREDENTIALS_HEADER} is not accepted by a sinchid-agent deployment; send a SinchID access token in Authorization instead`,
-    };
-  }
-
   if (extractHeaderValue(req.headers.authorization) === undefined) {
     return {
       ok: false,

@@ -91,17 +91,3 @@ export const decodeUserJwtHeader = (
   const hasAnyClaim = Object.values(claims).some((value) => value !== undefined);
   return hasAnyClaim ? claims : undefined;
 };
-
-/**
- * True when the bearer token carries Sinch-namespaced user claims — the agent token shape.
- * Generic `sub`/`scope` alone do not count, so an M2M or unrelated JWT is not mistaken
- * for one.
- */
-export const isSinchUserToken = (authorizationHeader: string | string[] | undefined): boolean => {
-  const claims = decodeUserJwtHeader(authorizationHeader);
-  if (!claims) {
-    return false;
-  }
-
-  return [claims.globalUserId, claims.accountId, claims.projectId, claims.email].some((claim) => claim !== undefined);
-};

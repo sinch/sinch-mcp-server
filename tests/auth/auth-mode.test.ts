@@ -2,7 +2,6 @@
 import type { Request, Response } from 'express';
 import { createAuthModeMiddleware, isMcpAuthMode, MCP_AUTH_MODES } from '../../src/auth/auth-mode';
 import { AGENT_ID_HEADER } from '../../src/auth/credential-context';
-import { SINCH_CREDENTIALS_HEADER } from '../../src/auth/sinch-oauth-credentials';
 import { SINCH_PROJECT_ID_CLAIM } from '../../src/auth/user-jwt';
 
 const createMockResponse = () => {
@@ -61,61 +60,51 @@ describe('isMcpAuthMode', () => {
 
 describe('createAuthModeMiddleware', () => {
   describe('client-credentials', () => {
-    it('passes a request carrying only the credentials blob', () => {
-      const { res, next } = run('client-credentials', { [SINCH_CREDENTIALS_HEADER]: CREDENTIALS_BLOB });
+    it('passes a request whose Authorization decodes to a credential triple', () => {
+      const { res, next } = run('client-credentials', { authorization: `Bearer ${CREDENTIALS_BLOB}` });
 
       expect(next).toHaveBeenCalled();
       expect(res.statusCode).toBe(200);
     });
 
     it('rejects a request carrying x-agent-id with 401 and a challenge', () => {
-      const { res, next } = run('client-credentials', { [AGENT_ID_HEADER]: 'order-42' });
+      const { res, next } = run('client-credentials', {
+        [AGENT_ID_HEADER]: 'order-42',
+        authorization: `Bearer ${CREDENTIALS_BLOB}`,
+      });
 
       expect(next).not.toHaveBeenCalled();
       expect(res.statusCode).toBe(401);
       expect(res.headers['WWW-Authenticate']).toBe(
-        `Bearer realm="sinch-mcp", error="invalid_token", error_description="${AGENT_ID_HEADER} is not accepted by a client-credentials deployment; send ${SINCH_CREDENTIALS_HEADER} instead"`,
+        `Bearer realm="sinch-mcp", error="invalid_token", error_description="${AGENT_ID_HEADER} is not accepted by a client-credentials deployment; send Sinch API credentials in Authorization instead"`,
       );
-      expect(res.body).toEqual({
-        error: 'invalid_token',
-        error_description: `${AGENT_ID_HEADER} is not accepted by a client-credentials deployment; send ${SINCH_CREDENTIALS_HEADER} instead`,
-      });
     });
 
-    it('rejects a SinchID user token in Authorization even without x-agent-id', () => {
-      const { res, next } = run('client-credentials', { authorization: SINCHID_TOKEN });
+    it.each([
+      ['a SinchID JWT', SINCHID_TOKEN],
+      ['an opaque token', 'Bearer opaque-api-key'],
+      ['a token that decodes without both separators', `Bearer ${Buffer.from('proj:key').toString('base64')}`],
+    ])('rejects %s with 401', (_label, authorization) => {
+      const { res, next } = run('client-credentials', { authorization });
 
       expect(next).not.toHaveBeenCalled();
       expect(res.statusCode).toBe(401);
       expect(res.body).toEqual({
         error: 'invalid_token',
-        error_description: `a SinchID user token is not accepted by a client-credentials deployment; send ${SINCH_CREDENTIALS_HEADER} instead`,
+        error_description: 'Authorization must carry Base64 projectId:keyId:keySecret as a Bearer token',
       });
     });
 
-    it('allows a generic bearer JWT that carries no Sinch user claims', () => {
-      const { res, next } = run('client-credentials', {
-        [SINCH_CREDENTIALS_HEADER]: CREDENTIALS_BLOB,
-        authorization: `Bearer ${jwt({ sub: 'machine-1', scope: 'conversation:write' })}`,
+    it('rejects a request with no Authorization using a realm-only challenge', () => {
+      const { res, next } = run('client-credentials', {});
+
+      expect(next).not.toHaveBeenCalled();
+      expect(res.statusCode).toBe(401);
+      expect(res.headers['WWW-Authenticate']).toBe('Bearer realm="sinch-mcp"');
+      expect(res.body).toEqual({
+        error: 'Unauthorized',
+        error_description: 'Missing Sinch API credentials in the Authorization header',
       });
-
-      expect(next).toHaveBeenCalled();
-      expect(res.statusCode).toBe(200);
-    });
-
-    it('ignores a blank x-agent-id', () => {
-      const { next } = run('client-credentials', {
-        [AGENT_ID_HEADER]: '   ',
-        [SINCH_CREDENTIALS_HEADER]: CREDENTIALS_BLOB,
-      });
-
-      expect(next).toHaveBeenCalled();
-    });
-
-    it('lets a request carrying no credentials through to the tools', () => {
-      const { next } = run('client-credentials', {});
-
-      expect(next).toHaveBeenCalled();
     });
   });
 
@@ -127,38 +116,20 @@ describe('createAuthModeMiddleware', () => {
       expect(res.statusCode).toBe(200);
     });
 
-    it('rejects a base64 credential blob with 401 and a challenge', () => {
-      const { res, next } = run('sinchid-agent', {
-        [SINCH_CREDENTIALS_HEADER]: CREDENTIALS_BLOB,
-        authorization: SINCHID_TOKEN,
-      });
+    it.each([
+      ['a Base64 credential triple', `Bearer ${CREDENTIALS_BLOB}`],
+      ['an opaque token', 'Bearer opaque-api-key'],
+    ])('rejects %s with 401', (_label, authorization) => {
+      const { res, next } = run('sinchid-agent', { authorization });
 
       expect(next).not.toHaveBeenCalled();
       expect(res.statusCode).toBe(401);
       expect(res.headers['WWW-Authenticate']).toBe(
-        `Bearer realm="sinch-mcp", error="invalid_token", error_description="${SINCH_CREDENTIALS_HEADER} is not accepted by a sinchid-agent deployment; send a SinchID access token in Authorization instead"`,
+        'Bearer realm="sinch-mcp", error="invalid_token", error_description="Authorization must carry a SinchID access token as a Bearer JWT"',
       );
     });
 
-    it('rejects a credential blob smuggled into Authorization', () => {
-      const { res, next } = run('sinchid-agent', { authorization: `Bearer ${CREDENTIALS_BLOB}` });
-
-      expect(next).not.toHaveBeenCalled();
-      expect(res.statusCode).toBe(401);
-      expect(res.body).toEqual({
-        error: 'invalid_token',
-        error_description: 'Authorization must carry a SinchID access token as a Bearer JWT',
-      });
-    });
-
-    it('rejects a token that is not JWT-shaped', () => {
-      const { res } = run('sinchid-agent', { authorization: 'Bearer opaque-api-key' });
-
-      expect(res.statusCode).toBe(401);
-      expect(res.body).toMatchObject({ error: 'invalid_token' });
-    });
-
-    it('rejects a missing Authorization with a realm-only challenge', () => {
+    it('rejects a request with no Authorization using a realm-only challenge', () => {
       const { res, next } = run('sinchid-agent', { [AGENT_ID_HEADER]: 'order-42' });
 
       expect(next).not.toHaveBeenCalled();
@@ -169,16 +140,5 @@ describe('createAuthModeMiddleware', () => {
         error_description: 'Missing SinchID access token in the Authorization header',
       });
     });
-  });
-
-  it('rejects a request carrying both shapes, whichever mode is configured', () => {
-    const headers = {
-      [SINCH_CREDENTIALS_HEADER]: CREDENTIALS_BLOB,
-      [AGENT_ID_HEADER]: 'order-42',
-      authorization: SINCHID_TOKEN,
-    };
-
-    expect(run('client-credentials', headers).res.statusCode).toBe(401);
-    expect(run('sinchid-agent', headers).res.statusCode).toBe(401);
   });
 });

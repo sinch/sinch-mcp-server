@@ -455,7 +455,7 @@ describe('multi-tenant auth mode enforcement', () => {
     const { baseUrl, close } = await listen(createHttpApp());
 
     try {
-      const response = await post(baseUrl, initializeBody, { 'x-sinch-credentials': credentialsBlob });
+      const response = await post(baseUrl, initializeBody, { Authorization: `Bearer ${credentialsBlob}` });
 
       expect(response.status).toBe(401);
       expect(response.headers.get('www-authenticate')).toContain('Bearer realm="sinch-mcp"');
@@ -470,7 +470,7 @@ describe('multi-tenant auth mode enforcement', () => {
     const { baseUrl, close } = await listen(createHttpApp());
 
     try {
-      const response = await post(baseUrl, initializeBody, { 'x-sinch-credentials': credentialsBlob });
+      const response = await post(baseUrl, initializeBody, { Authorization: `Bearer ${credentialsBlob}` });
 
       expect(response.status).toBe(200);
       expect(response.headers.get('mcp-session-id')).toBeTruthy();
@@ -524,7 +524,7 @@ describe('multi-tenant auth mode enforcement', () => {
 
     try {
       const response = await fetch(`${baseUrl}/health/live`, {
-        headers: { 'x-sinch-credentials': credentialsBlob },
+        headers: { Authorization: `Bearer ${credentialsBlob}` },
       });
 
       expect(response.status).toBe(200);

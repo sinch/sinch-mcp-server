@@ -195,7 +195,7 @@ describe('sinch-oauth-credentials', () => {
   describe('sinchid-agent mode', () => {
     const promptText = (response: PromptResponse): string => response.promptResponse.content[0].text;
 
-    it('does not tell the caller to send a header this deployment rejects', () => {
+    it('points the caller at the agent installation, not at a credential header', () => {
       setHttpCredentialSource('request-header');
       setAuthMode('sinchid-agent');
 
@@ -203,19 +203,19 @@ describe('sinch-oauth-credentials', () => {
 
       expect(resolved).toBeInstanceOf(PromptResponse);
       const text = promptText(resolved as PromptResponse);
-      expect(text).toContain('does not accept x-sinch-credentials');
+      expect(text).toContain('agent installation');
       expect(text).toContain('x-agent-id');
-      expect(text).not.toContain('Base64 of projectId:keyId:keySecret');
+      expect(text).not.toContain('Authorization');
     });
 
-    it('still points client-credentials callers at the blob header', () => {
+    it('still points client-credentials callers at the Authorization header', () => {
       setHttpCredentialSource('request-header');
       setAuthMode('client-credentials');
 
       const resolved = runWithHttpCredentialHeaders({}, () => resolveSinchOAuthCredentials());
 
       expect(resolved).toBeInstanceOf(PromptResponse);
-      expect(promptText(resolved as PromptResponse)).toContain('Base64 of projectId:keyId:keySecret');
+      expect(promptText(resolved as PromptResponse)).toBe(MISSING_AUTHORIZATION_CREDENTIALS_MESSAGE);
     });
   });
 });
