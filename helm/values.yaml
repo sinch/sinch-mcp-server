@@ -52,8 +52,8 @@ secretKeys: []
 conversationRegion: ""
 
 # Inbound auth shape accepted by this deployment — one of:
-#   client-credentials  callers send X-Sinch-Credentials (base64 projectId:keyId:keySecret)
-#   sinchid-agent       callers send a SinchID access token plus x-agent-id
+#   client-credentials  Authorization: Bearer <base64 projectId:keyId:keySecret>
+#   sinchid-agent       Authorization: Bearer <SinchID access token>, plus x-agent-id
 # REQUIRED; there is no default. Both endpoints are unauthenticated at the edge, so a
 # deployment that accepted every shape would defeat the point of splitting them.
 authMode: ""
