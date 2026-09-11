@@ -9,7 +9,8 @@ export const MISSING_AUTHORIZATION_CREDENTIALS_MESSAGE =
 
 export const resolveSinchOAuthCredentials = (): SinchOAuthCredentials | PromptResponse => {
   // This deployment's Authorization header carries a SinchID token, not credentials: they are
-  // resolved from the agent installation instead.
+  // resolved from the agent installation instead. That lookup lands with DEVEXP-1631, which
+  // replaces this branch.
   if (getAuthMode() === 'sinchid-agent') {
     return new PromptResponse(
       `This deployment resolves Sinch API credentials from the agent installation (${AGENT_ID_HEADER}). ` +

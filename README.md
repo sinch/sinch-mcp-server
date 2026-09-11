@@ -386,8 +386,8 @@ In multi-tenant mode, `MCP_AUTH_MODE` is **required** alongside `CONVERSATION_RE
 
 Requests are checked against the configured shape and rejected with `401` plus a `WWW-Authenticate: Bearer` challenge otherwise:
 
-- **`client-credentials`** requires a token that decodes to `projectId:keyId:keySecret`, and rejects `x-agent-id`. A SinchID JWT contains `.` separators, so it never decodes to a credential triple and is rejected here.
-- **`sinchid-agent`** requires a three-segment JWT. A Base64 credential triple is not a JWT, so it is rejected here.
+- **`client-credentials`** requires a token that decodes to `projectId:keyId:keySecret`. A SinchID JWT contains `.` separators, so it never decodes to a credential triple and is rejected here. `x-agent-id` is ignored: this deployment never reads it.
+- **`sinchid-agent`** requires a three-segment JWT **and** an `x-agent-id` header — credentials are resolved from the agent installation it names, so a request without it cannot complete. A Base64 credential triple is not a JWT, so it is rejected here.
 
 A request with no `Authorization` at all gets the RFC 6750 realm-only challenge (`Bearer realm="sinch-mcp"`) with the reason in the response body; a request carrying the wrong *kind* of token gets `error="invalid_token"` plus a description.
 
@@ -423,7 +423,7 @@ curl -X POST "http://localhost:8000/mcp" \
 
 #### `x-agent-id` header (multi-tenant only)
 
-Agent integrations (e.g. an agent installed in a Gemini Enterprise app) may send an `x-agent-id` header carrying the unique installation identifier (the Marketplace **OrderId**). Its purpose is to distinguish which installation is calling the MCP server, so it is meant for **multi-tenant** deployments running with `MCP_AUTH_MODE=sinchid-agent` only: it will be used to resolve the caller's Sinch credentials in an upcoming release. In single-tenant mode credentials always come from the server environment, so the header serves no purpose there. This custom header is a temporary mechanism until a token-exchange capability is available over M2M authentication.
+Agent integrations (e.g. an agent installed in a Gemini Enterprise app) send an `x-agent-id` header carrying the unique installation identifier (the Marketplace **OrderId**). Its purpose is to distinguish which installation is calling the MCP server, so it is **required** on **multi-tenant** deployments running with `MCP_AUTH_MODE=sinchid-agent`: it will be used to resolve the caller's Sinch credentials in an upcoming release. Elsewhere it is simply not read — a `client-credentials` deployment ignores it, and in single-tenant mode credentials always come from the server environment. This custom header is a temporary mechanism until a token-exchange capability is available over M2M authentication.
 
 | Header       | Value                                             |
 | ------------ | ------------------------------------------------- |

@@ -36,16 +36,11 @@ const OK: AuthShapeCheck = { ok: true };
 /**
  * Credentials arrive as `Authorization: Bearer <Base64 of projectId:keyId:keySecret>`. A SinchID
  * token is a JWT, so it fails that parse and belongs to the other deployment.
+ *
+ * `x-agent-id` is a no-op here: this deployment never reads it, and callers are free to send
+ * headers we ignore.
  */
 const checkClientCredentials = (req: Request): AuthShapeCheck => {
-  if (extractHeaderValue(req.headers[AGENT_ID_HEADER]) !== undefined) {
-    return {
-      ok: false,
-      invalidToken: true,
-      reason: `${AGENT_ID_HEADER} is not accepted by a client-credentials deployment; send Sinch API credentials in Authorization instead`,
-    };
-  }
-
   if (extractHeaderValue(req.headers.authorization) === undefined) {
     return {
       ok: false,
@@ -67,7 +62,9 @@ const checkClientCredentials = (req: Request): AuthShapeCheck => {
 
 /**
  * The SinchID access token in Authorization is the credential, so it is required and must be
- * JWT-shaped. That rejects a Base64 credential triple, which is not a JWT.
+ * JWT-shaped. That rejects a Base64 credential triple, which is not a JWT. `x-agent-id` is
+ * required alongside it: credentials are resolved from the agent installation it names, so a
+ * request without it cannot complete anyway.
  */
 const checkSinchidAgent = (req: Request): AuthShapeCheck => {
   if (extractHeaderValue(req.headers.authorization) === undefined) {
@@ -83,6 +80,14 @@ const checkSinchidAgent = (req: Request): AuthShapeCheck => {
       ok: false,
       invalidToken: true,
       reason: 'Authorization must carry a SinchID access token as a Bearer JWT',
+    };
+  }
+
+  if (extractHeaderValue(req.headers[AGENT_ID_HEADER]) === undefined) {
+    return {
+      ok: false,
+      invalidToken: true,
+      reason: `${AGENT_ID_HEADER} is required alongside the SinchID access token`,
     };
   }
 

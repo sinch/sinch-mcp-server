@@ -67,17 +67,14 @@ describe('createAuthModeMiddleware', () => {
       expect(res.statusCode).toBe(200);
     });
 
-    it('rejects a request carrying x-agent-id with 401 and a challenge', () => {
+    it('ignores x-agent-id: the header is never read by this deployment', () => {
       const { res, next } = run('client-credentials', {
         [AGENT_ID_HEADER]: 'order-42',
         authorization: `Bearer ${CREDENTIALS_BLOB}`,
       });
 
-      expect(next).not.toHaveBeenCalled();
-      expect(res.statusCode).toBe(401);
-      expect(res.headers['WWW-Authenticate']).toBe(
-        `Bearer realm="sinch-mcp", error="invalid_token", error_description="${AGENT_ID_HEADER} is not accepted by a client-credentials deployment; send Sinch API credentials in Authorization instead"`,
-      );
+      expect(next).toHaveBeenCalled();
+      expect(res.statusCode).toBe(200);
     });
 
     it.each([
@@ -138,6 +135,17 @@ describe('createAuthModeMiddleware', () => {
       expect(res.body).toEqual({
         error: 'Unauthorized',
         error_description: 'Missing SinchID access token in the Authorization header',
+      });
+    });
+
+    it('rejects a SinchID token sent without x-agent-id', () => {
+      const { res, next } = run('sinchid-agent', { authorization: SINCHID_TOKEN });
+
+      expect(next).not.toHaveBeenCalled();
+      expect(res.statusCode).toBe(401);
+      expect(res.body).toEqual({
+        error: 'invalid_token',
+        error_description: `${AGENT_ID_HEADER} is required alongside the SinchID access token`,
       });
     });
   });

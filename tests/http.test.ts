@@ -435,16 +435,18 @@ describe('multi-tenant auth mode enforcement', () => {
     }
   });
 
-  test('client-credentials deployment rejects x-agent-id with 401 and a challenge', async () => {
+  test('client-credentials deployment ignores x-agent-id', async () => {
     mockEnv.MCP_AUTH_MODE = 'client-credentials';
     const { baseUrl, close } = await listen(createHttpApp());
 
     try {
-      const response = await post(baseUrl, initializeBody, { 'x-agent-id': 'order-42' });
+      const response = await post(baseUrl, initializeBody, {
+        Authorization: `Bearer ${credentialsBlob}`,
+        'x-agent-id': 'order-42',
+      });
 
-      expect(response.status).toBe(401);
-      expect(response.headers.get('www-authenticate')).toContain('Bearer realm="sinch-mcp"');
-      expect(await response.json()).toMatchObject({ error: 'invalid_token' });
+      expect(response.status).toBe(200);
+      expect(response.headers.get('mcp-session-id')).toBeTruthy();
     } finally {
       await close();
     }

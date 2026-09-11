@@ -111,8 +111,7 @@ const requireConversationRegion = (): void => {
   throw new Error(
     'The server is starting in multi-tenant mode because neither MCP_API_KEY nor MCP_API_KEYS is set. ' +
       'In multi-tenant mode, the CONVERSATION_REGION environment variable is required: ' +
-      'refusing to start rather than defaulting to a region. ' +
-      'Either set CONVERSATION_REGION, or set MCP_API_KEY to run in single-tenant mode.',
+      'refusing to start rather than defaulting to a region.',
   );
 };
 
@@ -128,8 +127,7 @@ const requireAuthMode = (): McpAuthMode => {
   throw new Error(
     'The server is starting in multi-tenant mode because neither MCP_API_KEY nor MCP_API_KEYS is set. ' +
       `In multi-tenant mode, the MCP_AUTH_MODE environment variable is required (one of: ${MCP_AUTH_MODES.join(', ')}): ` +
-      'refusing to start rather than accepting every auth shape. ' +
-      'Either set MCP_AUTH_MODE, or set MCP_API_KEY to run in single-tenant mode.',
+      'refusing to start rather than accepting every auth shape.',
   );
 };
 
