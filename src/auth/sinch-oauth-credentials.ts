@@ -1,8 +1,11 @@
 import { createHash } from 'node:crypto';
 import { env } from '../env';
-import { extractHeaderValue } from '../utils';
+import { extractBearerToken } from './mcp-api-key';
 
-export const SINCH_CREDENTIALS_HEADER = 'x-sinch-credentials';
+// Standard Base64 alphabet only (no line breaks, no base64url). Node's decoder is lenient
+// and silently drops invalid characters, so validate the shape explicitly: a token that
+// is not Base64 (e.g. a JWT or an opaque API key) must never be mistaken for credentials.
+const BASE64_PATTERN = /^[A-Za-z0-9+/]+={0,2}$/;
 
 export type SinchOAuthCredentials = {
   projectId: string;
@@ -17,16 +20,11 @@ export const buildCredentialCacheKey = (projectId: string, keyId: string, keySec
 
 export const parseSinchCredentialsValue = (encodedValue: string): SinchOAuthCredentials | undefined => {
   const trimmed = encodedValue.trim();
-  if (!trimmed) {
+  if (!trimmed || !BASE64_PATTERN.test(trimmed)) {
     return undefined;
   }
 
-  let decoded: string;
-  try {
-    decoded = Buffer.from(trimmed, 'base64').toString('utf8');
-  } catch {
-    return undefined;
-  }
+  const decoded = Buffer.from(trimmed, 'base64').toString('utf8');
 
   const separatorIndex = decoded.indexOf(':');
   if (separatorIndex < 0) {
@@ -57,15 +55,20 @@ export const parseSinchCredentialsValue = (encodedValue: string): SinchOAuthCred
   };
 };
 
-export const parseSinchCredentialsHeader = (
-  headerValue: string | string[] | undefined,
+/**
+ * Parses Sinch credentials from an `Authorization: Bearer <Base64 of projectId:keyId:keySecret>`
+ * header. Returns undefined when the header is missing, uses another scheme, or the token
+ * is not a well-formed encoded credential triple (e.g. a user JWT or an MCP API key).
+ */
+export const parseSinchCredentialsAuthorizationHeader = (
+  authorizationHeader: string | string[] | undefined,
 ): SinchOAuthCredentials | undefined => {
-  const value = extractHeaderValue(headerValue);
-  if (!value) {
+  const token = extractBearerToken(authorizationHeader);
+  if (!token) {
     return undefined;
   }
 
-  return parseSinchCredentialsValue(value);
+  return parseSinchCredentialsValue(token);
 };
 
 export const sinchOAuthCredentialsFromEnv = (): SinchOAuthCredentials | undefined => {
