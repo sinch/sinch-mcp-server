@@ -45,16 +45,17 @@ spec:
             - name: {{ .name }}
               value: {{ .value | quote }}
             {{- end }}
-            # Required, not optional: this chart only ever deploys the remote
-            # multi-tenant server, which refuses to start without a region. Failing at
-            # template time gives a clear error instead of a crash-looping pod.
+            # Required, not optional: this chart deploys the remote multi-tenant server, which
+            # refuses to start without a region. Failing at template time gives a clear error
+            # instead of a crash-looping pod. Harmless on a server-credentials deployment,
+            # which simply pins the region rather than defaulting it.
             - name: CONVERSATION_REGION
               value: {{ required "conversationRegion is required (us | eu | br). Without it the server would route customer data to another region." .Values.conversationRegion | quote }}
             # Required, not optional: the server refuses to start without it, and a
-            # deployment without a pinned auth mode would accept both shapes on an
+            # deployment without a pinned auth mode would accept every shape on an
             # edge-unauthenticated endpoint.
             - name: MCP_AUTH_MODE
-              value: {{ required "authMode is required (client-credentials | sinchid-agent). Without it this deployment would accept every inbound auth shape." .Values.authMode | quote }}
+              value: {{ required "authMode is required (client-credentials | server-credentials | sinchid-agent). Without it this deployment would accept every inbound auth shape." .Values.authMode | quote }}
             {{- if .Values.toolTags }}
             - name: MCP_TAGS
               value: {{ .Values.toolTags | quote }}

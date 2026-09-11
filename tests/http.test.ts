@@ -21,6 +21,8 @@ jest.mock(
 );
 
 const ACCEPT_HEADER = 'application/json, text/event-stream';
+const CREDENTIALS_BLOB = Buffer.from('project-1:key-1:secret-1').toString('base64');
+const CREDENTIALS_HEADER = `Bearer ${CREDENTIALS_BLOB}`;
 
 const listen = async (
   app: ReturnType<typeof createHttpApp>,
@@ -65,7 +67,7 @@ const post = (baseUrl: string, body: unknown, headers: Record<string, string> = 
     headers: {
       'Content-Type': 'application/json',
       Accept: ACCEPT_HEADER,
-      Authorization: 'Bearer test-http-key',
+      Authorization: CREDENTIALS_HEADER,
       ...headers,
     },
     body: JSON.stringify(body),
@@ -85,23 +87,22 @@ const initializeBody = {
 const toolsListBody = { jsonrpc: '2.0', id: 2, method: 'tools/list', params: {} };
 
 describe('HTTP MCP session handling (Redis-backed)', () => {
-  const originalApiKey = process.env.MCP_API_KEY;
-
+  // Single-tenant: callers present the server's own credentials, which CREDENTIALS_HEADER carries.
   beforeEach(() => {
-    process.env.MCP_API_KEY = 'test-http-key';
+    resetMockEnv();
     mockEnv.REDIS_HOST = '127.0.0.1';
     mockEnv.REDIS_PORT = '6379';
+    mockEnv.MCP_AUTH_MODE = 'server-credentials';
+    mockEnv.PROJECT_ID = 'project-1';
+    mockEnv.KEY_ID = 'key-1';
+    mockEnv.KEY_SECRET = 'secret-1';
   });
 
-  afterEach(async () => {
+  afterEach(() => {
     resetSessionStoreClientForTests();
-    mockEnv.REDIS_HOST = undefined;
-    mockEnv.REDIS_PORT = undefined;
-    if (originalApiKey === undefined) {
-      delete process.env.MCP_API_KEY;
-    } else {
-      process.env.MCP_API_KEY = originalApiKey;
-    }
+    resetMockEnv();
+    clearHttpCredentialSourceForTests();
+    clearAuthModeForTests();
   });
 
   it('issues a session on initialize and accepts a follow-up request handled by a different app instance (cross-pod)', async () => {
@@ -156,7 +157,7 @@ describe('HTTP MCP session handling (Redis-backed)', () => {
 
       const deleteResponse = await fetch(`${baseUrl}/mcp`, {
         method: 'DELETE',
-        headers: { Authorization: 'Bearer test-http-key', 'Mcp-Session-Id': sessionId },
+        headers: { Authorization: CREDENTIALS_HEADER, 'Mcp-Session-Id': sessionId },
       });
       expect(deleteResponse.status).toBe(200);
 
@@ -172,7 +173,7 @@ describe('HTTP MCP session handling (Redis-backed)', () => {
     try {
       const response = await fetch(`${baseUrl}/mcp`, {
         method: 'GET',
-        headers: { Accept: 'text/event-stream', Authorization: 'Bearer test-http-key' },
+        headers: { Accept: 'text/event-stream', Authorization: CREDENTIALS_HEADER },
       });
 
       expect(response.status).toBe(405);
@@ -266,7 +267,7 @@ describe('HTTP MCP session handling (Redis-backed)', () => {
     const { baseUrl, close } = await listen(createHttpApp());
     try {
       const clientTransport = new StreamableHTTPClientTransport(new URL(`${baseUrl}/mcp`), {
-        requestInit: { headers: { Authorization: 'Bearer test-http-key' } },
+        requestInit: { headers: { Authorization: CREDENTIALS_HEADER } },
       });
       const client = new Client({ name: 'test-client', version: '1.0.0' });
 
@@ -341,13 +342,8 @@ describe('main() startup', () => {
 });
 
 describe('createHttpApp startup validation', () => {
-  const originalMcpApiKey = process.env.MCP_API_KEY;
-  const originalMcpApiKeys = process.env.MCP_API_KEYS;
-
   beforeEach(() => {
     resetMockEnv();
-    delete process.env.MCP_API_KEY;
-    delete process.env.MCP_API_KEYS;
   });
 
   afterEach(() => {
@@ -355,20 +351,21 @@ describe('createHttpApp startup validation', () => {
     clearAuthModeForTests();
   });
 
-  afterAll(() => {
-    if (originalMcpApiKey !== undefined) {
-      process.env.MCP_API_KEY = originalMcpApiKey;
-    }
-    if (originalMcpApiKeys !== undefined) {
-      process.env.MCP_API_KEYS = originalMcpApiKeys;
-    }
+  test('throws when MCP_AUTH_MODE is not set', () => {
+    expect(() => createHttpApp()).toThrow(
+      'The MCP_AUTH_MODE environment variable is required ' +
+        '(one of: client-credentials, server-credentials, sinchid-agent)',
+    );
+  });
+
+  test('throws when MCP_AUTH_MODE is not recognised', () => {
+    mockEnv.MCP_AUTH_MODE = 'sinchid_agent' as MockServerEnv['MCP_AUTH_MODE'];
+    expect(() => createHttpApp()).toThrow('The MCP_AUTH_MODE environment variable is required');
   });
 
   test('throws in multi-tenant mode when CONVERSATION_REGION is not set', () => {
-    expect(() => createHttpApp()).toThrow(
-      'The server is starting in multi-tenant mode because neither MCP_API_KEY nor MCP_API_KEYS is set. ' +
-        'In multi-tenant mode, the CONVERSATION_REGION environment variable is required',
-    );
+    mockEnv.MCP_AUTH_MODE = 'client-credentials';
+    expect(() => createHttpApp()).toThrow('In multi-tenant mode, the CONVERSATION_REGION environment variable is');
   });
 
   test('starts in multi-tenant mode when CONVERSATION_REGION and MCP_AUTH_MODE are set', () => {
@@ -378,61 +375,64 @@ describe('createHttpApp startup validation', () => {
     expect(getHttpCredentialSource()).toBe('request-header');
   });
 
-  test('throws in multi-tenant mode when MCP_AUTH_MODE is not set', () => {
-    mockEnv.CONVERSATION_REGION = 'eu';
-    expect(() => createHttpApp()).toThrow(
-      'In multi-tenant mode, the MCP_AUTH_MODE environment variable is required ' +
-        '(one of: client-credentials, sinchid-agent)',
-    );
-  });
-
-  test('throws in multi-tenant mode when MCP_AUTH_MODE is not recognised', () => {
-    mockEnv.CONVERSATION_REGION = 'eu';
-    mockEnv.MCP_AUTH_MODE = 'sinchid_agent' as MockServerEnv['MCP_AUTH_MODE'];
-    expect(() => createHttpApp()).toThrow('In multi-tenant mode, the MCP_AUTH_MODE environment variable is required');
-  });
-
   test('accepts sinchid-agent as an auth mode', () => {
     mockEnv.CONVERSATION_REGION = 'eu';
     mockEnv.MCP_AUTH_MODE = 'sinchid-agent';
     expect(() => createHttpApp()).not.toThrow();
   });
 
-  test('does not require CONVERSATION_REGION or MCP_AUTH_MODE in single-tenant mode', () => {
-    process.env.MCP_API_KEY = 'test-api-key';
-    expect(() => createHttpApp()).not.toThrow();
-    expect(getHttpCredentialSource()).toBe('env');
+  describe('server-credentials (single-tenant)', () => {
+    const setServerCredentials = () => {
+      mockEnv.PROJECT_ID = 'project-1';
+      mockEnv.KEY_ID = 'key-1';
+      mockEnv.KEY_SECRET = 'secret-1';
+    };
+
+    test('resolves credentials from the environment, not the request', () => {
+      mockEnv.MCP_AUTH_MODE = 'server-credentials';
+      setServerCredentials();
+
+      expect(() => createHttpApp()).not.toThrow();
+      expect(getHttpCredentialSource()).toBe('env');
+    });
+
+    test('does not require CONVERSATION_REGION', () => {
+      mockEnv.MCP_AUTH_MODE = 'server-credentials';
+      setServerCredentials();
+      mockEnv.CONVERSATION_REGION = undefined;
+
+      expect(() => createHttpApp()).not.toThrow();
+    });
+
+    test.each([['PROJECT_ID'], ['KEY_ID'], ['KEY_SECRET']] as const)(
+      'refuses to start when %s is missing',
+      (missing) => {
+        mockEnv.MCP_AUTH_MODE = 'server-credentials';
+        setServerCredentials();
+        mockEnv[missing] = undefined;
+
+        expect(() => createHttpApp()).toThrow(
+          'MCP_AUTH_MODE=server-credentials requires PROJECT_ID, KEY_ID and KEY_SECRET',
+        );
+      },
+    );
   });
 });
 
-describe('multi-tenant auth mode enforcement', () => {
-  const originalMcpApiKey = process.env.MCP_API_KEY;
-  const originalMcpApiKeys = process.env.MCP_API_KEYS;
-
-  const credentialsBlob = Buffer.from('project-1:key-1:secret-1').toString('base64');
+describe('auth mode enforcement', () => {
+  const credentialsBlob = CREDENTIALS_BLOB;
   const encodeSegment = (payload: Record<string, unknown>) =>
     Buffer.from(JSON.stringify(payload)).toString('base64url');
   const sinchIdToken = `Bearer ${encodeSegment({ alg: 'RS256' })}.${encodeSegment({ sub: 'user-1' })}.sig`;
 
   beforeEach(() => {
     resetMockEnv();
-    delete process.env.MCP_API_KEY;
-    delete process.env.MCP_API_KEYS;
     mockEnv.CONVERSATION_REGION = 'eu';
   });
 
   afterEach(() => {
     clearHttpCredentialSourceForTests();
     clearAuthModeForTests();
-  });
-
-  afterAll(() => {
-    if (originalMcpApiKey !== undefined) {
-      process.env.MCP_API_KEY = originalMcpApiKey;
-    }
-    if (originalMcpApiKeys !== undefined) {
-      process.env.MCP_API_KEYS = originalMcpApiKeys;
-    }
   });
 
   test('client-credentials deployment ignores x-agent-id', async () => {
@@ -515,6 +515,41 @@ describe('multi-tenant auth mode enforcement', () => {
 
       expect(response.status).toBe(200);
       expect(response.headers.get('mcp-session-id')).toBeTruthy();
+    } finally {
+      await close();
+    }
+  });
+
+  test("server-credentials deployment accepts the server's own credentials", async () => {
+    mockEnv.MCP_AUTH_MODE = 'server-credentials';
+    mockEnv.PROJECT_ID = 'project-1';
+    mockEnv.KEY_ID = 'key-1';
+    mockEnv.KEY_SECRET = 'secret-1';
+    const { baseUrl, close } = await listen(createHttpApp());
+
+    try {
+      const response = await post(baseUrl, initializeBody, { Authorization: `Bearer ${credentialsBlob}` });
+
+      expect(response.status).toBe(200);
+      expect(response.headers.get('mcp-session-id')).toBeTruthy();
+    } finally {
+      await close();
+    }
+  });
+
+  test('server-credentials deployment rejects another account with 401', async () => {
+    mockEnv.MCP_AUTH_MODE = 'server-credentials';
+    mockEnv.PROJECT_ID = 'project-1';
+    mockEnv.KEY_ID = 'key-1';
+    mockEnv.KEY_SECRET = 'secret-1';
+    const { baseUrl, close } = await listen(createHttpApp());
+
+    try {
+      const otherAccount = Buffer.from('project-2:key-2:secret-2').toString('base64');
+      const response = await post(baseUrl, initializeBody, { Authorization: `Bearer ${otherAccount}` });
+
+      expect(response.status).toBe(401);
+      expect(await response.json()).toMatchObject({ error: 'invalid_token' });
     } finally {
       await close();
     }

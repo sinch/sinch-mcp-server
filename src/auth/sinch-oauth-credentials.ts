@@ -1,6 +1,6 @@
-import { createHash } from 'node:crypto';
+import { createHash, timingSafeEqual } from 'node:crypto';
 import { env } from '../env';
-import { extractBearerToken } from './mcp-api-key';
+import { extractBearerToken } from './bearer-token';
 
 // Standard Base64 alphabet only (no line breaks, no base64url). Node's decoder is lenient
 // and silently drops invalid characters, so validate the shape explicitly: a token that
@@ -86,4 +86,17 @@ export const sinchOAuthCredentialsFromEnv = (): SinchOAuthCredentials | undefine
     keySecret,
     cacheKey: buildCredentialCacheKey(projectId, keyId, keySecret),
   };
+};
+
+/**
+ * True when the presented credentials are the ones this server holds. Compares the SHA-256
+ * cache keys so the check is constant-time over fixed-length digests, never over the secret.
+ */
+export const matchesServerCredentials = (presented: SinchOAuthCredentials): boolean => {
+  const server = sinchOAuthCredentialsFromEnv();
+  if (!server) {
+    return false;
+  }
+
+  return timingSafeEqual(Buffer.from(presented.cacheKey, 'hex'), Buffer.from(server.cacheKey, 'hex'));
 };

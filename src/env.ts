@@ -28,7 +28,7 @@ export const env = createEnv({
     REDIS_PASSWORD: z.string().optional(),
     MCP_SESSION_TTL_SECONDS: z.string().optional(),
     MCP_TAGS: z.string().optional(),
-    MCP_AUTH_MODE: z.enum(['client-credentials', 'sinchid-agent']).optional(),
+    MCP_AUTH_MODE: z.enum(['client-credentials', 'server-credentials', 'sinchid-agent']).optional(),
   },
   runtimeEnvStrict: {
     PROJECT_ID: process.env.PROJECT_ID,

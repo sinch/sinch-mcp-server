@@ -338,7 +338,7 @@ You can then configure the MCP server in the Claude configuration file as follow
 
 ## Option 3: Native Streamable HTTP server (recommended for remote)
 
-This option runs a **native Streamable HTTP** MCP server on `/mcp`. Choose **single-tenant** or **multi-tenant** deployment — they are mutually exclusive.
+This option runs a **native Streamable HTTP** MCP server on `/mcp`. Choose **single-tenant** or **multi-tenant** deployment with `MCP_AUTH_MODE` — they are mutually exclusive.
 
 ### Step 1: Build the MCP server
 
@@ -348,24 +348,37 @@ npm install
 npm run build
 ```
 
-### Step 2: Choose a deployment mode
+### Step 2: Choose a deployment mode with `MCP_AUTH_MODE`
 
-#### Single-tenant (one Sinch account per server)
+`MCP_AUTH_MODE` is **required**: the server refuses to start when it is unset or unrecognised, and there is no default. It picks the deployment mode and pins it to a single inbound auth shape, all carried in `Authorization`:
 
-Use when every client of this MCP instance shares the same Sinch project. Configure credentials **on the server**; clients do not send Sinch credentials per request.
+| `MCP_AUTH_MODE`      | Tenancy       | Expected `Authorization` token                                 | Tools run as                 |
+| -------------------- | ------------- | -------------------------------------------------------------- | ---------------------------- |
+| `server-credentials` | Single-tenant | `Bearer <Base64 projectId:keyId:keySecret>` — the server's own | the server's env credentials |
+| `client-credentials` | Multi-tenant  | `Bearer <Base64 projectId:keyId:keySecret>` — the caller's own | the credentials in the token |
+| `sinchid-agent`      | Multi-tenant  | `Bearer <SinchID access token>`, plus `x-agent-id`             | the agent installation       |
+
+#### Single-tenant (`server-credentials`)
+
+Use when every client of this MCP instance shares the same Sinch project. The credentials live **on the server**, and callers authenticate by presenting that same triple — there is no separate gateway key.
 
 ```dotenv
 PORT=8000
+MCP_AUTH_MODE=server-credentials
 PROJECT_ID=
 KEY_ID=
 KEY_SECRET=
 ```
 
-#### Multi-tenant (each client brings a Sinch account)
+All three are required in this mode: they are both what callers are checked against and what the tools run as, so the server refuses to start without them. The comparison is constant-time, and a wrong triple is rejected with `401` without revealing anything about the configured one.
 
-Use when different clients must use different Sinch projects. Each client sends its own credentials on every request.
+Because the caller is proven to hold the server's own credentials, the request's copy is never used to call Sinch — the environment copy is. `CONVERSATION_REGION` stays optional here (defaulting to `us`) and can still be overridden from the prompt.
 
-Remote clients send **one header** on every request:
+> **Note:** the token clients send _is_ your live Sinch access key. Treat every client config as holding that secret, and rotate the key if one is exposed.
+
+#### Multi-tenant (`client-credentials`)
+
+Use when different clients must use different Sinch projects. Each client sends its own credentials on every request:
 
 | Header          | Value                                               |
 | --------------- | --------------------------------------------------- |
@@ -373,31 +386,25 @@ Remote clients send **one header** on every request:
 
 The server does **not** read `PROJECT_ID`, `KEY_ID`, or `KEY_SECRET` from its environment for OAuth-backed tools in this mode. OAuth clients are cached in memory with **LRU eviction** (default 256 entries, configurable via `OAUTH_TOKEN_CACHE_MAX_ENTRIES`).
 
-In multi-tenant mode, `CONVERSATION_REGION` is **required**: the server refuses to start without it, and it is never defaulted to `us`. Each deployment is pinned to a single region, and the region cannot be overridden per request or from the prompt.
+In the multi-tenant modes, `CONVERSATION_REGION` is **required**: the server refuses to start without it, and it is never defaulted to `us`. Each deployment is pinned to a single region, and the region cannot be overridden per request or from the prompt.
 
-#### `MCP_AUTH_MODE` (multi-tenant only)
-
-In multi-tenant mode, `MCP_AUTH_MODE` is **required** alongside `CONVERSATION_REGION`: the server refuses to start when it is unset or unrecognised, and there is no default. It pins the deployment to a single inbound auth shape — both carried in `Authorization`:
-
-| `MCP_AUTH_MODE`      | Expected `Authorization` token                      |
-| -------------------- | --------------------------------------------------- |
-| `client-credentials` | `Bearer <Base64 projectId:keyId:keySecret>`         |
-| `sinchid-agent`      | `Bearer <SinchID access token>`, plus `x-agent-id`  |
+#### How the shape check behaves
 
 Requests are checked against the configured shape and rejected with `401` plus a `WWW-Authenticate: Bearer` challenge otherwise:
 
+- **`server-credentials`** requires a token that decodes to `projectId:keyId:keySecret` **and** matches the server's own. Any other account is rejected, so no one else can transact here.
 - **`client-credentials`** requires a token that decodes to `projectId:keyId:keySecret`. A SinchID JWT contains `.` separators, so it never decodes to a credential triple and is rejected here. `x-agent-id` is ignored: this deployment never reads it.
 - **`sinchid-agent`** requires a three-segment JWT **and** an `x-agent-id` header — credentials are resolved from the agent installation it names, so a request without it cannot complete. A Base64 credential triple is not a JWT, so it is rejected here.
 
-A request with no `Authorization` at all gets the RFC 6750 realm-only challenge (`Bearer realm="sinch-mcp"`) with the reason in the response body; a request carrying the wrong *kind* of token gets `error="invalid_token"` plus a description.
+A request with no `Authorization` at all gets the RFC 6750 realm-only challenge (`Bearer realm="sinch-mcp"`) with the reason in the response body; a request carrying the wrong _kind_ of token gets `error="invalid_token"` plus a description.
 
-The SinchID token's signature is **not** verified in-app — the check only ensures the right *kind* of credential reaches the right deployment.
+The SinchID token's signature is **not** verified in-app — the check only ensures the right _kind_ of credential reaches the right deployment.
 
-Two deployments of the same image, each with its own `MCP_AUTH_MODE`, therefore serve the two audiences on separate hostnames without either accepting the other's credentials. `MCP_AUTH_MODE` has no effect in single-tenant mode or over stdio.
+Two deployments of the same image, each with its own `MCP_AUTH_MODE`, therefore serve the two audiences on separate hostnames without either accepting the other's credentials. `MCP_AUTH_MODE` has no effect over stdio.
 
 > **`sinchid-agent` is not functional yet.** Credential resolution for this mode lands in [DEVEXP-1631](https://sinchenterprise.atlassian.net/browse/DEVEXP-1631); until then its tools return an explanatory prompt instead of running.
 
-#### `Authorization` credentials format (multi-tenant only)
+#### `Authorization` credentials format (HTTP only)
 
 1. Build a UTF-8 string: `projectId:keyId:keySecret` (see [API credentials](#api-credentials)).
 2. Encode with **standard Base64** (no line breaks, standard `+`/`/` alphabet — not base64url).
@@ -421,9 +428,9 @@ curl -X POST "http://localhost:8000/mcp" \
 
 **Scope:** the `Authorization` credentials apply to **Conversation**, **Numbers**, and **Number Lookup** tools. **Voice**, **Verification**, and **Mailgun** still use server environment variables for now. **Local stdio** (Option 1) always uses server environment variables.
 
-#### `x-agent-id` header (multi-tenant only)
+#### `x-agent-id` header (`sinchid-agent` only)
 
-Agent integrations (e.g. an agent installed in a Gemini Enterprise app) send an `x-agent-id` header carrying the unique installation identifier (the Marketplace **OrderId**). Its purpose is to distinguish which installation is calling the MCP server, so it is **required** on **multi-tenant** deployments running with `MCP_AUTH_MODE=sinchid-agent`: it will be used to resolve the caller's Sinch credentials in an upcoming release. Elsewhere it is simply not read — a `client-credentials` deployment ignores it, and in single-tenant mode credentials always come from the server environment. This custom header is a temporary mechanism until a token-exchange capability is available over M2M authentication.
+Agent integrations (e.g. an agent installed in a Gemini Enterprise app) send an `x-agent-id` header carrying the unique installation identifier (the Marketplace **OrderId**). Its purpose is to distinguish which installation is calling the MCP server, so it is **required** on deployments running with `MCP_AUTH_MODE=sinchid-agent`: it will be used to resolve the caller's Sinch credentials in an upcoming release. Elsewhere it is simply not read — the other modes ignore it, and over stdio credentials always come from the environment. This custom header is a temporary mechanism until a token-exchange capability is available over M2M authentication.
 
 | Header       | Value                                             |
 | ------------ | ------------------------------------------------- |
@@ -439,15 +446,15 @@ After the end-user completes the OAuth login and consent flow, agent integration
 
 The server base64-decodes the JWT payload and captures the Sinch claims (`https://sinch.com/project_id`, `https://sinch.com/account_id`, `https://sinch.com/global_user_id`) and the standard `scope` claim in the request context, logging them for **audit purposes only**. The token signature is **not** verified and the claims are never used to resolve API credentials (the `x-agent-id` header serves that purpose). Outside `MCP_AUTH_MODE`, a missing or malformed token is ignored and the request proceeds normally; where `MCP_AUTH_MODE` is set, the token must match the deployment's shape or the request is rejected with `401`. In the long term, the user JWT will be exchanged for an M2M JWT, replacing the custom headers.
 
-Every deployment authenticates through `Authorization`; what the token *is* depends on the deployment:
+Every deployment authenticates through `Authorization`; what the token _is_ depends on the deployment:
 
-| Deployment                              | Bearer token                                   | Sinch credentials come from                                    |
-| --------------------------------------- | ---------------------------------------------- | -------------------------------------------------------------- |
-| Single-tenant                           | Gateway token, when gateway auth is configured | the server's `PROJECT_ID`/`KEY_ID`/`KEY_SECRET`                |
-| Multi-tenant, `client-credentials`      | Base64 `projectId:keyId:keySecret`             | the token itself                                               |
-| Multi-tenant, `sinchid-agent`           | SinchID access token (three-segment JWT)       | the agent installation — not implemented yet (DEVEXP-1631)     |
+| Deployment                          | Bearer token                                              | Sinch credentials come from                                |
+| ----------------------------------- | --------------------------------------------------------- | ---------------------------------------------------------- |
+| Single-tenant, `server-credentials` | Base64 `projectId:keyId:keySecret` — must be the server's | the server's `PROJECT_ID`/`KEY_ID`/`KEY_SECRET`            |
+| Multi-tenant, `client-credentials`  | Base64 `projectId:keyId:keySecret`                        | the token itself                                           |
+| Multi-tenant, `sinchid-agent`       | SinchID access token (three-segment JWT)                  | the agent installation — not implemented yet (DEVEXP-1631) |
 
-The two multi-tenant shapes are disjoint: a JWT contains `.` separators, which are not in the Base64 alphabet, so a credential triple is never read as a token and a JWT never resolves to credentials. Each deployment accepts only its own shape and answers `401` to the other — see [`MCP_AUTH_MODE`](#mcp_auth_mode-multi-tenant-only).
+The credential and JWT shapes are disjoint: a JWT contains `.` separators, which are not in the Base64 alphabet, so a credential triple is never read as a token and a JWT never resolves to credentials. Each deployment accepts only its own shape and answers `401` to the others — see [`MCP_AUTH_MODE`](#step-2-choose-a-deployment-mode-with-mcp_auth_mode).
 
 Because a request carries a single `Authorization` header, the audit claims described above are captured only where the token is a JWT — that is, on a `sinchid-agent` deployment. A `client-credentials` caller supplies credentials rather than a user token, so no claims are logged for it.
 
@@ -467,19 +474,7 @@ Because there's no persistent per-session transport, the server doesn't support 
 
 ### Step 4: Example MCP client configuration
 
-**Single-tenant:**
-
-```json
-{
-  "mcpServers": {
-    "sinch-remote": {
-      "url": "https://your-host.example.com/mcp"
-    }
-  }
-}
-```
-
-**Multi-tenant:**
+Every mode sends the same header shape — what differs is whose credentials the token carries. Single-tenant clients encode the server's triple; multi-tenant clients encode their own.
 
 ```json
 {

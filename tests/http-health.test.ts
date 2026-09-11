@@ -1,5 +1,8 @@
 import http from 'http';
 import type { AddressInfo } from 'net';
+import { clearAuthModeForTests } from '../src/auth/auth-mode';
+import { clearHttpCredentialSourceForTests } from '../src/auth/http-credential-mode';
+import { mockEnv, resetMockEnv } from '../src/__mocks__/env';
 import { createHttpApp, setShuttingDownForTests } from '../src/http';
 import { pingSessionStore } from '../src/session-store';
 
@@ -32,10 +35,9 @@ const listen = async (
 };
 
 describe('HTTP health endpoints', () => {
-  const originalApiKey = process.env.MCP_API_KEY;
-
   beforeEach(() => {
-    process.env.MCP_API_KEY = 'test-health-key';
+    mockEnv.CONVERSATION_REGION = 'eu';
+    mockEnv.MCP_AUTH_MODE = 'client-credentials';
     setShuttingDownForTests(false);
     mockedPingSessionStore.mockResolvedValue(true);
   });
@@ -43,11 +45,9 @@ describe('HTTP health endpoints', () => {
   afterEach(() => {
     setShuttingDownForTests(false);
     mockedPingSessionStore.mockReset();
-    if (originalApiKey === undefined) {
-      delete process.env.MCP_API_KEY;
-    } else {
-      process.env.MCP_API_KEY = originalApiKey;
-    }
+    resetMockEnv();
+    clearHttpCredentialSourceForTests();
+    clearAuthModeForTests();
   });
 
   it('returns 200 on /health/live without authentication', async () => {

@@ -1,4 +1,4 @@
-import { extractBearerToken } from './mcp-api-key';
+import { extractBearerToken } from './bearer-token';
 
 /**
  * Sinch-namespaced claims carried by the Auth0 user JWT that agent

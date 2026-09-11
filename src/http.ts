@@ -1,6 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import type { Server } from 'node:http';
-import express, { type Request, type RequestHandler, type Response } from 'express';
+import express, { type Request, type Response } from 'express';
 import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js';
 import { isInitializeRequest } from '@modelcontextprotocol/sdk/types.js';
 import dotenv from 'dotenv';
@@ -13,7 +13,7 @@ import {
 } from './auth/auth-mode';
 import { getRequestAgentId, getRequestUserClaims, runWithHttpCredentialHeaders } from './auth/credential-context';
 import { setHttpCredentialSource } from './auth/http-credential-mode';
-import { createMcpApiKeyMiddleware, loadMcpApiKeys } from './auth/mcp-api-key';
+import { sinchOAuthCredentialsFromEnv } from './auth/sinch-oauth-credentials';
 import { env } from './env';
 import { buildJsonRpcErrorResponse } from './json-rpc';
 import { getToolsFilter, instantiateMcpServer, registerCapabilities } from './server';
@@ -100,8 +100,9 @@ const respondSessionStoreUnavailable = (res: Response, body: unknown): void => {
 };
 
 /**
- * Each deployment is pinned to one Conversation API region. Defaulting silently could route
- * traffic to the wrong region, so refuse to start instead.
+ * Each multi-tenant deployment is pinned to one Conversation API region. Defaulting silently
+ * could route traffic to the wrong region, so refuse to start instead. Single-tenant keeps the
+ * historical behaviour: optional, and overridable per request.
  */
 const requireConversationRegion = (): void => {
   if (env.CONVERSATION_REGION) {
@@ -109,8 +110,7 @@ const requireConversationRegion = (): void => {
   }
 
   throw new Error(
-    'The server is starting in multi-tenant mode because neither MCP_API_KEY nor MCP_API_KEYS is set. ' +
-      'In multi-tenant mode, the CONVERSATION_REGION environment variable is required: ' +
+    'In multi-tenant mode, the CONVERSATION_REGION environment variable is required: ' +
       'refusing to start rather than defaulting to a region.',
   );
 };
@@ -125,29 +125,39 @@ const requireAuthMode = (): McpAuthMode => {
   }
 
   throw new Error(
-    'The server is starting in multi-tenant mode because neither MCP_API_KEY nor MCP_API_KEYS is set. ' +
-      `In multi-tenant mode, the MCP_AUTH_MODE environment variable is required (one of: ${MCP_AUTH_MODES.join(', ')}): ` +
+    `The MCP_AUTH_MODE environment variable is required (one of: ${MCP_AUTH_MODES.join(', ')}): ` +
       'refusing to start rather than accepting every auth shape.',
   );
 };
 
-const configureSingleTenant = (mcpApiKeys: string[]): RequestHandler => {
-  setAuthMode(undefined);
-  setHttpCredentialSource('env');
-  return createMcpApiKeyMiddleware(mcpApiKeys);
-};
+/**
+ * Without the triple there is nothing to check a caller against and nothing to transact as,
+ * so the endpoint would be unusable — or worse, open.
+ */
+const requireServerCredentials = (): void => {
+  if (sinchOAuthCredentialsFromEnv()) {
+    return;
+  }
 
-const configureMultiTenant = (): RequestHandler => {
-  requireConversationRegion();
-  const authMode = requireAuthMode();
-  setAuthMode(authMode);
-  setHttpCredentialSource('request-header');
-  return createAuthModeMiddleware(authMode);
+  throw new Error(
+    'MCP_AUTH_MODE=server-credentials requires PROJECT_ID, KEY_ID and KEY_SECRET: they are both ' +
+      'what callers authenticate against and what the tools run as.',
+  );
 };
 
 export const createHttpApp = () => {
-  const mcpApiKeys = loadMcpApiKeys();
-  const authMiddleware = mcpApiKeys.length > 0 ? configureSingleTenant(mcpApiKeys) : configureMultiTenant();
+  const authMode = requireAuthMode();
+
+  if (authMode === 'server-credentials') {
+    requireServerCredentials();
+    setHttpCredentialSource('env');
+  } else {
+    requireConversationRegion();
+    setHttpCredentialSource('request-header');
+  }
+
+  setAuthMode(authMode);
+  const authMiddleware = createAuthModeMiddleware(authMode);
 
   const handleMcpRequest = async (req: Request, res: Response): Promise<void> => {
     const sessionId = getSessionId(req);
