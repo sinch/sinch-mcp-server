@@ -13,7 +13,11 @@ import {
 } from './auth/auth-mode';
 import { getRequestAgentId, getRequestUserClaims, runWithHttpCredentialHeaders } from './auth/credential-context';
 import { setHttpCredentialSource } from './auth/http-credential-mode';
-import { sinchOAuthCredentialsFromEnv } from './auth/sinch-oauth-credentials';
+import {
+  presentServerCredentialEnvVars,
+  SERVER_CREDENTIAL_ENV_VARS,
+  sinchOAuthCredentialsFromEnv,
+} from './auth/sinch-oauth-credentials';
 import { env } from './env';
 import { buildJsonRpcErrorResponse } from './json-rpc';
 import { getToolsFilter, instantiateMcpServer, registerCapabilities } from './server';
@@ -115,49 +119,73 @@ const requireConversationRegion = (): void => {
   );
 };
 
-/**
- * Each deployment is pinned to one inbound auth shape. Both endpoints are
- * edge-unauthenticated, so defaulting here would let either shape in on either one.
- */
-const requireAuthMode = (): McpAuthMode => {
-  if (isMcpAuthMode(env.MCP_AUTH_MODE)) {
-    return env.MCP_AUTH_MODE;
-  }
-
-  throw new Error(
-    `The MCP_AUTH_MODE environment variable is required (one of: ${MCP_AUTH_MODES.join(', ')}): ` +
-      'refusing to start rather than accepting every auth shape.',
-  );
-};
+type DeploymentMode = { tenancy: 'single-tenant' } | { tenancy: 'multi-tenant'; authMode: McpAuthMode };
 
 /**
- * Without the triple there is nothing to check a caller against and nothing to transact as,
- * so the endpoint would be unusable — or worse, open.
+ * MCP_AUTH_MODE is the tenancy selector, and it is checked first:
+ *
+ *   set to a known mode   multi-tenant. Callers bring their own credentials and the mode pins
+ *                         which inbound shape is accepted. PROJECT_ID / KEY_ID / KEY_SECRET are
+ *                         NEVER read — a credential left in the environment cannot pull a
+ *                         deployed server back onto one shared account.
+ *   set to anything else  refuse to start. A typo must not silently degrade to single-tenant,
+ *                         which would drop inbound auth entirely.
+ *   unset                 single-tenant, which then requires the full credential triple.
+ *
+ * Reading the mode first is what makes multi-tenant safe to deploy: the decision depends on one
+ * variable the chart always sets, never on the absence of something.
  */
-const requireServerCredentials = (): void => {
-  if (sinchOAuthCredentialsFromEnv()) {
-    return;
+const resolveDeploymentMode = (): DeploymentMode => {
+  // Typed as unknown on purpose: the zod schema in env.ts already rejects an unknown value, but
+  // this must still fail loudly if that guard is ever loosened.
+  const configuredAuthMode: unknown = env.MCP_AUTH_MODE;
+
+  if (configuredAuthMode !== undefined) {
+    if (!isMcpAuthMode(configuredAuthMode)) {
+      throw new Error(
+        `MCP_AUTH_MODE=${String(configuredAuthMode)} is not a recognised mode ` +
+          `(one of: ${MCP_AUTH_MODES.join(', ')}): refusing to start rather than falling back ` +
+          'to single-tenant, which performs no inbound authentication.',
+      );
+    }
+
+    return { tenancy: 'multi-tenant', authMode: configuredAuthMode };
   }
 
-  throw new Error(
-    'MCP_AUTH_MODE=server-credentials requires PROJECT_ID, KEY_ID and KEY_SECRET: they are both ' +
-      'what callers authenticate against and what the tools run as.',
-  );
+  const present = presentServerCredentialEnvVars();
+  if (present.length < SERVER_CREDENTIAL_ENV_VARS.length) {
+    const missing = SERVER_CREDENTIAL_ENV_VARS.filter((key) => !present.includes(key));
+    throw new Error(
+      `MCP_AUTH_MODE is not set, so this is a single-tenant deployment, which requires ` +
+        `${SERVER_CREDENTIAL_ENV_VARS.join(', ')} — ${missing.join(', ')} missing. ` +
+        `Set them to run single-tenant, or set MCP_AUTH_MODE (one of: ${MCP_AUTH_MODES.join(', ')}) ` +
+        'to run multi-tenant.',
+    );
+  }
+
+  return { tenancy: 'single-tenant' };
 };
 
 export const createHttpApp = () => {
-  const authMode = requireAuthMode();
+  const mode = resolveDeploymentMode();
 
-  if (authMode === 'server-credentials') {
-    requireServerCredentials();
+  if (mode.tenancy === 'single-tenant') {
     setHttpCredentialSource('env');
+    // No auth mode and no auth middleware: MCP_AUTH_MODE being unset IS the configuration, and
+    // there is no per-caller credential to validate. Anyone who can reach this port transacts
+    // on the configured account, so it must not be exposed beyond localhost.
+    setAuthMode(undefined);
+    logger.warn(
+      { project_id: sinchOAuthCredentialsFromEnv()?.projectId },
+      'Starting SINGLE-TENANT: PROJECT_ID, KEY_ID and KEY_SECRET are set, so every request ' +
+        'transacts on that account and /mcp performs no inbound authentication. Intended for ' +
+        'local use only — do not expose this port.',
+    );
   } else {
     requireConversationRegion();
     setHttpCredentialSource('request-header');
+    setAuthMode(mode.authMode);
   }
-
-  setAuthMode(authMode);
-  const authMiddleware = createAuthModeMiddleware(authMode);
 
   const handleMcpRequest = async (req: Request, res: Response): Promise<void> => {
     const sessionId = getSessionId(req);
@@ -262,7 +290,10 @@ export const createHttpApp = () => {
     })();
   });
 
-  app.use(MCP_PATH, authMiddleware);
+  // Single-tenant registers no auth middleware at all — see resolveDeploymentMode.
+  if (mode.tenancy === 'multi-tenant') {
+    app.use(MCP_PATH, createAuthModeMiddleware(mode.authMode));
+  }
 
   const routeHandler = (req: Request, res: Response) => {
     void handleMcpRequest(req, res).catch((error) => {

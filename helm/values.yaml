@@ -41,10 +41,10 @@ resources:
     cpu: 500m
     memory: 512Mi
 
-# Credentials are deliberately empty: with authMode below set to a multi-tenant shape, every
-# caller brings its own. Do NOT populate PROJECT_ID / KEY_ID / KEY_SECRET here unless you also
-# set authMode to server-credentials — on a multi-tenant deployment they are ignored, and on a
-# single-tenant one they make every caller transact on that one shared account.
+# Credentials are deliberately empty: every caller brings its own.
+# Do NOT populate PROJECT_ID / KEY_ID / KEY_SECRET here. This chart always sets authMode, so
+# the server runs multi-tenant and never reads them — they would be inert, but they would
+# still be live Sinch credentials sitting in the namespace with nothing to read them.
 # Leaving existingSecret empty means the chart mounts no secret at all.
 existingSecret: ""
 secretKeys: []
@@ -53,11 +53,12 @@ secretKeys: []
 # Set per site in k8s-manifests-mcp-messaging.
 conversationRegion: ""
 
-# Deployment mode and the inbound auth shape it accepts — one of:
-#   client-credentials  Multi-tenant. Bearer <base64 projectId:keyId:keySecret>, the caller's own
-#   sinchid-agent       Multi-tenant. Bearer <SinchID access token>, plus x-agent-id
-#   server-credentials  Single-tenant. Bearer <base64 projectId:keyId:keySecret>, and it must
-#                       match the PROJECT_ID/KEY_ID/KEY_SECRET in existingSecret
+# The one inbound auth shape this deployment accepts (MCP_AUTH_MODE) — one of:
+#   client-credentials  Bearer <base64 projectId:keyId:keySecret>, the caller's own
+#   sinchid-agent       Bearer <SinchID access token>, plus an x-agent-id header
+# Both are multi-tenant. Single-tenant is not a value here — it is what the server falls to
+# when MCP_AUTH_MODE is UNSET, and it performs no inbound authentication at all, so it must
+# never be deployed. Setting this value is what keeps that unreachable through the chart.
 # REQUIRED; there is no default. Both endpoints are unauthenticated at the edge, so a
 # deployment that accepted every shape would defeat the point of splitting them.
 authMode: ""

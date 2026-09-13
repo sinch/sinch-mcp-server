@@ -21,7 +21,7 @@ export type MockServerEnv = {
   REDIS_PASSWORD?: string;
   MCP_SESSION_TTL_SECONDS?: string;
   MCP_TAGS?: string;
-  MCP_AUTH_MODE?: 'client-credentials' | 'server-credentials' | 'sinchid-agent';
+  MCP_AUTH_MODE?: 'client-credentials' | 'sinchid-agent';
 };
 
 export const mockEnv: MockServerEnv = {};

@@ -22,7 +22,9 @@
 
 # Probes: `/health/live`, `/health/ready` (no auth).
 
-# Auth: set by `MCP_AUTH_MODE`. Staging runs multi-tenant — the app holds no Sinch credentials.
+# Auth: staging and prod run multi-tenant — the app holds no Sinch credentials, and
+
+# `MCP_AUTH_MODE` pins which caller-supplied shape each deployment accepts.
 
 # Client credentials always arrive in the `Authorization` header (see "Auth contract" below).
 
@@ -42,45 +44,51 @@
 
 ## Auth contract (`Authorization` header)
 
-Every request to `/mcp` authenticates through the standard `Authorization: Bearer <token>` header.
-The deployment mode is selected by `MCP_AUTH_MODE` (required; no default), and that also decides
-what the token means:
+`MCP_AUTH_MODE` selects the tenancy, and it is read **first**:
 
-| `MCP_AUTH_MODE`      | Tenancy       | `Authorization` header value                                        | Tools run as           |
-| -------------------- | ------------- | ------------------------------------------------------------------- | ---------------------- |
-| `server-credentials` | Single-tenant | `Bearer <base64(projectId:keyId:keySecret)>` — must be the server's | the env credentials    |
-| `client-credentials` | Multi-tenant  | `Bearer <base64(projectId:keyId:keySecret)>` — the caller's own     | the credentials sent   |
-| `sinchid-agent`      | Multi-tenant  | `Bearer <SinchID access token>`, plus `x-agent-id`                  | the agent installation |
+| `MCP_AUTH_MODE`     | Tenancy       | `PROJECT_ID`/`KEY_ID`/`KEY_SECRET` | Tools run as              |
+| ------------------- | ------------- | ---------------------------------- | ------------------------- |
+| set to a known mode | Multi-tenant  | **never read**                     | whatever the caller sends |
+| set to anything else| —             | —                                  | refuses to start          |
+| unset               | Single-tenant | **required**, all three            | the env credentials       |
+
+That ordering is the point: the decision rests on one variable the chart always sets, never on
+the absence of something. A credential left in the environment — a stale Secret key, a local
+`.env` baked into an image — cannot pull a deployed server back onto one shared account, because
+in multi-tenant those variables are never consulted for credential resolution, for telemetry, or
+for anything else.
+
+When `MCP_AUTH_MODE` is set, it also pins the one inbound shape `/mcp` accepts:
+
+| `MCP_AUTH_MODE`      | `Authorization` header value                                    | Tools run as           |
+| -------------------- | --------------------------------------------------------------- |------------------------|
+| `client-credentials` | `Bearer <base64(projectId:keyId:keySecret)>` — the caller's own | the credentials sent   |
+| `sinchid-agent`      | `Bearer <SinchID access token>`, plus `x-agent-id`              | the user's credentials |
 
 Notes:
 
+- **Single-tenant performs no inbound authentication on `/mcp`.** `MCP_AUTH_MODE` being unset is
+  the whole configuration, so there is no per-caller credential to check — anyone who can reach
+  the port transacts on that account. It is a local/stdio-equivalent mode and must never be
+  exposed. This chart cannot deploy it, because it always sets `MCP_AUTH_MODE`.
+- A **partial** triple with `MCP_AUTH_MODE` unset refuses to start: single-tenant needs all three.
+  With `MCP_AUTH_MODE` set, a partial triple is simply irrelevant.
+- An **unrecognised** `MCP_AUTH_MODE` refuses to start. It does not degrade to single-tenant —
+  that would drop inbound auth on an endpoint whose only protection is this middleware.
+- Multi-tenant requires `CONVERSATION_REGION`, which cannot be overridden per request.
 - Encode `projectId:keyId:keySecret` with standard Base64 (no line breaks, not base64url) and
   send it on every request, including after `initialize`.
-- `server-credentials` requires `PROJECT_ID`/`KEY_ID`/`KEY_SECRET` in the app secret and refuses
-  to start without them; the comparison against the caller's token is constant-time.
-- The multi-tenant modes require `CONVERSATION_REGION` and read no Sinch credentials from env.
 - A request carrying the wrong token shape is rejected with `401` plus a `WWW-Authenticate`
   challenge. Where a tool is reached without usable credentials it answers with a prompt response:
   `Missing or invalid Authorization header (expected "Bearer <Base64 of projectId:keyId:keySecret>").`
 - Make sure `Authorization` is passed through to the pod untouched.
-- `MCP_API_KEY` / `MCP_API_KEYS` are gone — the single-tenant gateway key was replaced by the
-  credential triple above. They are no longer read at all, so drop them from any secret carried
-  over from an earlier deploy.
 
 ## Secret skeleton (create in namespace before first deploy)
 
-Multi-tenant deployments (the staging default) need no Sinch credentials at all — add
-`PROJECT_ID`/`KEY_ID`/`KEY_SECRET` only for `server-credentials`, and the Verification, Voice
-and Mailgun keys only if those tool tags are enabled.
-
-```bash
-kubectl -n mcp-messaging create secret generic sinch-mcp-server \
-  --from-literal=APPLICATION_KEY='...' \
-  --from-literal=APPLICATION_SECRET='...' \
-  --from-literal=MAILGUN_DOMAIN='...' \
-  --from-literal=MAILGUN_API_KEY='...' \
-  --from-literal=MAILGUN_SENDER_ADDRESS='...'
-```
+Do not put `PROJECT_ID`/`KEY_ID`/`KEY_SECRET` in this secret. The chart always sets
+`MCP_AUTH_MODE`, so they would be inert rather than dangerous — but they would still be live
+Sinch credentials sitting in a namespace with nothing to read them, which is worth avoiding on
+its own.
 
 `CONVERSATION_REGION` and `MCP_AUTH_MODE` are chart values (`conversationRegion`, `authMode`),
 not secret keys.
@@ -92,8 +100,11 @@ name a secret with `endpoint`/`port`/`password` keys — normally provisioned au
 
 ## Local image smoke test
 
-REDIS_HOST and MCP_AUTH_MODE are required — the server exits immediately on startup without
-them. Run a throwaway Redis on the same Docker network so the container can reach it by name:
+`REDIS_HOST` is required in every mode — the server exits immediately on startup without it.
+The run below reproduces the deployed shape, which additionally needs `MCP_AUTH_MODE` and
+`CONVERSATION_REGION`. (To smoke-test single-tenant instead, drop both and pass
+`PROJECT_ID`/`KEY_ID`/`KEY_SECRET`.) Run a throwaway Redis on the same Docker network so the
+container can reach it by name:
 
 ```bash
 docker network create mcp-smoke-test
@@ -101,8 +112,7 @@ docker run -d --rm --name redis --network mcp-smoke-test redis:8-alpine
 
 docker build -t sinch-mcp-server:local .
 docker run --rm -p 8000:8000 --network mcp-smoke-test \
-  -e MCP_AUTH_MODE=server-credentials \
-  -e PROJECT_ID=x -e KEY_ID=x -e KEY_SECRET=x \
+  -e MCP_AUTH_MODE=client-credentials -e CONVERSATION_REGION=eu \
   -e REDIS_HOST=redis \
   sinch-mcp-server:local
 curl -s http://127.0.0.1:8000/health/live

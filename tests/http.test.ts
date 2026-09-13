@@ -6,7 +6,7 @@ jest.mock('ioredis', () => jest.requireActual('ioredis-mock'));
 import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { StreamableHTTPClientTransport } from '@modelcontextprotocol/sdk/client/streamableHttp.js';
 import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js';
-import { clearAuthModeForTests } from '../src/auth/auth-mode';
+import { clearAuthModeForTests, getAuthMode } from '../src/auth/auth-mode';
 import { clearHttpCredentialSourceForTests, getHttpCredentialSource } from '../src/auth/http-credential-mode';
 import { mockEnv, resetMockEnv, type MockServerEnv } from '../src/__mocks__/env';
 import { createHttpApp, main, waitForListening } from '../src/http';
@@ -87,15 +87,12 @@ const initializeBody = {
 const toolsListBody = { jsonrpc: '2.0', id: 2, method: 'tools/list', params: {} };
 
 describe('HTTP MCP session handling (Redis-backed)', () => {
-  // Single-tenant: callers present the server's own credentials, which CREDENTIALS_HEADER carries.
   beforeEach(() => {
     resetMockEnv();
     mockEnv.REDIS_HOST = '127.0.0.1';
     mockEnv.REDIS_PORT = '6379';
-    mockEnv.MCP_AUTH_MODE = 'server-credentials';
-    mockEnv.PROJECT_ID = 'project-1';
-    mockEnv.KEY_ID = 'key-1';
-    mockEnv.KEY_SECRET = 'secret-1';
+    mockEnv.MCP_AUTH_MODE = 'client-credentials';
+    mockEnv.CONVERSATION_REGION = 'eu';
   });
 
   afterEach(() => {
@@ -351,16 +348,19 @@ describe('createHttpApp startup validation', () => {
     clearAuthModeForTests();
   });
 
-  test('throws when MCP_AUTH_MODE is not set', () => {
-    expect(() => createHttpApp()).toThrow(
-      'The MCP_AUTH_MODE environment variable is required ' +
-        '(one of: client-credentials, server-credentials, sinchid-agent)',
-    );
+  test('throws when neither credentials nor MCP_AUTH_MODE are set', () => {
+    expect(() => createHttpApp()).toThrow('MCP_AUTH_MODE is not set, so this is a single-tenant deployment');
   });
 
-  test('throws when MCP_AUTH_MODE is not recognised', () => {
+  // A typo must not degrade to single-tenant: that would silently drop inbound auth on an
+  // endpoint whose only protection is the auth-mode middleware.
+  test('throws when MCP_AUTH_MODE is set but not recognised, even with credentials available', () => {
     mockEnv.MCP_AUTH_MODE = 'sinchid_agent' as MockServerEnv['MCP_AUTH_MODE'];
-    expect(() => createHttpApp()).toThrow('The MCP_AUTH_MODE environment variable is required');
+    mockEnv.PROJECT_ID = 'project-1';
+    mockEnv.KEY_ID = 'key-1';
+    mockEnv.KEY_SECRET = 'secret-1';
+
+    expect(() => createHttpApp()).toThrow('MCP_AUTH_MODE=sinchid_agent is not a recognised mode');
   });
 
   test('throws in multi-tenant mode when CONVERSATION_REGION is not set', () => {
@@ -381,23 +381,22 @@ describe('createHttpApp startup validation', () => {
     expect(() => createHttpApp()).not.toThrow();
   });
 
-  describe('server-credentials (single-tenant)', () => {
+  describe('single-tenant, selected by MCP_AUTH_MODE being unset', () => {
     const setServerCredentials = () => {
       mockEnv.PROJECT_ID = 'project-1';
       mockEnv.KEY_ID = 'key-1';
       mockEnv.KEY_SECRET = 'secret-1';
     };
 
-    test('resolves credentials from the environment, not the request', () => {
-      mockEnv.MCP_AUTH_MODE = 'server-credentials';
+    test('starts on the credential triple alone and resolves credentials from the environment', () => {
       setServerCredentials();
 
       expect(() => createHttpApp()).not.toThrow();
       expect(getHttpCredentialSource()).toBe('env');
+      expect(getAuthMode()).toBeUndefined();
     });
 
     test('does not require CONVERSATION_REGION', () => {
-      mockEnv.MCP_AUTH_MODE = 'server-credentials';
       setServerCredentials();
       mockEnv.CONVERSATION_REGION = undefined;
 
@@ -405,17 +404,53 @@ describe('createHttpApp startup validation', () => {
     });
 
     test.each([['PROJECT_ID'], ['KEY_ID'], ['KEY_SECRET']] as const)(
-      'refuses to start when %s is missing',
+      'refuses to start on a partial triple, with %s missing',
       (missing) => {
-        mockEnv.MCP_AUTH_MODE = 'server-credentials';
         setServerCredentials();
         mockEnv[missing] = undefined;
 
-        expect(() => createHttpApp()).toThrow(
-          'MCP_AUTH_MODE=server-credentials requires PROJECT_ID, KEY_ID and KEY_SECRET',
-        );
+        expect(() => createHttpApp()).toThrow('single-tenant deployment, which requires');
+        expect(() => createHttpApp()).toThrow(`${missing} missing`);
       },
     );
+  });
+
+  // MCP_AUTH_MODE is the selector and is read first, so a credential left in the environment —
+  // a stale Secret key, a local .env carried into a container — cannot pull a deployed
+  // multi-tenant server back onto one shared account.
+  describe('MCP_AUTH_MODE takes precedence over the credential triple', () => {
+    test.each([['client-credentials'], ['sinchid-agent']] as const)(
+      'starts multi-tenant with MCP_AUTH_MODE=%s even when the full triple is set',
+      (mode) => {
+        mockEnv.PROJECT_ID = 'project-1';
+        mockEnv.KEY_ID = 'key-1';
+        mockEnv.KEY_SECRET = 'secret-1';
+        mockEnv.CONVERSATION_REGION = 'eu';
+        mockEnv.MCP_AUTH_MODE = mode;
+
+        expect(() => createHttpApp()).not.toThrow();
+        expect(getHttpCredentialSource()).toBe('request-header');
+        expect(getAuthMode()).toBe(mode);
+      },
+    );
+
+    test('a partial triple is irrelevant once MCP_AUTH_MODE is set', () => {
+      mockEnv.PROJECT_ID = 'project-1';
+      mockEnv.CONVERSATION_REGION = 'eu';
+      mockEnv.MCP_AUTH_MODE = 'client-credentials';
+
+      expect(() => createHttpApp()).not.toThrow();
+      expect(getHttpCredentialSource()).toBe('request-header');
+    });
+
+    test('still requires CONVERSATION_REGION, which the credentials cannot substitute for', () => {
+      mockEnv.PROJECT_ID = 'project-1';
+      mockEnv.KEY_ID = 'key-1';
+      mockEnv.KEY_SECRET = 'secret-1';
+      mockEnv.MCP_AUTH_MODE = 'client-credentials';
+
+      expect(() => createHttpApp()).toThrow('In multi-tenant mode, the CONVERSATION_REGION environment variable is');
+    });
   });
 });
 
@@ -520,15 +555,22 @@ describe('auth mode enforcement', () => {
     }
   });
 
-  test("server-credentials deployment accepts the server's own credentials", async () => {
-    mockEnv.MCP_AUTH_MODE = 'server-credentials';
+  // Single-tenant registers no auth middleware, so /mcp must serve a request with no
+  // Authorization at all — and must not reject one carrying another account's blob either,
+  // since nothing reads the header. This is the mode's defining property, not an oversight:
+  // it is why single-tenant must never be exposed.
+  test('single-tenant serves a request with no Authorization at all', async () => {
     mockEnv.PROJECT_ID = 'project-1';
     mockEnv.KEY_ID = 'key-1';
     mockEnv.KEY_SECRET = 'secret-1';
     const { baseUrl, close } = await listen(createHttpApp());
 
     try {
-      const response = await post(baseUrl, initializeBody, { Authorization: `Bearer ${credentialsBlob}` });
+      const response = await fetch(`${baseUrl}/mcp`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Accept: ACCEPT_HEADER },
+        body: JSON.stringify(initializeBody),
+      });
 
       expect(response.status).toBe(200);
       expect(response.headers.get('mcp-session-id')).toBeTruthy();
@@ -537,8 +579,7 @@ describe('auth mode enforcement', () => {
     }
   });
 
-  test('server-credentials deployment rejects another account with 401', async () => {
-    mockEnv.MCP_AUTH_MODE = 'server-credentials';
+  test("single-tenant ignores another account's credentials rather than rejecting them", async () => {
     mockEnv.PROJECT_ID = 'project-1';
     mockEnv.KEY_ID = 'key-1';
     mockEnv.KEY_SECRET = 'secret-1';
@@ -548,8 +589,8 @@ describe('auth mode enforcement', () => {
       const otherAccount = Buffer.from('project-2:key-2:secret-2').toString('base64');
       const response = await post(baseUrl, initializeBody, { Authorization: `Bearer ${otherAccount}` });
 
-      expect(response.status).toBe(401);
-      expect(await response.json()).toMatchObject({ error: 'invalid_token' });
+      expect(response.status).toBe(200);
+      expect(getHttpCredentialSource()).toBe('env');
     } finally {
       await close();
     }

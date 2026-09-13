@@ -1,4 +1,4 @@
-import { createHash, timingSafeEqual } from 'node:crypto';
+import { createHash } from 'node:crypto';
 import { env } from '../env';
 import { extractBearerToken } from './bearer-token';
 
@@ -71,6 +71,13 @@ export const parseSinchCredentialsAuthorizationHeader = (
   return parseSinchCredentialsValue(token);
 };
 
+export const SERVER_CREDENTIAL_ENV_VARS = ['PROJECT_ID', 'KEY_ID', 'KEY_SECRET'] as const;
+
+/** Which of the three server-credential env vars are populated. All three or none is valid. */
+export const presentServerCredentialEnvVars = (): string[] => {
+  return SERVER_CREDENTIAL_ENV_VARS.filter((key) => Boolean(env[key]?.trim()));
+};
+
 export const sinchOAuthCredentialsFromEnv = (): SinchOAuthCredentials | undefined => {
   const projectId = env.PROJECT_ID?.trim();
   const keyId = env.KEY_ID?.trim();
@@ -86,17 +93,4 @@ export const sinchOAuthCredentialsFromEnv = (): SinchOAuthCredentials | undefine
     keySecret,
     cacheKey: buildCredentialCacheKey(projectId, keyId, keySecret),
   };
-};
-
-/**
- * True when the presented credentials are the ones this server holds. Compares the SHA-256
- * cache keys so the check is constant-time over fixed-length digests, never over the secret.
- */
-export const matchesServerCredentials = (presented: SinchOAuthCredentials): boolean => {
-  const server = sinchOAuthCredentialsFromEnv();
-  if (!server) {
-    return false;
-  }
-
-  return timingSafeEqual(Buffer.from(presented.cacheKey, 'hex'), Buffer.from(server.cacheKey, 'hex'));
 };

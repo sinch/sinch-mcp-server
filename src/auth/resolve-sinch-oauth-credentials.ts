@@ -27,8 +27,7 @@ export const resolveSinchOAuthCredentials = (): SinchOAuthCredentials | PromptRe
     return fromRequest;
   }
 
-  // Single-tenant HTTP and stdio: credentials come only from server env. In single-tenant the
-  // caller's Authorization had to match that same triple, so there is nothing to override.
+  // Single-tenant HTTP and stdio: credentials come only from server env.
   const fromEnv = sinchOAuthCredentialsFromEnv();
   if (fromEnv) {
     return fromEnv;

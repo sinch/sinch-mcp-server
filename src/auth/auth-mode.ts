@@ -1,11 +1,16 @@
 import type { NextFunction, Request, Response } from 'express';
 import { AGENT_ID_HEADER } from './credential-context';
 import { buildBearerWwwAuthenticateHeader } from './bearer-token';
-import { matchesServerCredentials, parseSinchCredentialsAuthorizationHeader } from './sinch-oauth-credentials';
+import { parseSinchCredentialsAuthorizationHeader } from './sinch-oauth-credentials';
 import { isJwtShapedBearerToken } from './user-jwt';
 import { extractHeaderValue } from '../utils';
 
-export const MCP_AUTH_MODES = ['client-credentials', 'server-credentials', 'sinchid-agent'] as const;
+/**
+ * The inbound auth shapes a MULTI-TENANT HTTP deployment can be pinned to. Single-tenant is
+ * deliberately absent: it is not an auth mode but the absence of one, selected by the presence
+ * of PROJECT_ID/KEY_ID/KEY_SECRET in the environment (see createHttpApp).
+ */
+export const MCP_AUTH_MODES = ['client-credentials', 'sinchid-agent'] as const;
 
 export type McpAuthMode = (typeof MCP_AUTH_MODES)[number];
 
@@ -19,7 +24,7 @@ export const setAuthMode = (mode: McpAuthMode | undefined): void => {
   configuredAuthMode = mode;
 };
 
-/** Undefined in single-tenant HTTP and over stdio, where no auth mode applies. */
+/** Undefined in single-tenant HTTP and over stdio, where no inbound auth shape is enforced. */
 export const getAuthMode = (): McpAuthMode | undefined => {
   return configuredAuthMode;
 };
@@ -94,52 +99,11 @@ const checkSinchidAgent = (req: Request): AuthShapeCheck => {
   return OK;
 };
 
-/**
- * Single-tenant: the caller proves it holds this server's own credentials, and the tools then
- * run on the environment copy. Same wire shape as client-credentials — what differs is that the
- * triple must be ours, so no other account can transact here.
- */
-const checkServerCredentials = (req: Request): AuthShapeCheck => {
-  if (extractHeaderValue(req.headers.authorization) === undefined) {
-    return {
-      ok: false,
-      invalidToken: false,
-      reason: 'Missing Sinch API credentials in the Authorization header',
-    };
-  }
-
-  const credentials = parseSinchCredentialsAuthorizationHeader(req.headers.authorization);
-  if (credentials === undefined) {
-    return {
-      ok: false,
-      invalidToken: true,
-      reason: 'Authorization must carry Base64 projectId:keyId:keySecret as a Bearer token',
-    };
-  }
-
-  // Deliberately vague: a caller that guessed wrong learns nothing about the configured triple.
-  if (!matchesServerCredentials(credentials)) {
-    return {
-      ok: false,
-      invalidToken: true,
-      reason: 'The Sinch API credentials are not accepted by this deployment',
-    };
-  }
-
-  return OK;
-};
-
 const AUTH_SHAPE_CHECKS: Record<McpAuthMode, (req: Request) => AuthShapeCheck> = {
   'client-credentials': checkClientCredentials,
-  'server-credentials': checkServerCredentials,
   'sinchid-agent': checkSinchidAgent,
 };
 
-/**
- * Enforces the one inbound auth shape this deployment was started for. Both endpoints are
- * unauthenticated at the edge (ZAP does TLS and routing only), so accepting anything else
- * here would defeat the point of splitting them.
- */
 const rejectWrongShape = (res: Response, reason: string): void => {
   res.setHeader(
     'WWW-Authenticate',

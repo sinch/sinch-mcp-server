@@ -52,10 +52,6 @@ describe('isMcpAuthMode', () => {
     expect(isMcpAuthMode('sinchid-agent')).toBe(true);
   });
 
-  it('accepts server-credentials', () => {
-    expect(isMcpAuthMode('server-credentials')).toBe(true);
-  });
-
   it('rejects anything else', () => {
     expect(isMcpAuthMode('sinchid_agent')).toBe(false);
     expect(isMcpAuthMode('')).toBe(false);
@@ -114,73 +110,20 @@ describe('createAuthModeMiddleware', () => {
     });
   });
 
-  describe('server-credentials', () => {
-    const setServerCredentials = () => {
+  // Both multi-tenant modes ignore the server's own credentials: a deployment that held any
+  // would not be multi-tenant, and createHttpApp refuses to start in that combination. Asserted
+  // here so a future change can't quietly make the middleware read them.
+  describe('server env credentials', () => {
+    it('does not change client-credentials behaviour when set', () => {
       mockEnv.PROJECT_ID = 'project-1';
       mockEnv.KEY_ID = 'key-1';
       mockEnv.KEY_SECRET = 'secret-1';
-    };
 
-    it("passes a request presenting the server's own credentials", () => {
-      setServerCredentials();
-      const { res, next } = run('server-credentials', { authorization: `Bearer ${CREDENTIALS_BLOB}` });
+      const other = Buffer.from('project-2:key-2:secret-2').toString('base64');
+      const { res, next } = run('client-credentials', { authorization: `Bearer ${other}` });
 
       expect(next).toHaveBeenCalled();
       expect(res.statusCode).toBe(200);
-    });
-
-    it.each([
-      ['another account', Buffer.from('project-2:key-2:secret-2').toString('base64')],
-      ['the right project with a wrong secret', Buffer.from('project-1:key-1:wrong').toString('base64')],
-      ['the right project with a wrong key id', Buffer.from('project-1:wrong:secret-1').toString('base64')],
-    ])('rejects credentials for %s with 401', (_label, blob) => {
-      setServerCredentials();
-      const { res, next } = run('server-credentials', { authorization: `Bearer ${blob}` });
-
-      expect(next).not.toHaveBeenCalled();
-      expect(res.statusCode).toBe(401);
-      expect(res.body).toEqual({
-        error: 'invalid_token',
-        error_description: 'The Sinch API credentials are not accepted by this deployment',
-      });
-    });
-
-    it('does not leak the configured credentials in the rejection', () => {
-      setServerCredentials();
-      const { res } = run('server-credentials', {
-        authorization: `Bearer ${Buffer.from('project-2:key-2:secret-2').toString('base64')}`,
-      });
-
-      const rendered = `${JSON.stringify(res.body)}${res.headers['WWW-Authenticate']}`;
-      expect(rendered).not.toContain('secret-1');
-      expect(rendered).not.toContain('key-1');
-    });
-
-    it('rejects a non-credential token with the shape error', () => {
-      setServerCredentials();
-      const { res, next } = run('server-credentials', { authorization: SINCHID_TOKEN });
-
-      expect(next).not.toHaveBeenCalled();
-      expect(res.body).toEqual({
-        error: 'invalid_token',
-        error_description: 'Authorization must carry Base64 projectId:keyId:keySecret as a Bearer token',
-      });
-    });
-
-    it('rejects a request with no Authorization using a realm-only challenge', () => {
-      setServerCredentials();
-      const { res, next } = run('server-credentials', {});
-
-      expect(next).not.toHaveBeenCalled();
-      expect(res.statusCode).toBe(401);
-      expect(res.headers['WWW-Authenticate']).toBe('Bearer realm="sinch-mcp"');
-    });
-
-    it('rejects everything when the server holds no credentials', () => {
-      const { res, next } = run('server-credentials', { authorization: `Bearer ${CREDENTIALS_BLOB}` });
-
-      expect(next).not.toHaveBeenCalled();
-      expect(res.statusCode).toBe(401);
     });
   });
 

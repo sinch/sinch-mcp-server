@@ -76,9 +76,9 @@
   },
   "scripts": {
     "build": "tsc --project tsconfig.build.json && tsc --project tsconfig.tests.json",
-    "start:stdio": "tsc && node dist/index.js",
+    "start:stdio": "tsc --project tsconfig.build.json && node dist/index.js",
     "start:sse": "tsc --project tsconfig.build.json && npx -y supergateway --stdio \"node dist/index.js\" --port 8000 --baseUrl http://localhost:8000 --ssePath /sse --messagePath /message",
-    "start:http": "tsc --project tsconfig.build.json && npx -y supergateway --stdio \"node dist/index.js\" --port 8000 --outputTransport streamableHttp",
+    "start:http:server": "tsc --project tsconfig.build.json && node dist/http.js",
     "lint": "eslint src/ tests/ --ext .ts --max-warnings 0",
     "lint:fix": "eslint src/ tests/ --ext .ts --fix",
     "prettier": "prettier './**/*.{js,ts,md}' --write",
@@ -87,8 +87,7 @@
     "test:coverage": "jest --coverage --testPathIgnorePatterns='/tests/(integration|eval)/'",
     "test:integration": "NODE_OPTIONS=--experimental-vm-modules jest --config jest.integration.config.ts --runInBand",
     "test:eval": "NODE_OPTIONS=--experimental-vm-modules jest --config jest.eval.config.ts --runInBand",
-    "prepare": "husky",
-    "start:http:server": "tsc --project tsconfig.build.json && node dist/http.js"
+    "prepare": "husky"
   },
   "engines": {
     "node": ">=20.18.1 < 23"
