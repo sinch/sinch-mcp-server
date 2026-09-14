@@ -1,6 +1,11 @@
 import { getAuthMode } from './auth-mode';
 import { resolveAgentCredentials } from './agent-credentials';
-import { AGENT_ID_HEADER, getRequestAgentId, getRequestSinchOAuthCredentials } from './credential-context';
+import {
+  AGENT_ID_HEADER,
+  getRequestAgentId,
+  getRequestSinchOAuthCredentials,
+  getRequestUserClaims,
+} from './credential-context';
 import { getHttpCredentialSource } from './http-credential-mode';
 import { sinchOAuthCredentialsFromEnv, type SinchOAuthCredentials } from './sinch-oauth-credentials';
 import { logger } from '../telemetry/logger';
@@ -16,16 +21,24 @@ export const resolveSinchOAuthCredentials = (): SinchOAuthCredentials | PromptRe
       return new PromptResponse(`Missing ${AGENT_ID_HEADER} header.`);
     }
 
-    const fromAgent = resolveAgentCredentials(agentId);
+    // ZAP is responsible for authenticating the JWT upstream. The MCP server uses
+    // its projectId claim with the OrderId to select this installation's credentials.
+    const projectId = getRequestUserClaims()?.projectId;
+    if (!projectId) {
+      return new PromptResponse(`Missing project id in the Authorization JWT for ${AGENT_ID_HEADER} "${agentId}".`);
+    }
+
+    const fromAgent = resolveAgentCredentials(agentId, projectId);
     if (fromAgent) {
       return fromAgent;
     }
     logger.warn(
-      { agent_id: agentId },
-      `Unknown agent id in ${AGENT_ID_HEADER} header: not present in the agent credentials map`,
+      { agent_id: agentId, project_id: projectId },
+      'Unknown agent and project combination: not present in the agent credentials map',
     );
     return new PromptResponse(
-      `Unknown agent id "${agentId}": it is not present in the server's agent credentials map.`,
+      `Unknown agent and project combination "${agentId}:${projectId}": ` +
+        "it is not present in the server's agent credentials map.",
     );
   }
 

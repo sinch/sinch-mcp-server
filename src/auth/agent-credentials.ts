@@ -4,14 +4,12 @@ import { buildCredentialCacheKey, type SinchOAuthCredentials } from './sinch-oau
 
 /**
  * The AGENT_CREDENTIALS environment variable holds the map of known agent
- * installations to their Sinch M2M credentials, keyed by
- * "<agentId>:<projectId>" (the identifier sent in the x-agent-id header, e.g.
- * the Gemini Enterprise Marketplace OrderId, and the Sinch project it acts
- * on):
+ * installations to their Sinch M2M credentials. The key combines the OrderId
+ * sent in x-agent-id with the projectId supplied by the upstream-authenticated
+ * user JWT:
  *
  *   {
- *     "<agentId>:<projectId>": {
- *       "projectId": "...",
+ *     "<orderId>:<projectId>": {
  *       "accessKeyId": "...",
  *       "accessKeySecret": "..."
  *     }
@@ -24,18 +22,26 @@ import { buildCredentialCacheKey, type SinchOAuthCredentials } from './sinch-oau
 export const AGENT_CREDENTIALS_ENV_VAR = 'AGENT_CREDENTIALS';
 
 const agentCredentialsEntrySchema = z.object({
-  projectId: z.string().trim().min(1),
   accessKeyId: z.string().trim().min(1),
   accessKeySecret: z.string().trim().min(1),
 });
 
-const agentCredentialsMapSchema = z.record(z.string().trim().min(1), agentCredentialsEntrySchema);
+const agentCredentialsMapKeySchema = z
+  .string()
+  .trim()
+  .refine((key) => {
+    const separator = key.lastIndexOf(':');
+    return separator > 0 && separator < key.length - 1;
+  }, 'Expected an orderId:projectId key');
 
-type AgentCredentialsMap = ReadonlyMap<string, SinchOAuthCredentials>;
+const agentCredentialsMapSchema = z.record(agentCredentialsMapKeySchema, agentCredentialsEntrySchema);
+
+type AgentCredentialsEntry = z.infer<typeof agentCredentialsEntrySchema>;
+type AgentCredentialsMap = ReadonlyMap<string, AgentCredentialsEntry>;
 
 const EMPTY_MAP: AgentCredentialsMap = new Map();
 
-let cachedCredentialsByAgentId: AgentCredentialsMap | undefined;
+let cachedCredentialsByAgentAndProject: AgentCredentialsMap | undefined;
 
 const findDuplicateTrimmedKey = (keys: string[]): string | undefined => {
   const seen = new Set<string>();
@@ -56,13 +62,13 @@ const parseAgentCredentials = (rawValue: string): AgentCredentialsMap => {
   } catch {
     throw new Error(
       `${AGENT_CREDENTIALS_ENV_VAR} is not valid JSON. ` +
-        'Expected a map of agent ids to { projectId, accessKeyId, accessKeySecret } objects.',
+        'Expected a map of orderId:projectId keys to { accessKeyId, accessKeySecret } objects.',
     );
   }
 
   const parsed = agentCredentialsMapSchema.safeParse(json);
   if (!parsed.success) {
-    // Report offending agent ids and fields only; never echo credential values.
+    // Report offending map keys and fields only; never echo credential values.
     const issues = parsed.error.issues.map((issue) => `${issue.path.join('.') || '(root)'}: ${issue.message}`);
     throw new Error(`${AGENT_CREDENTIALS_ENV_VAR} has an invalid shape: ${issues.join('; ')}`);
   }
@@ -74,17 +80,7 @@ const parseAgentCredentials = (rawValue: string): AgentCredentialsMap => {
     throw new Error(`${AGENT_CREDENTIALS_ENV_VAR} contains duplicate agent id "${duplicateAgentId}" after trimming.`);
   }
 
-  return new Map(
-    Object.entries(parsed.data).map(([agentId, entry]) => [
-      agentId,
-      {
-        projectId: entry.projectId,
-        keyId: entry.accessKeyId,
-        keySecret: entry.accessKeySecret,
-        cacheKey: buildCredentialCacheKey(entry.projectId, entry.accessKeyId, entry.accessKeySecret),
-      },
-    ]),
-  );
+  return new Map(Object.entries(parsed.data));
 };
 
 /**
@@ -93,17 +89,26 @@ const parseAgentCredentials = (rawValue: string): AgentCredentialsMap => {
  * configuration refuses to start instead of failing on the first request.
  */
 export const loadAgentCredentials = (): AgentCredentialsMap => {
-  if (!cachedCredentialsByAgentId) {
+  if (!cachedCredentialsByAgentAndProject) {
     const rawValue = env.AGENT_CREDENTIALS?.trim();
-    cachedCredentialsByAgentId = rawValue ? parseAgentCredentials(rawValue) : EMPTY_MAP;
+    cachedCredentialsByAgentAndProject = rawValue ? parseAgentCredentials(rawValue) : EMPTY_MAP;
   }
-  return cachedCredentialsByAgentId;
+  return cachedCredentialsByAgentAndProject;
 };
 
-export const resolveAgentCredentials = (agentId: string): SinchOAuthCredentials | undefined => {
-  return loadAgentCredentials().get(agentId);
+export const resolveAgentCredentials = (agentId: string, projectId: string): SinchOAuthCredentials | undefined => {
+  const entry = loadAgentCredentials().get(`${agentId}:${projectId}`);
+  if (!entry) {
+    return undefined;
+  }
+  return {
+    projectId,
+    keyId: entry.accessKeyId,
+    keySecret: entry.accessKeySecret,
+    cacheKey: buildCredentialCacheKey(projectId, entry.accessKeyId, entry.accessKeySecret),
+  };
 };
 
 export const clearAgentCredentialsCacheForTests = (): void => {
-  cachedCredentialsByAgentId = undefined;
+  cachedCredentialsByAgentAndProject = undefined;
 };

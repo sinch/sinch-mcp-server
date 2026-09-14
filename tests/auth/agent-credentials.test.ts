@@ -8,12 +8,10 @@ import { mockEnv, resetMockEnv } from '../helpers/mock-env';
 
 const validMap = {
   'order-42:project-a': {
-    projectId: 'project-a',
     accessKeyId: 'key-a',
     accessKeySecret: 'secret-a',
   },
   'order-43:project-b': {
-    projectId: 'project-b',
     accessKeyId: 'key-b',
     accessKeySecret: 'secret-b',
   },
@@ -35,17 +33,15 @@ describe('agent-credentials', () => {
       expect(loadAgentCredentials().size).toBe(0);
     });
 
-    it('parses a valid map into SinchOAuthCredentials entries', () => {
+    it('parses a valid map of credential secrets', () => {
       mockEnv.AGENT_CREDENTIALS = JSON.stringify(validMap);
 
       const credentials = loadAgentCredentials();
 
       expect(credentials.size).toBe(2);
       expect(credentials.get('order-42:project-a')).toEqual({
-        projectId: 'project-a',
-        keyId: 'key-a',
-        keySecret: 'secret-a',
-        cacheKey: buildCredentialCacheKey('project-a', 'key-a', 'secret-a'),
+        accessKeyId: 'key-a',
+        accessKeySecret: 'secret-a',
       });
     });
 
@@ -77,21 +73,21 @@ describe('agent-credentials', () => {
 
     it('throws when an entry is missing a field', () => {
       mockEnv.AGENT_CREDENTIALS = JSON.stringify({
-        'order-42:project-a': { projectId: 'project-a', accessKeyId: 'key-a' },
+        'order-42:project-a': { accessKeyId: 'key-a' },
       });
       expect(() => loadAgentCredentials()).toThrow(/invalid shape.*order-42:project-a\.accessKeySecret/);
     });
 
-    it('throws when a field is empty', () => {
+    it('throws when a credential field is empty', () => {
       mockEnv.AGENT_CREDENTIALS = JSON.stringify({
-        'order-42:project-a': { projectId: '', accessKeyId: 'key-a', accessKeySecret: 'secret-a' },
+        'order-42:project-a': { accessKeyId: '', accessKeySecret: 'secret-a' },
       });
-      expect(() => loadAgentCredentials()).toThrow(/invalid shape.*order-42:project-a\.projectId/);
+      expect(() => loadAgentCredentials()).toThrow(/invalid shape.*order-42:project-a\.accessKeyId/);
     });
 
     it('does not include credential values in shape errors', () => {
       mockEnv.AGENT_CREDENTIALS = JSON.stringify({
-        'order-42:project-a': { projectId: 'project-a', accessKeyId: 42, accessKeySecret: 'super-secret-value' },
+        'order-42:project-a': { accessKeyId: 42, accessKeySecret: 'super-secret-value' },
       });
 
       let error: Error | undefined;
@@ -112,44 +108,56 @@ describe('agent-credentials', () => {
 
     it('trims whitespace around agent ids', () => {
       mockEnv.AGENT_CREDENTIALS = JSON.stringify({
-        ' order-42:project-a ': { projectId: 'project-a', accessKeyId: 'key-a', accessKeySecret: 'secret-a' },
+        ' order-42:project-a ': { accessKeyId: 'key-a', accessKeySecret: 'secret-a' },
       });
 
       const credentials = loadAgentCredentials();
 
-      expect(credentials.get('order-42:project-a')?.projectId).toBe('project-a');
+      expect(credentials.get('order-42:project-a')?.accessKeyId).toBe('key-a');
       expect(credentials.has(' order-42:project-a ')).toBeFalse();
     });
 
     it('throws when an agent id is blank', () => {
       mockEnv.AGENT_CREDENTIALS = JSON.stringify({
-        '   ': { projectId: 'project-a', accessKeyId: 'key-a', accessKeySecret: 'secret-a' },
+        '   ': { accessKeyId: 'key-a', accessKeySecret: 'secret-a' },
       });
       expect(() => loadAgentCredentials()).toThrow(/invalid shape/);
     });
 
+    it('throws when a map key does not contain both orderId and projectId', () => {
+      mockEnv.AGENT_CREDENTIALS = JSON.stringify({
+        'order-42': { accessKeyId: 'key-a', accessKeySecret: 'secret-a' },
+      });
+      expect(() => loadAgentCredentials()).toThrow(/Expected an orderId:projectId key/);
+    });
+
     it('throws when two agent ids collide after trimming', () => {
       mockEnv.AGENT_CREDENTIALS = JSON.stringify({
-        'order-42:project-a': { projectId: 'project-a', accessKeyId: 'key-a', accessKeySecret: 'secret-a' },
-        ' order-42:project-a': { projectId: 'project-b', accessKeyId: 'key-b', accessKeySecret: 'secret-b' },
+        'order-42:project-a': { accessKeyId: 'key-a', accessKeySecret: 'secret-a' },
+        ' order-42:project-a': { accessKeyId: 'key-b', accessKeySecret: 'secret-b' },
       });
       expect(() => loadAgentCredentials()).toThrow(/duplicate agent id "order-42:project-a"/);
     });
   });
 
   describe('resolveAgentCredentials', () => {
-    it('resolves a known agent id', () => {
+    it('resolves a known order and project combination', () => {
       mockEnv.AGENT_CREDENTIALS = JSON.stringify(validMap);
-      expect(resolveAgentCredentials('order-43:project-b')?.projectId).toBe('project-b');
+      expect(resolveAgentCredentials('order-43', 'project-b')).toEqual({
+        projectId: 'project-b',
+        keyId: 'key-b',
+        keySecret: 'secret-b',
+        cacheKey: buildCredentialCacheKey('project-b', 'key-b', 'secret-b'),
+      });
     });
 
-    it('returns undefined for an unknown agent id', () => {
+    it('returns undefined for an unknown order and project combination', () => {
       mockEnv.AGENT_CREDENTIALS = JSON.stringify(validMap);
-      expect(resolveAgentCredentials('order-99:project-a')).toBeUndefined();
+      expect(resolveAgentCredentials('order-99', 'project-a')).toBeUndefined();
     });
 
     it('returns undefined when no map is configured', () => {
-      expect(resolveAgentCredentials('order-42:project-a')).toBeUndefined();
+      expect(resolveAgentCredentials('order-42', 'project-a')).toBeUndefined();
     });
   });
 });

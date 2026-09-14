@@ -18,7 +18,7 @@ describe('oauth-token-cache', () => {
     clearOauthTokenCacheForTests();
   });
 
-  it('reuses Oauth2TokenRequest for the same credential cache key', () => {
+  it('reuses the token plugin for the same credential cache key', () => {
     const creds = makeCreds('p', 'k', 's');
 
     const first = getSharedOauth2TokenRequest(creds);
