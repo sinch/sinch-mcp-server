@@ -7,8 +7,9 @@ import { extractHeaderValue } from '../utils';
 
 /**
  * The inbound auth shapes a MULTI-TENANT HTTP deployment can be pinned to. Single-tenant is
- * deliberately absent: it is not an auth mode but the absence of one, selected by the presence
- * of PROJECT_ID/KEY_ID/KEY_SECRET in the environment (see createHttpApp).
+ * deliberately absent: it is not an auth mode but the absence of one, selected by leaving
+ * MCP_AUTH_MODE unset — which then requires PROJECT_ID/KEY_ID/KEY_SECRET (see
+ * resolveDeploymentMode). Credential presence never selects the tenancy.
  */
 export const MCP_AUTH_MODES = ['client-credentials', 'sinchid-agent'] as const;
 
