@@ -1,4 +1,4 @@
-import { extractBearerToken } from './mcp-api-key';
+import { extractBearerToken } from './bearer-token';
 
 /**
  * Sinch-namespaced claims carried by the Auth0 user JWT that agent
@@ -37,6 +37,15 @@ const decodeJwtPayload = (token: string): Record<string, unknown> | undefined =>
   }
 
   return payload as Record<string, unknown>;
+};
+
+/**
+ * True when Authorization carries a `Bearer` token whose payload decodes as a
+ * three-segment JWT. Shape only — no signature, issuer, or expiry check.
+ */
+export const isJwtShapedBearerToken = (authorizationHeader: string | string[] | undefined): boolean => {
+  const token = extractBearerToken(authorizationHeader);
+  return token !== undefined && decodeJwtPayload(token) !== undefined;
 };
 
 const stringClaim = (payload: Record<string, unknown>, claim: string): string | undefined => {

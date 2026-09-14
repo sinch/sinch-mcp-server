@@ -8,6 +8,7 @@ import {
   resolveSinchOAuthCredentials,
 } from '../../src/auth/resolve-sinch-oauth-credentials';
 import { runWithHttpCredentialHeaders } from '../../src/auth/credential-context';
+import { clearAuthModeForTests, setAuthMode } from '../../src/auth/auth-mode';
 import { clearHttpCredentialSourceForTests, setHttpCredentialSource } from '../../src/auth/http-credential-mode';
 import { PromptResponse } from '../../src/types';
 import { mockEnv, resetMockEnv } from '../helpers/mock-env';
@@ -23,6 +24,7 @@ describe('sinch-oauth-credentials', () => {
   beforeEach(() => {
     resetMockEnv();
     clearHttpCredentialSourceForTests();
+    clearAuthModeForTests();
   });
 
   describe('parseSinchCredentialsValue', () => {
@@ -187,6 +189,33 @@ describe('sinch-oauth-credentials', () => {
     it('returns PromptResponse when credentials are missing', () => {
       const result = resolveSinchOAuthCredentials();
       expect(expectPromptText(result)).toBe('Missing env vars: PROJECT_ID, KEY_ID, KEY_SECRET.');
+    });
+  });
+
+  describe('sinchid-agent mode', () => {
+    const promptText = (response: PromptResponse): string => response.promptResponse.content[0].text;
+
+    it('points the caller at the agent installation, not at a credential header', () => {
+      setHttpCredentialSource('request-header');
+      setAuthMode('sinchid-agent');
+
+      const resolved = runWithHttpCredentialHeaders({}, () => resolveSinchOAuthCredentials());
+
+      expect(resolved).toBeInstanceOf(PromptResponse);
+      const text = promptText(resolved as PromptResponse);
+      expect(text).toContain('agent installation');
+      expect(text).toContain('x-agent-id');
+      expect(text).not.toContain('Authorization');
+    });
+
+    it('still points client-credentials callers at the Authorization header', () => {
+      setHttpCredentialSource('request-header');
+      setAuthMode('client-credentials');
+
+      const resolved = runWithHttpCredentialHeaders({}, () => resolveSinchOAuthCredentials());
+
+      expect(resolved).toBeInstanceOf(PromptResponse);
+      expect(promptText(resolved as PromptResponse)).toBe(MISSING_AUTHORIZATION_CREDENTIALS_MESSAGE);
     });
   });
 });

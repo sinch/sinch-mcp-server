@@ -1,6 +1,6 @@
 import { createHash } from 'node:crypto';
 import { env } from '../env';
-import { extractBearerToken } from './mcp-api-key';
+import { extractBearerToken } from './bearer-token';
 
 // Standard Base64 alphabet only (no line breaks, no base64url). Node's decoder is lenient
 // and silently drops invalid characters, so validate the shape explicitly: a token that
@@ -69,6 +69,13 @@ export const parseSinchCredentialsAuthorizationHeader = (
   }
 
   return parseSinchCredentialsValue(token);
+};
+
+export const SERVER_CREDENTIAL_ENV_VARS = ['PROJECT_ID', 'KEY_ID', 'KEY_SECRET'] as const;
+
+/** Which of the three server-credential env vars are populated. All three or none is valid. */
+export const presentServerCredentialEnvVars = (): string[] => {
+  return SERVER_CREDENTIAL_ENV_VARS.filter((key) => Boolean(env[key]?.trim()));
 };
 
 export const sinchOAuthCredentialsFromEnv = (): SinchOAuthCredentials | undefined => {

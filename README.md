@@ -124,7 +124,7 @@ To use the APIs used by the MCP tools, you will need the following credentials:
   - (Required) `KEY_ID`: Select or create a new access key in the [Access keys section](https://dashboard.sinch.com/settings/access-keys) of the Sinch Build dashboard.
   - (Required) `KEY_SECRET`: This is the secret associated with the `Access Key` you selected or created in the previous step. Be careful, the `Access Key Secret` is only shown once when you create the `Access Key`. If you lose it, you will need to create a new `Access Key`.
   - `CONVERSATION_APP_ID`: This is the ID of the conversation app you want to use. You can find it in the [Conversation API / Apps section](https://dashboard.sinch.com/convapi/apps) of the Sinch Build dashboard. If you don't set it, you will have to specify it in the prompt.
-  - `CONVERSATION_REGION`: This is the region where your conversation app and templates are located. It can be `us`, `eu`, or `br`. If you don't set it, it defaults to `us` (except in [multi-tenant mode](#multi-tenant-each-client-brings-a-sinch-account), where it is required and never defaulted).
+  - `CONVERSATION_REGION`: This is the region where your conversation app and templates are located. It can be `us`, `eu`, or `br`. If you don't set it, it defaults to `us` (except in [multi-tenant mode](#step-2-pick-a-tenancy), where it is required and never defaulted).
   - When using the SMS channel, you can also set the `DEFAULT_SMS_ORIGINATOR` environment variable to the phone number that will be used as the sender for SMS messages. Depending on your country, this setting may be required.
   - You can also set the `GEOCODING_API_KEY` environment variable to your Google Geocoding API key if you want to use the location feature. This is needed to convert an address to a latitude/longitude pair.
 - Verification API credentials: navigate to the [Verification / Apps section](https://dashboard.sinch.com/verification/apps) of the Sinch Build dashboard and create a new app or select an existing one. You will need the following credentials:
@@ -316,7 +316,7 @@ By default, this command will start the MCP with all the tools available. If you
 You can combine multiple tags by separating them with commas. For example, if you want to use both conversation and verification tools, you can use the following command:
 
 ```bash
-"start": "tsc --project tsconfig.build.json && (npx -y supergateway --stdio \"node dist/index.js --tag conversation,verification\" --port 8000 --baseUrl http://localhost:8000 --ssePath /sse --messagePath /message)"
+"start:sse": "tsc --project tsconfig.build.json && (npx -y supergateway --stdio \"node dist/index.js --tag conversation,verification\" --port 8000 --baseUrl http://localhost:8000 --ssePath /sse --messagePath /message)"
 ```
 
 ### Step 4: Configure the MCP server in Claude Desktop
@@ -338,7 +338,7 @@ You can then configure the MCP server in the Claude configuration file as follow
 
 ## Option 3: Native Streamable HTTP server (recommended for remote)
 
-This option runs a **native Streamable HTTP** MCP server on `/mcp`. Choose **single-tenant** or **multi-tenant** deployment — they are mutually exclusive.
+This option runs a **native Streamable HTTP** MCP server on `/mcp`. It is either **single-tenant** or **multi-tenant** (See below).
 
 ### Step 1: Build the MCP server
 
@@ -348,34 +348,66 @@ npm install
 npm run build
 ```
 
-### Step 2: Choose a deployment mode
+### Step 2: Pick a tenancy
 
-#### Single-tenant (one Sinch account per server)
+Tenancy is determined by `MCP_AUTH_MODE`, which is read **first**:
 
-Use when every client of this MCP instance shares the same Sinch project. Configure credentials **on the server**; clients do not send Sinch credentials per request.
+- `multi-tenant` (client credentials) if `MCP_AUTH_MODE` is `client-credentials`
+- `multi-tenant` (sinchid-agent) if `MCP_AUTH_MODE` is `sinchid-agent`
+- `single-tenant` if `MCP_AUTH_MODE` is unset — `PROJECT_ID`, `KEY_ID` and `KEY_SECRET` are then required
+
+| `MCP_AUTH_MODE`      | Tenancy       | `PROJECT_ID`/`KEY_ID`/`KEY_SECRET` | Tools run as                 |
+| -------------------- | ------------- | ---------------------------------- | ---------------------------- |
+| set to a known mode  | Multi-tenant  | **never read**                     | whatever the caller sends    |
+| set to anything else | —             | —                                  | refuses to start             |
+| unset                | Single-tenant | **required**, all three            | the server's env credentials |
+
+Because the mode is read before anything else, credentials left in the environment cannot quietly switch a multi-tenant server back onto one shared account — there, they are not consulted at all, for credential resolution or for telemetry. An unrecognised value is a startup error rather than a fall back to single-tenant, which would drop inbound authentication altogether. With `MCP_AUTH_MODE` unset, a partial triple also refuses to start: set all three, or none and a mode.
+
+#### Single-tenant (no `MCP_AUTH_MODE`)
+
+Use when every client of this MCP instance shares the same Sinch project — in practice, local development. The credentials live **on the server**, and all three are required:
 
 ```dotenv
 PORT=8000
 PROJECT_ID=
 KEY_ID=
 KEY_SECRET=
+# MCP_AUTH_MODE deliberately unset
 ```
 
-#### Multi-tenant (each client brings a Sinch account)
+> **Note:** `/mcp` performs **no inbound authentication** in this mode. `MCP_AUTH_MODE` being unset is the entire configuration, so there is no per-caller credential to validate and anyone who can reach the port transacts on that account. Bind it to localhost and do not expose it. For a remotely reachable server, use a multi-tenant mode.
 
-Use when different clients must use different Sinch projects. Each client sends its own credentials on every request.
+`CONVERSATION_REGION` stays optional here (defaulting to `us`) and can still be overridden from the prompt.
 
-Remote clients send **one header** on every request:
+#### Multi-tenant (`MCP_AUTH_MODE=client-credentials`)
+
+Use when different clients must use different Sinch projects. Each client sends its own credentials on every request:
 
 | Header          | Value                                               |
 | --------------- | --------------------------------------------------- |
 | `Authorization` | `Bearer <Base64-encoded projectId:keyId:keySecret>` |
 
-The server does **not** read `PROJECT_ID`, `KEY_ID`, or `KEY_SECRET` from its environment for OAuth-backed tools in this mode. OAuth clients are cached in memory with **LRU eviction** (default 256 entries, configurable via `OAUTH_TOKEN_CACHE_MAX_ENTRIES`).
+The server does **not** read `PROJECT_ID`, `KEY_ID`, or `KEY_SECRET` from its environment in this mode — not for OAuth-backed tools, and not for span attributes either. OAuth clients are cached in memory with **LRU eviction** (default 256 entries, configurable via `OAUTH_TOKEN_CACHE_MAX_ENTRIES`).
 
-In multi-tenant mode, `CONVERSATION_REGION` is **required**: the server refuses to start without it, and it is never defaulted to `us`. Each deployment is pinned to a single region, and the region cannot be overridden per request or from the prompt.
+In the multi-tenant modes, `CONVERSATION_REGION` is **required**: the server refuses to start without it, and it is never defaulted to `us`. Each deployment is pinned to a single region, and the region cannot be overridden per request or from the prompt.
 
-#### `Authorization` credentials format (multi-tenant only)
+#### How the shape check behaves
+
+The shape check exists only in the multi-tenant modes. Requests are checked against the configured shape and rejected with `401` plus a `WWW-Authenticate: Bearer` challenge otherwise:
+
+- **`client-credentials`** requires a token that decodes to `projectId:keyId:keySecret`. A SinchID JWT contains `.` separators, so it never decodes to a credential triple and is rejected here. `x-agent-id` is ignored: this deployment never reads it.
+- **`sinchid-agent`** requires a three-segment JWT **and** an `x-agent-id` header — credentials are resolved from the agent installation it names, so a request without it cannot complete. A Base64 credential triple is not a JWT, so it is rejected here.
+
+A request with no `Authorization` at all gets the RFC 6750 realm-only challenge (`Bearer realm="sinch-mcp"`) with the reason in the response body; a request carrying the wrong _kind_ of token gets `error="invalid_token"` plus a description.
+
+The SinchID token's signature is **not** verified in-app — the check only ensures the right _kind_ of credential reaches the right deployment.
+
+Two deployments of the same image, each with its own `MCP_AUTH_MODE`, therefore serve the two audiences on separate hostnames without either accepting the other's credentials. `MCP_AUTH_MODE` has no effect over stdio.
+
+> **`sinchid-agent` is not functional yet.** Credential resolution for this mode lands in [DEVEXP-1631](https://sinchenterprise.atlassian.net/browse/DEVEXP-1631); until then its tools return an explanatory prompt instead of running.
+
+#### `Authorization` credentials format (HTTP only)
 
 1. Build a UTF-8 string: `projectId:keyId:keySecret` (see [API credentials](#api-credentials)).
 2. Encode with **standard Base64** (no line breaks, standard `+`/`/` alphabet — not base64url).
@@ -399,15 +431,15 @@ curl -X POST "http://localhost:8000/mcp" \
 
 **Scope:** the `Authorization` credentials apply to **Conversation**, **Numbers**, and **Number Lookup** tools. **Voice**, **Verification**, and **Mailgun** still use server environment variables for now. **Local stdio** (Option 1) always uses server environment variables.
 
-#### `x-agent-id` header (multi-tenant only)
+#### `x-agent-id` header (`sinchid-agent` only)
 
-Agent integrations (e.g. an agent installed in a Gemini Enterprise app) may send an `x-agent-id` header carrying the unique installation identifier (the Marketplace **OrderId**). Its purpose is to distinguish which installation is calling the MCP server, so it is meant for **multi-tenant** deployments only: it will be used to resolve the caller's Sinch credentials in an upcoming release. In single-tenant mode credentials always come from the server environment, so the header serves no purpose there. This custom header is a temporary mechanism until a token-exchange capability is available over M2M authentication.
+Agent integrations (e.g. an agent installed in a Gemini Enterprise app) send an `x-agent-id` header carrying the unique installation identifier (the Marketplace **OrderId**). Its purpose is to distinguish which installation is calling the MCP server, so it is **required** on deployments running with `MCP_AUTH_MODE=sinchid-agent`: it will be used to resolve the caller's Sinch credentials in an upcoming release. Elsewhere it is simply not read — the other modes ignore it, and over stdio credentials always come from the environment. This custom header is a temporary mechanism until a token-exchange capability is available over M2M authentication.
 
 | Header       | Value                                             |
 | ------------ | ------------------------------------------------- |
 | `x-agent-id` | Agent installation identifier (e.g. GE `OrderId`) |
 
-#### `Authorization` user JWT (optional)
+#### `Authorization` user JWT (agent deployments)
 
 After the end-user completes the OAuth login and consent flow, agent integrations may send the resulting Auth0 user JWT on each request:
 
@@ -415,16 +447,19 @@ After the end-user completes the OAuth login and consent flow, agent integration
 | --------------- | ------------------- |
 | `Authorization` | `Bearer <user JWT>` |
 
-The server base64-decodes the JWT payload and captures the Sinch claims (`https://sinch.com/project_id`, `https://sinch.com/account_id`, `https://sinch.com/global_user_id`) and the standard `scope` claim in the request context, logging them for **audit purposes only**. The token signature is **not** verified and the claims are never used to resolve API credentials (the `x-agent-id` header serves that purpose). A missing or malformed token is ignored and the request proceeds normally. In the long term, the user JWT will be exchanged for an M2M JWT, replacing the custom headers.
+The server base64-decodes the JWT payload and captures the Sinch claims (`https://sinch.com/project_id`, `https://sinch.com/account_id`, `https://sinch.com/global_user_id`) and the standard `scope` claim in the request context, logging them for **audit purposes only**. The token signature is **not** verified and the claims are never used to resolve API credentials (the `x-agent-id` header serves that purpose). In single-tenant, a missing or malformed token is ignored and the request proceeds normally; in the multi-tenant modes the token must match the deployment's shape or the request is rejected with `401`. In the long term, the user JWT will be exchanged for an M2M JWT, replacing the custom headers.
 
-`Authorization` is shared by the dual HTTP deployment modes:
+What the `Authorization` token _is_ depends on the deployment:
 
-| Deployment mode | Bearer token shape                                 | Server behavior                                              |
-| --------------- | -------------------------------------------------- | ------------------------------------------------------------ |
-| Single-tenant   | Gateway token, when gateway auth is configured     | Uses server-side `PROJECT_ID`, `KEY_ID`, and `KEY_SECRET`    |
-| Multi-tenant    | Standard Base64 `projectId:keyId:keySecret`        | Uses the request credentials for OAuth-backed tools          |
-| User JWT audit  | Three-segment JWT (`header.payload.signature`)     | Captures user claims for audit logging only                  |
-| Other value     | Missing, malformed, or not one of the shapes above | Ignored by parsers that do not recognize that specific shape |
+| Deployment                         | Bearer token                             | Sinch credentials come from                                |
+| ---------------------------------- | ---------------------------------------- | ---------------------------------------------------------- |
+| Single-tenant                      | not read, and not required               | the server's `PROJECT_ID`/`KEY_ID`/`KEY_SECRET`            |
+| Multi-tenant, `client-credentials` | Base64 `projectId:keyId:keySecret`       | the token itself                                           |
+| Multi-tenant, `sinchid-agent`      | SinchID access token (three-segment JWT) | the agent installation — not implemented yet (DEVEXP-1631) |
+
+The two multi-tenant shapes are disjoint: a JWT contains `.` separators, which are not in the Base64 alphabet, so a credential triple is never read as a token and a JWT never resolves to credentials. Each multi-tenant deployment accepts only its own shape and answers `401` to the other — see [`MCP_AUTH_MODE`](#step-2-pick-a-tenancy).
+
+Because a request carries a single `Authorization` header, the audit claims described above are captured only where the token is a JWT — that is, on a `sinchid-agent` deployment. A `client-credentials` caller supplies credentials rather than a user token, so no claims are logged for it.
 
 ### Step 3: Start the HTTP server
 
@@ -442,19 +477,7 @@ Because there's no persistent per-session transport, the server doesn't support 
 
 ### Step 4: Example MCP client configuration
 
-**Single-tenant:**
-
-```json
-{
-  "mcpServers": {
-    "sinch-remote": {
-      "url": "https://your-host.example.com/mcp"
-    }
-  }
-}
-```
-
-**Multi-tenant:**
+Every mode sends the same header shape — what differs is whose credentials the token carries. Single-tenant clients encode the server's triple; multi-tenant clients encode their own.
 
 ```json
 {

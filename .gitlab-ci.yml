@@ -193,21 +193,55 @@ update-manifests:
       git config user.name "sinch-mcp-server CI"
 
       export TAG="${ARTIFACT_VERSION}"
-      for site in eu1tst us1tst; do
-        f="staging/${site}/overrides/sinch-mcp-server.yaml"
-        yq -i '.spec.values.image.version = strenv(TAG)' "$f"
-        echo "updated ${f} -> ${TAG}"
+
+      # Both HelmReleases run the SAME image and differ only in authMode, so they are
+      # bumped together or not at all: a partial bump leaves the agent deployment pinned
+      # to an old image, which is invisible until someone debugs a behaviour difference
+      # between two endpoints that are supposed to be identical.
+      #
+      # Staging only. Promotion to prod is an explicit act, not a side
+      # effect of merging to main — do not widen this list to prod sites.
+      SITES="eu1tst us1tst"
+      RELEASES="sinch-mcp-server sinch-mcp-server-agent"
+
+      # A missing file is a hard failure, not a skip.
+      for site in ${SITES}; do
+        for release in ${RELEASES}; do
+          f="staging/${site}/overrides/${release}.yaml"
+          if [ ! -f "$f" ]; then
+            echo "ERROR: ${f} is missing from the manifests repo."
+            echo "Refusing to bump a subset — both releases must move to one image together."
+            exit 1
+          fi
+          yq -i '.spec.values.image.version = strenv(TAG)' "$f"
+          git add "$f"
+          echo "updated ${f} -> ${TAG}"
+        done
       done
 
-      if git diff --quiet; then
+      # Post-condition: read every file back and confirm it really says TAG. `yq ... =`
+      # CREATES a path that does not exist rather than failing, so a restructured override
+      # would otherwise be reported as updated while the value the chart reads is untouched.
+      for site in ${SITES}; do
+        for release in ${RELEASES}; do
+          f="staging/${site}/overrides/${release}.yaml"
+          actual="$(yq '.spec.values.image.version' "$f" | tr -d '"')"
+          if [ "${actual}" != "${TAG}" ]; then
+            echo "ERROR: ${f} reads '${actual}' after the bump, expected '${TAG}'."
+            echo "The image.version path may have moved — check the override layout."
+            exit 1
+          fi
+        done
+      done
+
+      if git diff --cached --quiet; then
         echo "Manifests already at ${TAG}, nothing to commit."
         exit 0
       fi
 
-      git add staging/eu1tst/overrides/sinch-mcp-server.yaml \
-              staging/us1tst/overrides/sinch-mcp-server.yaml
       git commit \
         -m "chore(staging): deploy sinch-mcp-server ${TAG}" \
+        -m "Bumps both HelmReleases (general + agent) on ${SITES}." \
         -m "Source commit: ${CI_PROJECT_PATH}@${CI_COMMIT_SHA}" \
         -m "Pipeline: ${CI_PIPELINE_URL}"
 
