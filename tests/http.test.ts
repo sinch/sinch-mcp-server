@@ -7,6 +7,7 @@ import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { StreamableHTTPClientTransport } from '@modelcontextprotocol/sdk/client/streamableHttp.js';
 import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js';
 import { clearAuthModeForTests, getAuthMode } from '../src/auth/auth-mode';
+import { clearAgentCredentialsCacheForTests } from '../src/auth/agent-credentials';
 import { clearHttpCredentialSourceForTests, getHttpCredentialSource } from '../src/auth/http-credential-mode';
 import { mockEnv, resetMockEnv, type MockServerEnv } from '../src/__mocks__/env';
 import { createHttpApp, main, waitForListening } from '../src/http';
@@ -341,6 +342,7 @@ describe('main() startup', () => {
 describe('createHttpApp startup validation', () => {
   beforeEach(() => {
     resetMockEnv();
+    clearAgentCredentialsCacheForTests();
   });
 
   afterEach(() => {
@@ -462,6 +464,7 @@ describe('auth mode enforcement', () => {
 
   beforeEach(() => {
     resetMockEnv();
+    clearAgentCredentialsCacheForTests();
     mockEnv.CONVERSATION_REGION = 'eu';
   });
 
@@ -609,6 +612,38 @@ describe('auth mode enforcement', () => {
     } finally {
       await close();
     }
+  });
+
+  test('throws in multi-tenant mode when AGENT_CREDENTIALS is malformed', () => {
+    mockEnv.MCP_AUTH_MODE = 'sinchid-agent';
+    mockEnv.CONVERSATION_REGION = 'eu';
+    mockEnv.AGENT_CREDENTIALS = '{not-json';
+    expect(() => createHttpApp()).toThrow(/AGENT_CREDENTIALS is not valid JSON/);
+  });
+
+  test('starts in multi-tenant mode with a valid AGENT_CREDENTIALS map', () => {
+    mockEnv.MCP_AUTH_MODE = 'sinchid-agent';
+    mockEnv.CONVERSATION_REGION = 'eu';
+    mockEnv.AGENT_CREDENTIALS = JSON.stringify({
+      'order-42:p': { accessKeyId: 'k', accessKeySecret: 's' },
+    });
+    expect(() => createHttpApp()).not.toThrow();
+    expect(getHttpCredentialSource()).toBe('request-header');
+  });
+
+  test('ignores a malformed AGENT_CREDENTIALS in client-credentials mode', () => {
+    mockEnv.MCP_AUTH_MODE = 'client-credentials';
+    mockEnv.CONVERSATION_REGION = 'eu';
+    mockEnv.AGENT_CREDENTIALS = '{not-json';
+    expect(() => createHttpApp()).not.toThrow();
+  });
+
+  test('ignores a malformed AGENT_CREDENTIALS in single-tenant mode', () => {
+    mockEnv.PROJECT_ID = 'project-1';
+    mockEnv.KEY_ID = 'key-1';
+    mockEnv.KEY_SECRET = 'secret-1';
+    mockEnv.AGENT_CREDENTIALS = '{not-json';
+    expect(() => createHttpApp()).not.toThrow();
   });
 });
 

@@ -11,6 +11,7 @@ import {
   setAuthMode,
   type McpAuthMode,
 } from './auth/auth-mode';
+import { loadAgentCredentials } from './auth/agent-credentials';
 import { getRequestAgentId, getRequestUserClaims, runWithHttpCredentialHeaders } from './auth/credential-context';
 import { setHttpCredentialSource } from './auth/http-credential-mode';
 import {
@@ -78,17 +79,18 @@ const buildTransport = async (): Promise<StreamableHTTPServerTransport> => {
 
 const logUserJwtAuditTrail = (): void => {
   const claims = getRequestUserClaims();
-  if (!claims) {
+  const agentId = getRequestAgentId();
+  if (!claims && !agentId) {
     return;
   }
 
   logger.info(
     {
-      project_id: claims.projectId,
-      account_id: claims.accountId,
-      global_user_id: claims.globalUserId,
-      scope: claims.scope,
-      agent_id: getRequestAgentId(),
+      project_id: claims?.projectId,
+      account_id: claims?.accountId,
+      global_user_id: claims?.globalUserId,
+      scope: claims?.scope,
+      agent_id: agentId,
     },
     'Agent user request (unverified JWT claims)',
   );
@@ -148,7 +150,6 @@ const resolveDeploymentMode = (): DeploymentMode => {
           'to single-tenant, which performs no inbound authentication.',
       );
     }
-
     return { tenancy: 'multi-tenant', authMode: configuredAuthMode };
   }
 
@@ -183,6 +184,10 @@ export const createHttpApp = () => {
     );
   } else {
     requireConversationRegion();
+    if (mode.authMode === 'sinchid-agent') {
+      // Fail fast on malformed agent credentials only in the mode that uses them.
+      loadAgentCredentials();
+    }
     setHttpCredentialSource('request-header');
     setAuthMode(mode.authMode);
   }

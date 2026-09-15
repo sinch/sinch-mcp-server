@@ -29,6 +29,7 @@ export const env = createEnv({
     MCP_SESSION_TTL_SECONDS: z.string().optional(),
     MCP_TAGS: z.string().optional(),
     MCP_AUTH_MODE: z.enum(['client-credentials', 'sinchid-agent']).optional(),
+    AGENT_CREDENTIALS: z.string().optional(),
   },
   runtimeEnvStrict: {
     PROJECT_ID: process.env.PROJECT_ID,
@@ -54,6 +55,7 @@ export const env = createEnv({
     MCP_SESSION_TTL_SECONDS: process.env.MCP_SESSION_TTL_SECONDS,
     MCP_TAGS: process.env.MCP_TAGS,
     MCP_AUTH_MODE: process.env.MCP_AUTH_MODE,
+    AGENT_CREDENTIALS: process.env.AGENT_CREDENTIALS,
   },
   emptyStringAsUndefined: true,
   onValidationError: (issues: readonly StandardSchemaV1.Issue[]) => {

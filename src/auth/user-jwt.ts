@@ -57,9 +57,9 @@ const stringClaim = (payload: Record<string, unknown>, claim: string): string | 
  * Extracts the Sinch user claims from a `Bearer <JWT>` Authorization header.
  *
  * The payload is base64url-decoded WITHOUT verifying the token signature,
- * issuer, or expiry: the claims are self-reported and used for audit purposes
- * only (credentials are resolved through other mechanisms). Verification will
- * come with the future user-JWT to M2M-JWT token exchange.
+ * issuer, or expiry. ZAP is the upstream authentication boundary for agent
+ * requests. Within that trusted path, projectId is combined with x-agent-id
+ * to resolve credentials; the remaining claims are used for auditing.
  *
  * Returns undefined for anything that is not a well-formed three-segment JWT
  * with a JSON object payload (e.g. an opaque MCP API key in single-tenant

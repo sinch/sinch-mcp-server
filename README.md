@@ -405,8 +405,6 @@ The SinchID token's signature is **not** verified in-app — the check only ensu
 
 Two deployments of the same image, each with its own `MCP_AUTH_MODE`, therefore serve the two audiences on separate hostnames without either accepting the other's credentials. `MCP_AUTH_MODE` has no effect over stdio.
 
-> **`sinchid-agent` is not functional yet.** Credential resolution for this mode lands in [DEVEXP-1631](https://sinchenterprise.atlassian.net/browse/DEVEXP-1631); until then its tools return an explanatory prompt instead of running.
-
 #### `Authorization` credentials format (HTTP only)
 
 1. Build a UTF-8 string: `projectId:keyId:keySecret` (see [API credentials](#api-credentials)).
@@ -433,11 +431,28 @@ curl -X POST "http://localhost:8000/mcp" \
 
 #### `x-agent-id` header (`sinchid-agent` only)
 
-Agent integrations (e.g. an agent installed in a Gemini Enterprise app) send an `x-agent-id` header carrying the unique installation identifier (the Marketplace **OrderId**). Its purpose is to distinguish which installation is calling the MCP server, so it is **required** on deployments running with `MCP_AUTH_MODE=sinchid-agent`: it will be used to resolve the caller's Sinch credentials in an upcoming release. Elsewhere it is simply not read — the other modes ignore it, and over stdio credentials always come from the environment. This custom header is a temporary mechanism until a token-exchange capability is available over M2M authentication.
+Agent integrations (e.g. an agent installed in a Gemini Enterprise app) send an `x-agent-id` header carrying the Marketplace **OrderId**. It is **required** when `MCP_AUTH_MODE=sinchid-agent`. The server combines it with the Sinch project id from the user JWT to resolve M2M credentials from `AGENT_CREDENTIALS`. Other modes ignore this header. This custom header is temporary until token exchange is available over M2M authentication.
 
 | Header       | Value                                             |
 | ------------ | ------------------------------------------------- |
 | `x-agent-id` | Agent installation identifier (e.g. GE `OrderId`) |
+
+#### `AGENT_CREDENTIALS` map (`sinchid-agent` only)
+
+`AGENT_CREDENTIALS` is a JSON map keyed by `<orderId>:<projectId>`:
+
+```json
+{
+  "<orderId>:<projectId>": {
+    "accessKeyId": "<Sinch access key id>",
+    "accessKeySecret": "<Sinch access key secret>"
+  }
+}
+```
+
+A malformed value makes a `sinchid-agent` deployment refuse to start. Other modes do not parse it.
+
+In both multi-tenant auth modes, the server checks Redis for an M2M access token keyed by a hash of the resolved credentials. On a miss it exchanges the access key for a token at Sinch and stores it in Redis with an expiry safety margin. This lets all MCP pods and sessions reuse tokens without storing credential secrets in Redis. A small in-process LRU caches only the OAuth request plugins.
 
 #### `Authorization` user JWT (agent deployments)
 
@@ -447,15 +462,15 @@ After the end-user completes the OAuth login and consent flow, agent integration
 | --------------- | ------------------- |
 | `Authorization` | `Bearer <user JWT>` |
 
-The server base64-decodes the JWT payload and captures the Sinch claims (`https://sinch.com/project_id`, `https://sinch.com/account_id`, `https://sinch.com/global_user_id`) and the standard `scope` claim in the request context, logging them for **audit purposes only**. The token signature is **not** verified and the claims are never used to resolve API credentials (the `x-agent-id` header serves that purpose). In single-tenant, a missing or malformed token is ignored and the request proceeds normally; in the multi-tenant modes the token must match the deployment's shape or the request is rejected with `401`. In the long term, the user JWT will be exchanged for an M2M JWT, replacing the custom headers.
+The server base64-decodes the JWT payload and captures the Sinch claims (`https://sinch.com/project_id`, `https://sinch.com/account_id`, `https://sinch.com/global_user_id`) and the standard `scope` claim in the request context. The claims are logged for audit, and `project_id` is combined with `x-agent-id` for credential resolution. The MCP server does not verify the JWT signature itself: requests on this path must be authenticated by ZAP upstream, which is the centralized authentication boundary. A missing or malformed token cannot be used with `x-agent-id`. In the long term, the user JWT will be exchanged for an M2M JWT, replacing the custom headers.
 
 What the `Authorization` token _is_ depends on the deployment:
 
-| Deployment                         | Bearer token                             | Sinch credentials come from                                |
-| ---------------------------------- | ---------------------------------------- | ---------------------------------------------------------- |
-| Single-tenant                      | not read, and not required               | the server's `PROJECT_ID`/`KEY_ID`/`KEY_SECRET`            |
-| Multi-tenant, `client-credentials` | Base64 `projectId:keyId:keySecret`       | the token itself                                           |
-| Multi-tenant, `sinchid-agent`      | SinchID access token (three-segment JWT) | the agent installation — not implemented yet (DEVEXP-1631) |
+| Deployment                         | Bearer token                             | Sinch credentials come from                              |
+| ---------------------------------- | ---------------------------------------- | -------------------------------------------------------- |
+| Single-tenant                      | not read, and not required               | the server's `PROJECT_ID`/`KEY_ID`/`KEY_SECRET`          |
+| Multi-tenant, `client-credentials` | Base64 `projectId:keyId:keySecret`       | the token itself                                         |
+| Multi-tenant, `sinchid-agent`      | SinchID access token (three-segment JWT) | the `<orderId>:<projectId>` entry in `AGENT_CREDENTIALS` |
 
 The two multi-tenant shapes are disjoint: a JWT contains `.` separators, which are not in the Base64 alphabet, so a credential triple is never read as a token and a JWT never resolves to credentials. Each multi-tenant deployment accepts only its own shape and answers `401` to the other — see [`MCP_AUTH_MODE`](#step-2-pick-a-tenancy).
 

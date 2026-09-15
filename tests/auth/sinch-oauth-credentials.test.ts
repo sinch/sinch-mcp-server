@@ -195,7 +195,7 @@ describe('sinch-oauth-credentials', () => {
   describe('sinchid-agent mode', () => {
     const promptText = (response: PromptResponse): string => response.promptResponse.content[0].text;
 
-    it('points the caller at the agent installation, not at a credential header', () => {
+    it('requires the agent installation header', () => {
       setHttpCredentialSource('request-header');
       setAuthMode('sinchid-agent');
 
@@ -203,7 +203,6 @@ describe('sinch-oauth-credentials', () => {
 
       expect(resolved).toBeInstanceOf(PromptResponse);
       const text = promptText(resolved as PromptResponse);
-      expect(text).toContain('agent installation');
       expect(text).toContain('x-agent-id');
       expect(text).not.toContain('Authorization');
     });

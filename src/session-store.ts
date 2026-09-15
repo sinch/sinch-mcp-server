@@ -1,10 +1,9 @@
-import Redis from 'ioredis';
 import { env } from './env';
+import { getRedisClient, resetRedisClientForTests } from './redis-client';
 
 const DEFAULT_SESSION_TTL_SECONDS = 1800;
 const REDIS_RETRY_ATTEMPTS = 3;
 const REDIS_RETRY_BASE_DELAY_MS = 50;
-const REDIS_COMMAND_TIMEOUT_MS = 250;
 
 const sessionKey = (sessionId: string): string => `mcp:session:${sessionId}`;
 
@@ -18,31 +17,6 @@ export class SessionStoreUnavailableError extends Error {
 const getSessionTtlSeconds = (): number => {
   const configured = Number(env.MCP_SESSION_TTL_SECONDS ?? DEFAULT_SESSION_TTL_SECONDS);
   return Number.isFinite(configured) && configured > 0 ? Math.floor(configured) : DEFAULT_SESSION_TTL_SECONDS;
-};
-
-let client: Redis | undefined;
-
-const REDIS_CLIENT_OPTIONS = {
-  enableOfflineQueue: false,
-  maxRetriesPerRequest: 1,
-  commandTimeout: REDIS_COMMAND_TIMEOUT_MS,
-  retryStrategy: (times: number) => Math.min(times * 100, 2000),
-};
-
-// REDIS_HOST/REDIS_PORT are required to reach this point — src/http.ts's main() fails fast
-// on startup otherwise. TLS turns on automatically with a password (AWS ElastiCache requires it).
-const getClient = (): Redis => {
-  if (!client) {
-    client = new Redis({
-      host: env.REDIS_HOST,
-      port: Number(env.REDIS_PORT),
-      password: env.REDIS_PASSWORD,
-      tls: env.REDIS_PASSWORD ? {} : undefined,
-      ...REDIS_CLIENT_OPTIONS,
-    });
-    client.on('error', (error) => console.error('Redis client error:', error));
-  }
-  return client;
 };
 
 const sleep = (ms: number): Promise<void> => new Promise((resolve) => setTimeout(resolve, ms));
@@ -64,7 +38,7 @@ const withRetry = async <T>(operation: () => Promise<T>): Promise<T> => {
 
 export const createSession = async (sessionId: string): Promise<void> => {
   await withRetry(() =>
-    getClient().set(
+    getRedisClient().set(
       sessionKey(sessionId),
       JSON.stringify({ sessionId, createdAt: Date.now() }),
       'EX',
@@ -74,18 +48,18 @@ export const createSession = async (sessionId: string): Promise<void> => {
 };
 
 export const validateAndTouchSession = async (sessionId: string): Promise<boolean> => {
-  const result = await withRetry(() => getClient().expire(sessionKey(sessionId), getSessionTtlSeconds()));
+  const result = await withRetry(() => getRedisClient().expire(sessionKey(sessionId), getSessionTtlSeconds()));
   return result === 1;
 };
 
 export const deleteSession = async (sessionId: string): Promise<void> => {
-  await withRetry(() => getClient().del(sessionKey(sessionId)));
+  await withRetry(() => getRedisClient().del(sessionKey(sessionId)));
 };
 
 /** Single-attempt reachability check for readiness probes — no retry, fails fast. */
 export const pingSessionStore = async (): Promise<boolean> => {
   try {
-    await getClient().ping();
+    await getRedisClient().ping();
     return true;
   } catch {
     return false;
@@ -94,9 +68,8 @@ export const pingSessionStore = async (): Promise<boolean> => {
 
 /** Exposed for tests to reset the module-level client between suites. */
 export const resetSessionStoreClientForTests = (): void => {
-  client?.disconnect();
-  client = undefined;
+  resetRedisClientForTests();
 };
 
 /** Exposed for tests to spy on the underlying client (e.g. force a command to fail). */
-export const getSessionStoreClientForTests = (): Redis => getClient();
+export const getSessionStoreClientForTests = () => getRedisClient();
