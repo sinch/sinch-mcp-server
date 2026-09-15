@@ -249,3 +249,86 @@ update-manifests:
       git push origin HEAD:main
   rules:
     - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+
+# Manual promotion of the version already deployed to staging (via update-manifests)
+# into prod. Deliberately separate from update-manifests and never auto-triggered:
+# promoting to prod is an explicit human action, not a side effect of merging to main.
+promote-prod:
+  stage: release
+  image: alpine:3.20
+  retry:
+    max: 2
+    when: script_failure
+  needs:
+    - job: publish-image
+      artifacts: true
+  before_script:
+    - apk add --no-cache git yq
+  script:
+    - |
+      set -euo pipefail
+
+      : "${MANIFESTS_REPO_TOKEN:?MANIFESTS_REPO_TOKEN CI variable is not set}"
+      : "${ARTIFACT_VERSION:?ARTIFACT_VERSION not provided by publish-image dotenv}"
+
+      git clone --depth 1 \
+        "https://oauth2:${MANIFESTS_REPO_TOKEN}@${MANIFESTS_REPO}" manifests
+      cd manifests
+
+      git config user.email "ci@sinch.com"
+      git config user.name "sinch-mcp-server CI"
+
+      export TAG="${ARTIFACT_VERSION}"
+
+      # Same all-or-nothing rationale as update-manifests: both HelmReleases run the
+      # same image and must move together.
+      SITES="us1 eu1 br1"
+      RELEASES="sinch-mcp-server sinch-mcp-server-agent"
+
+      # A missing file is a hard failure, not a skip.
+      for site in ${SITES}; do
+        for release in ${RELEASES}; do
+          f="prod/${site}/overrides/${release}.yaml"
+          if [ ! -f "$f" ]; then
+            echo "ERROR: ${f} is missing from the manifests repo."
+            echo "Refusing to bump a subset — both releases must move to one image together."
+            exit 1
+          fi
+          yq -i '.spec.values.image.version = strenv(TAG)' "$f"
+          git add "$f"
+          echo "updated ${f} -> ${TAG}"
+        done
+      done
+
+      # Post-condition: read every file back and confirm it really says TAG. `yq ... =`
+      # CREATES a path that does not exist rather than failing, so a restructured override
+      # would otherwise be reported as updated while the value the chart reads is untouched.
+      for site in ${SITES}; do
+        for release in ${RELEASES}; do
+          f="prod/${site}/overrides/${release}.yaml"
+          actual="$(yq '.spec.values.image.version' "$f" | tr -d '"')"
+          if [ "${actual}" != "${TAG}" ]; then
+            echo "ERROR: ${f} reads '${actual}' after the bump, expected '${TAG}'."
+            echo "The image.version path may have moved — check the override layout."
+            exit 1
+          fi
+        done
+      done
+
+      if git diff --cached --quiet; then
+        echo "Manifests already at ${TAG}, nothing to commit."
+        exit 0
+      fi
+
+      git commit \
+        -m "chore(prod): deploy sinch-mcp-server ${TAG}" \
+        -m "Bumps both HelmReleases (general + agent) on ${SITES}." \
+        -m "Source commit: ${CI_PROJECT_PATH}@${CI_COMMIT_SHA}" \
+        -m "Pipeline: ${CI_PIPELINE_URL}"
+
+      # Non-force push on purpose: if main has moved, fail rather than overwrite.
+      git push origin HEAD:main
+  rules:
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+      when: manual
+      allow_failure: true
