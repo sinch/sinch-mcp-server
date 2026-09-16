@@ -22,6 +22,9 @@ export type MockServerEnv = {
   MCP_SESSION_TTL_SECONDS?: string;
   MCP_TAGS?: string;
   MCP_AUTH_MODE?: 'client-credentials' | 'sinchid-agent';
+  SINCHID_JWT_ISSUER?: string;
+  SINCHID_JWT_AUDIENCE?: string;
+  SINCHID_JWT_JWKS_URI?: string;
 };
 
 export const mockEnv: MockServerEnv = {};

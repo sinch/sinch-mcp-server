@@ -8,9 +8,13 @@ import { StreamableHTTPClientTransport } from '@modelcontextprotocol/sdk/client/
 import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js';
 import { clearAuthModeForTests, getAuthMode } from '../src/auth/auth-mode';
 import { clearHttpCredentialSourceForTests, getHttpCredentialSource } from '../src/auth/http-credential-mode';
+import { resetSinchIdJwtVerifierForTests } from '../src/auth/sinchid-jwt-verifier';
+import { SINCH_PROJECT_ID_CLAIM } from '../src/auth/user-jwt';
 import { mockEnv, resetMockEnv, type MockServerEnv } from '../src/__mocks__/env';
 import { createHttpApp, main, waitForListening } from '../src/http';
 import { getSessionStoreClientForTests, resetSessionStoreClientForTests } from '../src/session-store';
+import { logger } from '../src/telemetry/logger';
+import { generateUnpublishedKeyPair, startTestJwksServer, type TestJwksServer } from './helpers/jwks-server';
 
 jest.mock(
   '@sinch/sdk-core/package.json',
@@ -378,7 +382,49 @@ describe('createHttpApp startup validation', () => {
   test('accepts sinchid-agent as an auth mode', () => {
     mockEnv.CONVERSATION_REGION = 'eu';
     mockEnv.MCP_AUTH_MODE = 'sinchid-agent';
+    mockEnv.SINCHID_JWT_ISSUER = 'https://issuer.example/';
+    mockEnv.SINCHID_JWT_AUDIENCE = 'audience';
+    mockEnv.SINCHID_JWT_JWKS_URI = 'https://issuer.example/jwks.json';
     expect(() => createHttpApp()).not.toThrow();
+  });
+
+  describe('sinchid-agent requires JWT verification config', () => {
+    beforeEach(() => {
+      mockEnv.CONVERSATION_REGION = 'eu';
+      mockEnv.MCP_AUTH_MODE = 'sinchid-agent';
+    });
+
+    test('throws when SINCHID_JWT_ISSUER, SINCHID_JWT_AUDIENCE and SINCHID_JWT_JWKS_URI are all unset', () => {
+      expect(() => createHttpApp()).toThrow(
+        'MCP_AUTH_MODE=sinchid-agent requires SINCHID_JWT_ISSUER, SINCHID_JWT_AUDIENCE, SINCHID_JWT_JWKS_URI',
+      );
+    });
+
+    test.each([['SINCHID_JWT_ISSUER'], ['SINCHID_JWT_AUDIENCE'], ['SINCHID_JWT_JWKS_URI']] as const)(
+      'throws naming %s when only it is missing',
+      (missing) => {
+        mockEnv.SINCHID_JWT_ISSUER = 'https://issuer.example/';
+        mockEnv.SINCHID_JWT_AUDIENCE = 'audience';
+        mockEnv.SINCHID_JWT_JWKS_URI = 'https://issuer.example/jwks.json';
+        mockEnv[missing] = undefined;
+
+        expect(() => createHttpApp()).toThrow(missing);
+      },
+    );
+
+    test('does not throw once all three are set', () => {
+      mockEnv.SINCHID_JWT_ISSUER = 'https://issuer.example/';
+      mockEnv.SINCHID_JWT_AUDIENCE = 'audience';
+      mockEnv.SINCHID_JWT_JWKS_URI = 'https://issuer.example/jwks.json';
+
+      expect(() => createHttpApp()).not.toThrow();
+    });
+
+    test('client-credentials mode does not require these vars', () => {
+      mockEnv.MCP_AUTH_MODE = 'client-credentials';
+
+      expect(() => createHttpApp()).not.toThrow();
+    });
   });
 
   describe('single-tenant, selected by MCP_AUTH_MODE being unset', () => {
@@ -427,6 +473,11 @@ describe('createHttpApp startup validation', () => {
         mockEnv.KEY_SECRET = 'secret-1';
         mockEnv.CONVERSATION_REGION = 'eu';
         mockEnv.MCP_AUTH_MODE = mode;
+        if (mode === 'sinchid-agent') {
+          mockEnv.SINCHID_JWT_ISSUER = 'https://issuer.example/';
+          mockEnv.SINCHID_JWT_AUDIENCE = 'audience';
+          mockEnv.SINCHID_JWT_JWKS_URI = 'https://issuer.example/jwks.json';
+        }
 
         expect(() => createHttpApp()).not.toThrow();
         expect(getHttpCredentialSource()).toBe('request-header');
@@ -456,13 +507,25 @@ describe('createHttpApp startup validation', () => {
 
 describe('auth mode enforcement', () => {
   const credentialsBlob = CREDENTIALS_BLOB;
-  const encodeSegment = (payload: Record<string, unknown>) =>
-    Buffer.from(JSON.stringify(payload)).toString('base64url');
-  const sinchIdToken = `Bearer ${encodeSegment({ alg: 'RS256' })}.${encodeSegment({ sub: 'user-1' })}.sig`;
+  const ISSUER = 'https://issuer.example/';
+  const AUDIENCE = 'https://agent-auth-api-test.sinch.com';
+  let jwksServer: TestJwksServer;
+
+  beforeAll(async () => {
+    jwksServer = await startTestJwksServer();
+  });
+
+  afterAll(async () => {
+    await jwksServer.close();
+  });
 
   beforeEach(() => {
     resetMockEnv();
+    resetSinchIdJwtVerifierForTests();
     mockEnv.CONVERSATION_REGION = 'eu';
+    mockEnv.SINCHID_JWT_ISSUER = ISSUER;
+    mockEnv.SINCHID_JWT_AUDIENCE = AUDIENCE;
+    mockEnv.SINCHID_JWT_JWKS_URI = jwksServer.url;
   });
 
   afterEach(() => {
@@ -538,21 +601,116 @@ describe('auth mode enforcement', () => {
     }
   });
 
-  test('sinchid-agent deployment accepts a SinchID token with x-agent-id', async () => {
+  test('sinchid-agent deployment accepts a validly signed SinchID token with x-agent-id', async () => {
     mockEnv.MCP_AUTH_MODE = 'sinchid-agent';
+    const infoSpy = jest.spyOn(logger, 'info').mockImplementation(() => undefined);
     const { baseUrl, close } = await listen(createHttpApp());
 
     try {
+      const token = jwksServer.sign({
+        iss: ISSUER,
+        aud: AUDIENCE,
+        sub: 'user-1',
+        [SINCH_PROJECT_ID_CLAIM]: 'project-1',
+      });
       const response = await post(baseUrl, initializeBody, {
-        Authorization: sinchIdToken,
+        Authorization: `Bearer ${token}`,
         'x-agent-id': 'order-42',
       });
 
       expect(response.status).toBe(200);
       expect(response.headers.get('mcp-session-id')).toBeTruthy();
+      expect(infoSpy).toHaveBeenCalledWith(
+        expect.objectContaining({ project_id: 'project-1' }),
+        'Agent user request (verified JWT claims)',
+      );
     } finally {
+      infoSpy.mockRestore();
       await close();
     }
+  });
+
+  describe('sinchid-agent token verification', () => {
+    beforeEach(() => {
+      mockEnv.MCP_AUTH_MODE = 'sinchid-agent';
+    });
+
+    const postWithToken = (baseUrl: string, token: string) =>
+      post(baseUrl, initializeBody, { Authorization: `Bearer ${token}`, 'x-agent-id': 'order-42' });
+
+    test('rejects a forged token that is merely JWT-shaped, and never creates a session', async () => {
+      const { baseUrl, close } = await listen(createHttpApp());
+
+      try {
+        const forged = `${Buffer.from(JSON.stringify({ alg: 'RS256', kid: 'unknown-key' })).toString('base64url')}.${Buffer.from(
+          JSON.stringify({ iss: ISSUER, aud: AUDIENCE, sub: 'attacker' }),
+        ).toString('base64url')}.forged-signature`;
+
+        const response = await postWithToken(baseUrl, forged);
+
+        expect(response.status).toBe(401);
+        expect(response.headers.get('mcp-session-id')).toBeNull();
+      } finally {
+        await close();
+      }
+    });
+
+    test('rejects an expired token', async () => {
+      const { baseUrl, close } = await listen(createHttpApp());
+
+      try {
+        const token = jwksServer.sign({ iss: ISSUER, aud: AUDIENCE, sub: 'user-1' }, { expiresIn: '-10s' });
+        const response = await postWithToken(baseUrl, token);
+
+        expect(response.status).toBe(401);
+        expect(response.headers.get('mcp-session-id')).toBeNull();
+      } finally {
+        await close();
+      }
+    });
+
+    test('rejects a token with the wrong audience', async () => {
+      const { baseUrl, close } = await listen(createHttpApp());
+
+      try {
+        const token = jwksServer.sign({ iss: ISSUER, aud: 'https://someone-else.example', sub: 'user-1' });
+        const response = await postWithToken(baseUrl, token);
+
+        expect(response.status).toBe(401);
+        expect(response.headers.get('mcp-session-id')).toBeNull();
+      } finally {
+        await close();
+      }
+    });
+
+    test('rejects a token with the wrong issuer', async () => {
+      const { baseUrl, close } = await listen(createHttpApp());
+
+      try {
+        const token = jwksServer.sign({ iss: 'https://evil.example/', aud: AUDIENCE, sub: 'user-1' });
+        const response = await postWithToken(baseUrl, token);
+
+        expect(response.status).toBe(401);
+        expect(response.headers.get('mcp-session-id')).toBeNull();
+      } finally {
+        await close();
+      }
+    });
+
+    test('rejects a token signed with a key that does not match the published JWKS key', async () => {
+      const { baseUrl, close } = await listen(createHttpApp());
+
+      try {
+        const forgedKey = generateUnpublishedKeyPair();
+        const token = jwksServer.sign({ iss: ISSUER, aud: AUDIENCE, sub: 'user-1' }, { privateKey: forgedKey });
+        const response = await postWithToken(baseUrl, token);
+
+        expect(response.status).toBe(401);
+        expect(response.headers.get('mcp-session-id')).toBeNull();
+      } finally {
+        await close();
+      }
+    });
   });
 
   // Single-tenant registers no auth middleware, so /mcp must serve a request with no
@@ -592,6 +750,35 @@ describe('auth mode enforcement', () => {
       expect(response.status).toBe(200);
       expect(getHttpCredentialSource()).toBe('env');
     } finally {
+      await close();
+    }
+  });
+
+  test('single-tenant logs unverified JWT claims from Authorization for audit, without verification', async () => {
+    mockEnv.PROJECT_ID = 'project-1';
+    mockEnv.KEY_ID = 'key-1';
+    mockEnv.KEY_SECRET = 'secret-1';
+    const infoSpy = jest.spyOn(logger, 'info').mockImplementation(() => undefined);
+    const { baseUrl, close } = await listen(createHttpApp());
+
+    try {
+      const encodeSegment = (payload: Record<string, unknown>) =>
+        Buffer.from(JSON.stringify(payload)).toString('base64url');
+      // Shape-valid but unsigned/forged: single-tenant never verifies it, only audits the claims.
+      const unverifiedJwt = `${encodeSegment({ alg: 'RS256' })}.${encodeSegment({
+        sub: 'user-1',
+        [SINCH_PROJECT_ID_CLAIM]: 'project-1',
+      })}.forged-signature`;
+
+      const response = await post(baseUrl, initializeBody, { Authorization: `Bearer ${unverifiedJwt}` });
+
+      expect(response.status).toBe(200);
+      expect(infoSpy).toHaveBeenCalledWith(
+        expect.objectContaining({ project_id: 'project-1' }),
+        'Agent user request (unverified JWT claims)',
+      );
+    } finally {
+      infoSpy.mockRestore();
       await close();
     }
   });

@@ -18,6 +18,8 @@ import {
   SERVER_CREDENTIAL_ENV_VARS,
   sinchOAuthCredentialsFromEnv,
 } from './auth/sinch-oauth-credentials';
+import { decodeUnverifiedUserJwtHeaderForSingleTenant } from './auth/user-jwt';
+import { getVerifiedUserClaims } from './auth/verified-claims';
 import { env } from './env';
 import { buildJsonRpcErrorResponse } from './json-rpc';
 import { getToolsFilter, instantiateMcpServer, registerCapabilities } from './server';
@@ -76,7 +78,7 @@ const buildTransport = async (): Promise<StreamableHTTPServerTransport> => {
   return transport;
 };
 
-const logUserJwtAuditTrail = (): void => {
+const logUserJwtAuditTrail = (verified: boolean): void => {
   const claims = getRequestUserClaims();
   if (!claims) {
     return;
@@ -90,7 +92,7 @@ const logUserJwtAuditTrail = (): void => {
       scope: claims.scope,
       agent_id: getRequestAgentId(),
     },
-    'Agent user request (unverified JWT claims)',
+    `Agent user request (${verified ? 'verified' : 'unverified'} JWT claims)`,
   );
 };
 
@@ -116,6 +118,24 @@ const requireConversationRegion = (): void => {
   throw new Error(
     'In multi-tenant mode, the CONVERSATION_REGION environment variable is required: ' +
       'refusing to start rather than defaulting to a region.',
+  );
+};
+
+/**
+ * sinchid-agent trusts the Authorization JWT only after verifying it against a JWKS, so it cannot
+ * run without knowing which issuer, audience, and JWKS endpoint to verify against. Refuse to
+ * start rather than falling back to trusting unverified claims.
+ */
+const requireSinchIdJwtConfig = (): void => {
+  const required = ['SINCHID_JWT_ISSUER', 'SINCHID_JWT_AUDIENCE', 'SINCHID_JWT_JWKS_URI'] as const;
+  const missing = required.filter((key) => !env[key]);
+  if (missing.length === 0) {
+    return;
+  }
+
+  throw new Error(
+    `MCP_AUTH_MODE=sinchid-agent requires ${missing.join(', ')} to verify inbound SinchID access ` +
+      'tokens: refusing to start rather than trusting unverified JWT claims.',
   );
 };
 
@@ -183,9 +203,23 @@ export const createHttpApp = () => {
     );
   } else {
     requireConversationRegion();
+    if (mode.authMode === 'sinchid-agent') {
+      requireSinchIdJwtConfig();
+    }
     setHttpCredentialSource('request-header');
     setAuthMode(mode.authMode);
   }
+
+  // Single-tenant enforces no Authorization shape and registers no auth-mode middleware (see
+  // below), so there is nothing that could have verified a JWT there — fall back to decoding it
+  // unverified, for audit only, exactly as every mode used to. Multi-tenant modes only ever use
+  // claims verified by the auth-mode middleware (see verified-claims.ts); a JWT is never trusted
+  // there without passing that check first.
+  const resolveUserClaims =
+    mode.tenancy === 'single-tenant'
+      ? (req: Request) => decodeUnverifiedUserJwtHeaderForSingleTenant(req.headers.authorization)
+      : getVerifiedUserClaims;
+  const userClaimsAreVerified = mode.tenancy !== 'single-tenant';
 
   const handleMcpRequest = async (req: Request, res: Response): Promise<void> => {
     const sessionId = getSessionId(req);
@@ -213,8 +247,8 @@ export const createHttpApp = () => {
       res.setHeader('mcp-session-id', newSessionId);
       const transport = await buildTransport();
       res.on('close', () => void transport.close());
-      await runWithHttpCredentialHeaders(req.headers, () => {
-        logUserJwtAuditTrail();
+      await runWithHttpCredentialHeaders(req.headers, resolveUserClaims(req), () => {
+        logUserJwtAuditTrail(userClaimsAreVerified);
         return transport.handleRequest(req, res, req.body);
       });
       return;
@@ -257,8 +291,8 @@ export const createHttpApp = () => {
 
     const transport = await buildTransport();
     res.on('close', () => void transport.close());
-    await runWithHttpCredentialHeaders(req.headers, () => {
-      logUserJwtAuditTrail();
+    await runWithHttpCredentialHeaders(req.headers, resolveUserClaims(req), () => {
+      logUserJwtAuditTrail(userClaimsAreVerified);
       return transport.handleRequest(req, res, req.body);
     });
   };

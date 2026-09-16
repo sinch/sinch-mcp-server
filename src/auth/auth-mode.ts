@@ -1,8 +1,10 @@
 import type { NextFunction, Request, Response } from 'express';
 import { AGENT_ID_HEADER } from './credential-context';
-import { buildBearerWwwAuthenticateHeader } from './bearer-token';
+import { buildBearerWwwAuthenticateHeader, extractBearerToken } from './bearer-token';
 import { parseSinchCredentialsAuthorizationHeader } from './sinch-oauth-credentials';
+import { verifySinchIdAccessToken } from './sinchid-jwt-verifier';
 import { isJwtShapedBearerToken } from './user-jwt';
+import { setVerifiedUserClaims } from './verified-claims';
 import { extractHeaderValue } from '../utils';
 
 /**
@@ -71,8 +73,13 @@ const checkClientCredentials = (req: Request): AuthShapeCheck => {
  * JWT-shaped. That rejects a Base64 credential triple, which is not a JWT. `x-agent-id` is
  * required alongside it: credentials are resolved from the agent installation it names, so a
  * request without it cannot complete anyway.
+ *
+ * Being JWT-shaped is not enough to trust it: the token is then verified against the configured
+ * JWKS (signature, pinned algorithm, issuer, audience, expiry). Only a token that survives that
+ * check gets its claims stashed for the request (see `verified-claims.ts`) — anything else,
+ * including a well-formed but forged, expired, or wrong-audience/issuer token, is a 401.
  */
-const checkSinchidAgent = (req: Request): AuthShapeCheck => {
+const checkSinchidAgent = async (req: Request): Promise<AuthShapeCheck> => {
   if (extractHeaderValue(req.headers.authorization) === undefined) {
     return {
       ok: false,
@@ -97,10 +104,23 @@ const checkSinchidAgent = (req: Request): AuthShapeCheck => {
     };
   }
 
-  return OK;
+  const token = extractBearerToken(req.headers.authorization);
+  try {
+    const claims = await verifySinchIdAccessToken(token!);
+    if (claims) {
+      setVerifiedUserClaims(req, claims);
+    }
+    return OK;
+  } catch {
+    return {
+      ok: false,
+      invalidToken: true,
+      reason: 'SinchID access token failed verification (invalid signature, issuer, audience, or expiry)',
+    };
+  }
 };
 
-const AUTH_SHAPE_CHECKS: Record<McpAuthMode, (req: Request) => AuthShapeCheck> = {
+const AUTH_SHAPE_CHECKS: Record<McpAuthMode, (req: Request) => AuthShapeCheck | Promise<AuthShapeCheck>> = {
   'client-credentials': checkClientCredentials,
   'sinchid-agent': checkSinchidAgent,
 };
@@ -120,8 +140,8 @@ const rejectMissingCredentials = (res: Response, reason: string): void => {
 };
 
 export const createAuthModeMiddleware = (mode: McpAuthMode) => {
-  return (req: Request, res: Response, next: NextFunction): void => {
-    const check = AUTH_SHAPE_CHECKS[mode](req);
+  return async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    const check = await AUTH_SHAPE_CHECKS[mode](req);
     if (check.ok) {
       next();
       return;

@@ -63,6 +63,13 @@ conversationRegion: ""
 # deployment that accepted every shape would defeat the point of splitting them.
 authMode: ""
 
+# SinchID JWT verification — REQUIRED when authMode is "sinchid-agent", ignored otherwise. The
+# server verifies the inbound Authorization token's signature against this JWKS (algorithm pinned
+# to RS256), plus its issuer and audience, before trusting any claim from it. There is no default.
+sinchidJwtIssuer: ""
+sinchidJwtAudience: ""
+sinchidJwtJwksUri: ""
+
 # Name of the Secret holding the Redis connection details for shared session storage.
 # REQUIRED — the server refuses to start without Redis. This is deliberately separate from
 # existingSecret/secretKeys above: it's typically infra-managed (e.g. a Crossplane-provisioned

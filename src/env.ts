@@ -29,6 +29,9 @@ export const env = createEnv({
     MCP_SESSION_TTL_SECONDS: z.string().optional(),
     MCP_TAGS: z.string().optional(),
     MCP_AUTH_MODE: z.enum(['client-credentials', 'sinchid-agent']).optional(),
+    SINCHID_JWT_ISSUER: z.string().optional(),
+    SINCHID_JWT_AUDIENCE: z.string().optional(),
+    SINCHID_JWT_JWKS_URI: z.string().optional(),
   },
   runtimeEnvStrict: {
     PROJECT_ID: process.env.PROJECT_ID,
@@ -54,6 +57,9 @@ export const env = createEnv({
     MCP_SESSION_TTL_SECONDS: process.env.MCP_SESSION_TTL_SECONDS,
     MCP_TAGS: process.env.MCP_TAGS,
     MCP_AUTH_MODE: process.env.MCP_AUTH_MODE,
+    SINCHID_JWT_ISSUER: process.env.SINCHID_JWT_ISSUER,
+    SINCHID_JWT_AUDIENCE: process.env.SINCHID_JWT_AUDIENCE,
+    SINCHID_JWT_JWKS_URI: process.env.SINCHID_JWT_JWKS_URI,
   },
   emptyStringAsUndefined: true,
   onValidationError: (issues: readonly StandardSchemaV1.Issue[]) => {
