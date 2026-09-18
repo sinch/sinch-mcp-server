@@ -2,7 +2,37 @@ import { context, trace } from '@opentelemetry/api';
 import pino from 'pino';
 import { env } from '../env';
 
-const baseLogger = pino({ level: env.LOG_LEVEL ?? 'info' }, pino.destination(2));
+const REDACTED_FIELDS = [
+  'authorization',
+  'Authorization',
+  'headers.authorization',
+  'headers.Authorization',
+  'req.headers.authorization',
+  'request.headers.authorization',
+  'password',
+  'keySecret',
+  'key_secret',
+  'apiKey',
+  'api_key',
+  'token',
+  'access_token',
+  'refresh_token',
+];
+
+const errorType = (error: unknown): string => (error instanceof Error ? error.name : 'UnknownError');
+
+const baseLogger = pino(
+  {
+    level: env.LOG_LEVEL ?? 'info',
+    redact: { paths: REDACTED_FIELDS, remove: true },
+    // Error messages from HTTP clients can contain response bodies, URLs, or headers.
+    // Emit only the type at normal log levels; detailed failures belong in protected traces.
+    serializers: {
+      err: (error: unknown) => ({ type: errorType(error) }),
+    },
+  },
+  pino.destination(2),
+);
 
 const traceFields = (): Record<string, string> => {
   const span = trace.getSpan(context.active());
@@ -27,3 +57,7 @@ export const logger = {
   error: log('error'),
   debug: log('debug'),
 };
+
+export const safeErrorFields = (error: unknown): { error_type: string } => ({
+  error_type: errorType(error),
+});

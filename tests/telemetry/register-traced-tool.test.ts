@@ -132,6 +132,32 @@ test('registerTracedTool records error metrics when handler throws', async () =>
   });
 });
 
+test('registerTracedTool records a structured unsuccessful result as a failure', async () => {
+  const server = new McpServer({ name: 'test', version: '1.0.0' });
+  const handler = jest.fn().mockResolvedValue({
+    content: [{ type: 'text', text: JSON.stringify({ success: false, error: 'upstream rejected request' }) }],
+  });
+
+  registerTracedTool(server, 'unsuccessful-tool', { description: 'Returns a failure' }, handler);
+
+  const registeredTool = (
+    server as unknown as {
+      _registeredTools: Record<string, { callback: (...args: unknown[]) => unknown }>;
+    }
+  )._registeredTools['unsuccessful-tool'];
+
+  await expect(registeredTool.callback({} as never, {} as never)).resolves.toBeDefined();
+  expect(otelMocks().mockSetStatus).toHaveBeenCalledWith({ code: SpanStatusCode.ERROR });
+  expect(mockToolCallsAdd).toHaveBeenCalledWith(1, {
+    'tool.name': 'unsuccessful-tool',
+    status: 'error',
+  });
+  expect(mockToolErrorsAdd).toHaveBeenCalledWith(1, {
+    'tool.name': 'unsuccessful-tool',
+    'error.type': 'ToolResultError',
+  });
+});
+
 test('isTelemetryEnabled returns false without OTEL_EXPORTER_OTLP_ENDPOINT', () => {
   mockEnv.OTEL_EXPORTER_OTLP_ENDPOINT = undefined;
   // eslint-disable-next-line @typescript-eslint/no-require-imports

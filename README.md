@@ -415,7 +415,7 @@ Two deployments of the same image, each with its own `MCP_AUTH_MODE`, therefore 
 
 The access key secret may contain `:` characters; only the **first two** colons separate the three fields.
 
-A request whose `Authorization` header is missing, uses a scheme other than `Bearer`, or whose token is not a Base64-encoded `projectId:keyId:keySecret` triple is not rejected at the HTTP layer: OAuth-backed tools return a prompt response stating `Missing or invalid Authorization header (expected "Bearer <Base64 of projectId:keyId:keySecret>").`
+A request whose `Authorization` header is missing, uses a scheme other than `Bearer`, or whose token is not a Base64-encoded `projectId:keyId:keySecret` triple is rejected at the HTTP layer with `401` before an MCP session or tool can be used.
 
 Example (multi-tenant):
 
@@ -471,7 +471,7 @@ The server listens on `http://localhost:8000/mcp` by default (override with `POR
 
 #### Session storage (Redis)
 
-Session identity is stored in Redis, not in process memory, so any pod behind a load balancer can validate any session — no sticky sessions required. Each request builds its own short-lived `McpServer` and `StreamableHTTPServerTransport`, closed once the response finishes; nothing is held in memory between requests. Redis is required — the server exits immediately on startup unless both `REDIS_HOST` and `REDIS_PORT` are set (`REDIS_PASSWORD` is optional; TLS turns on automatically once it's set, e.g. for AWS ElastiCache). If Redis is unreachable after a short retry, the server returns **503 Service Unavailable** with JSON-RPC error code `-32003`, distinct from `-32001 Session not found`.
+Session identity is stored in Redis, not in process memory, so any pod behind a load balancer can validate any session — no sticky sessions required. A session is bound to a SHA-256 fingerprint of its caller; bearer tokens and credentials are never stored in Redis, and another caller presenting the session ID receives `Session not found`. Sessions have a sliding TTL of 30 minutes by default (`MCP_SESSION_TTL_SECONDS`). Each request builds its own short-lived `McpServer` and `StreamableHTTPServerTransport`, closed once the response finishes; nothing is held in memory between requests. Redis is required — the server exits immediately on startup unless both `REDIS_HOST` and `REDIS_PORT` are set (`REDIS_PASSWORD` is optional; TLS turns on automatically once it's set, e.g. for AWS ElastiCache). If Redis is unreachable after a short retry, the server returns **503 Service Unavailable** with JSON-RPC error code `-32003`, distinct from `-32001 Session not found`.
 
 Because there's no persistent per-session transport, the server doesn't support the standalone GET/SSE stream — `GET /mcp` returns **405**. Server-initiated notifications sent during a POST (e.g. tool progress) work as usual; a notification pushed independently of any request would have nowhere to go once transports are per-request.
 

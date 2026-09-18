@@ -1,6 +1,8 @@
-import { randomUUID } from 'node:crypto';
+import { shutdownTelemetry } from './telemetry';
+import { createHash, randomUUID } from 'node:crypto';
 import type { Server } from 'node:http';
 import express, { type Request, type Response } from 'express';
+import { trace } from '@opentelemetry/api';
 import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js';
 import { isInitializeRequest } from '@modelcontextprotocol/sdk/types.js';
 import dotenv from 'dotenv';
@@ -18,6 +20,7 @@ import {
   SERVER_CREDENTIAL_ENV_VARS,
   sinchOAuthCredentialsFromEnv,
 } from './auth/sinch-oauth-credentials';
+import { extractBearerToken } from './auth/bearer-token';
 import { env } from './env';
 import { buildJsonRpcErrorResponse } from './json-rpc';
 import { getToolsFilter, instantiateMcpServer, registerCapabilities } from './server';
@@ -28,7 +31,9 @@ import {
   SessionStoreUnavailableError,
   validateAndTouchSession,
 } from './session-store';
-import { logger } from './telemetry/logger';
+import { logger, safeErrorFields } from './telemetry/logger';
+import { getServiceMetrics } from './telemetry/metrics';
+import { ATTR_SESSION_ID } from './telemetry/constants';
 
 dotenv.config();
 
@@ -64,6 +69,15 @@ const getSessionId = (req: Request): string | undefined => {
     return header;
   }
   return undefined;
+};
+
+const sessionCorrelationId = (sessionId: string): string =>
+  createHash('sha256').update(sessionId).digest('hex').slice(0, 16);
+
+const attachSessionCorrelation = (res: Response, sessionId: string): void => {
+  const correlationId = sessionCorrelationId(sessionId);
+  res.locals.sessionCorrelationId = correlationId;
+  trace.getActiveSpan()?.setAttribute(ATTR_SESSION_ID, correlationId);
 };
 
 const buildTransport = async (): Promise<StreamableHTTPServerTransport> => {
@@ -120,6 +134,21 @@ const requireConversationRegion = (): void => {
 };
 
 type DeploymentMode = { tenancy: 'single-tenant' } | { tenancy: 'multi-tenant'; authMode: McpAuthMode };
+
+/**
+ * Bind a session to the caller without persisting the bearer token or credentials in Redis.
+ * A stolen session ID is therefore insufficient when it is replayed by another caller.
+ */
+const getSessionOwnerId = (req: Request, mode: DeploymentMode): string => {
+  const identity =
+    mode.tenancy === 'single-tenant'
+      ? `single-tenant:${env.PROJECT_ID}`
+      : `${mode.authMode}:${extractBearerToken(req.headers.authorization) ?? ''}:${
+          mode.authMode === 'sinchid-agent' ? (getRequestAgentId() ?? req.headers['x-agent-id'] ?? '') : ''
+        }`;
+
+  return createHash('sha256').update(identity).digest('hex');
+};
 
 /**
  * MCP_AUTH_MODE is the tenancy selector, and it is checked first:
@@ -190,6 +219,7 @@ export const createHttpApp = () => {
   const handleMcpRequest = async (req: Request, res: Response): Promise<void> => {
     const sessionId = getSessionId(req);
     const isInitRequest = isInitializationBody(req.body);
+    const sessionOwnerId = getSessionOwnerId(req, mode);
 
     if (isInitRequest) {
       if (sessionId) {
@@ -200,8 +230,10 @@ export const createHttpApp = () => {
       }
 
       const newSessionId = randomUUID();
+      attachSessionCorrelation(res, newSessionId);
       try {
-        await createSession(newSessionId);
+        await createSession(newSessionId, sessionOwnerId);
+        getServiceMetrics().sessionsCreatedTotal.add(1);
       } catch (error) {
         if (error instanceof SessionStoreUnavailableError) {
           respondSessionStoreUnavailable(res, req.body);
@@ -225,9 +257,10 @@ export const createHttpApp = () => {
       return;
     }
 
+    attachSessionCorrelation(res, sessionId);
     let sessionValid: boolean;
     try {
-      sessionValid = await validateAndTouchSession(sessionId);
+      sessionValid = await validateAndTouchSession(sessionId, sessionOwnerId);
     } catch (error) {
       if (error instanceof SessionStoreUnavailableError) {
         respondSessionStoreUnavailable(res, req.body);
@@ -252,6 +285,7 @@ export const createHttpApp = () => {
         throw error;
       }
       res.status(200).end();
+      getServiceMetrics().sessionsDeletedTotal.add(1);
       return;
     }
 
@@ -264,6 +298,35 @@ export const createHttpApp = () => {
   };
 
   const app = express();
+  app.use((req, res, next) => {
+    const metrics = getServiceMetrics();
+    const startedAt = performance.now();
+    metrics.httpActiveRequests.add(1);
+    let completed = false;
+    const recordCompletion = (): void => {
+      if (completed) {
+        return;
+      }
+      completed = true;
+      const attributes = { method: req.method, route: req.path, status_code: res.statusCode };
+      metrics.httpActiveRequests.add(-1);
+      metrics.httpRequestsTotal.add(1, attributes);
+      metrics.httpDurationMs.record(performance.now() - startedAt, attributes);
+      if (res.statusCode >= 400) {
+        metrics.httpErrorsTotal.add(1, attributes);
+      }
+      logger.info(
+        {
+          ...attributes,
+          session_id: res.locals.sessionCorrelationId as string | undefined,
+        },
+        'HTTP request completed',
+      );
+    };
+    res.once('finish', recordCompletion);
+    res.once('close', recordCompletion);
+    next();
+  });
   app.use(express.json({ limit: '4mb' }));
 
   // Unauthenticated probes for Kubernetes (must stay outside MCP auth middleware).
@@ -297,7 +360,7 @@ export const createHttpApp = () => {
 
   const routeHandler = (req: Request, res: Response) => {
     void handleMcpRequest(req, res).catch((error) => {
-      console.error(`Error handling MCP ${req.method} request:`, error);
+      logger.error({ ...safeErrorFields(error), method: req.method }, 'Error handling MCP request');
       if (!res.headersSent) {
         res.status(500).json(buildJsonRpcErrorResponse(-32603, 'Internal server error', req.body));
       }
@@ -368,9 +431,10 @@ const shutdown = async (server: Server, signal: string): Promise<void> => {
   }
   try {
     await closeServer(server);
+    await shutdownTelemetry();
     process.exit(0);
   } catch (error) {
-    console.error('Error during HTTP server shutdown:', error);
+    logger.error(safeErrorFields(error), 'Error during HTTP server shutdown');
     process.exit(1);
   }
 };
@@ -388,6 +452,10 @@ export const main = async (): Promise<void> => {
   const port = Number(process.env.PORT ?? DEFAULT_PORT);
   const app = createHttpApp();
   const server = app.listen(port);
+  server.on('connection', (socket) => {
+    getServiceMetrics().httpActiveConnections.add(1);
+    socket.once('close', () => getServiceMetrics().httpActiveConnections.add(-1));
+  });
 
   process.on('SIGTERM', () => void shutdown(server, 'SIGTERM'));
   process.on('SIGINT', () => void shutdown(server, 'SIGINT'));
@@ -401,7 +469,7 @@ export const main = async (): Promise<void> => {
 
 if (require.main === module) {
   main().catch((error) => {
-    console.error('Fatal error in HTTP main():', error);
+    logger.error(safeErrorFields(error), 'Fatal error in HTTP main()');
     process.exit(1);
   });
 }
