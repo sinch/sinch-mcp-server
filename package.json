@@ -87,6 +87,7 @@
     "test:coverage": "jest --coverage --testPathIgnorePatterns='/tests/(integration|eval)/'",
     "test:integration": "NODE_OPTIONS=--experimental-vm-modules jest --config jest.integration.config.ts --runInBand",
     "test:eval": "NODE_OPTIONS=--experimental-vm-modules jest --config jest.eval.config.ts --runInBand",
+    "test:load": "k6 run tests/load/mcp.js",
     "prepare": "husky"
   },
   "engines": {

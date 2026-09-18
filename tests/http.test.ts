@@ -122,6 +122,25 @@ describe('HTTP MCP session handling (Redis-backed)', () => {
     }
   });
 
+  it("does not let one caller use another caller's session", async () => {
+    const { baseUrl, close } = await listen(createHttpApp());
+    try {
+      const initResponse = await post(baseUrl, initializeBody);
+      const sessionId = initResponse.headers.get('mcp-session-id')!;
+      const otherCredentials = Buffer.from('project-2:key-2:secret-2').toString('base64');
+
+      const response = await post(baseUrl, toolsListBody, {
+        Authorization: `Bearer ${otherCredentials}`,
+        'Mcp-Session-Id': sessionId,
+      });
+
+      expect(response.status).toBe(404);
+      expect((await parseJsonRpcError(response)).error.code).toBe(-32001);
+    } finally {
+      await close();
+    }
+  });
+
   it('rejects an initialize request that already carries an Mcp-Session-Id header', async () => {
     const { baseUrl, close } = await listen(createHttpApp());
     try {

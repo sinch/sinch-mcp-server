@@ -9,6 +9,34 @@ import { getToolMetrics } from './metrics';
 
 const tracer = trace.getTracer(TRACER_NAME);
 
+const isFailedToolResult = (result: unknown): boolean => {
+  if (!result || typeof result !== 'object') {
+    return false;
+  }
+  const record = result as { isError?: unknown; content?: unknown };
+  if (record.isError === true) {
+    return true;
+  }
+  if (!Array.isArray(record.content)) {
+    return false;
+  }
+  return record.content.some((item) => {
+    if (!item || typeof item !== 'object' || (item as { type?: unknown }).type !== 'text') {
+      return false;
+    }
+    const text = (item as { text?: unknown }).text;
+    if (typeof text !== 'string') {
+      return false;
+    }
+    try {
+      const parsed = JSON.parse(text) as { success?: unknown };
+      return parsed.success === false;
+    } catch {
+      return false;
+    }
+  });
+};
+
 /**
  * An auth mode is set only on a multi-tenant deployment, where the server holds no credentials
  * of its own and the mode names how the caller authenticated. The env-credential branches below
@@ -59,14 +87,24 @@ const runWithTracing = async <T>(toolName: string, handler: () => T | Promise<T>
 
     try {
       const result = await handler();
-      span.setStatus({ code: SpanStatusCode.OK });
+      const failed = isFailedToolResult(result);
+      span.setStatus({ code: failed ? SpanStatusCode.ERROR : SpanStatusCode.OK });
       metrics.toolCallsTotal.add(1, {
         'tool.name': toolName,
-        status: 'success',
+        status: failed ? 'error' : 'success',
       });
+      if (failed) {
+        metrics.toolErrorsTotal.add(1, {
+          'tool.name': toolName,
+          'error.type': 'ToolResultError',
+        });
+      }
       return result;
     } catch (error) {
-      span.recordException(error instanceof Error ? error : new Error(String(error)));
+      const errorType = error instanceof Error ? error.name : 'Error';
+      // HTTP client errors may embed URLs, headers, or response bodies in their message.
+      // Preserve the classification without exporting those potentially sensitive values.
+      span.recordException(new Error(errorType));
       span.setStatus({ code: SpanStatusCode.ERROR });
       metrics.toolCallsTotal.add(1, {
         'tool.name': toolName,
@@ -74,7 +112,7 @@ const runWithTracing = async <T>(toolName: string, handler: () => T | Promise<T>
       });
       metrics.toolErrorsTotal.add(1, {
         'tool.name': toolName,
-        'error.type': error instanceof Error ? error.name : 'Error',
+        'error.type': errorType,
       });
       throw error;
     } finally {
