@@ -202,6 +202,39 @@ describe('createAuthModeMiddleware', () => {
       });
     });
 
+    it('rejects a validly signed token that carries none of the expected Sinch claims', async () => {
+      const token = server.sign({ iss: ISSUER, aud: AUDIENCE });
+      const { res, next } = await run('sinchid-agent', {
+        authorization: `Bearer ${token}`,
+        [AGENT_ID_HEADER]: 'order-42',
+      });
+
+      expect(next).not.toHaveBeenCalled();
+      expect(res.statusCode).toBe(401);
+      expect(res.body).toEqual({
+        error: 'invalid_token',
+        error_description: 'SinchID access token is missing the expected Sinch claims',
+      });
+    });
+
+    it('returns 503, not 401, when the JWKS endpoint cannot be reached', async () => {
+      mockEnv.SINCHID_JWT_JWKS_URI = 'http://127.0.0.1:1/jwks.json';
+      // Needs a `kid`, or verification fails before ever reaching the JWKS fetch.
+      const token = `${encodeSegment({ alg: 'RS256', kid: 'some-kid' })}.${encodeSegment({
+        iss: ISSUER,
+        aud: AUDIENCE,
+        sub: 'user-1',
+      })}.sig`;
+
+      const { res, next } = await run('sinchid-agent', {
+        authorization: `Bearer ${token}`,
+        [AGENT_ID_HEADER]: 'order-42',
+      });
+
+      expect(next).not.toHaveBeenCalled();
+      expect(res.statusCode).toBe(503);
+    });
+
     // A shape-valid but forged/expired/wrong-audience/wrong-issuer/wrong-signature token must
     // never reach next() — this is the actual vulnerability this auth mode used to have.
     describe('signature/claims verification', () => {

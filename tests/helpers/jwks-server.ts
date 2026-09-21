@@ -52,6 +52,7 @@ export const startTestJwksServer = async (): Promise<TestJwksServer> => {
       return jwt.sign(payload, signingKey, {
         algorithm: 'RS256',
         keyid: kid,
+        expiresIn: '1h',
         ...signOptions,
       });
     },

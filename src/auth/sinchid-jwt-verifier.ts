@@ -1,7 +1,6 @@
-import jwt, { type Algorithm } from 'jsonwebtoken';
+import jwt, { type Algorithm, type JwtPayload } from 'jsonwebtoken';
 import { JwksClient } from 'jwks-rsa';
 import { env } from '../env';
-import { mapSinchUserClaims, type SinchUserClaims } from './user-jwt';
 
 // Pinned, not env-configurable: the token's own `alg` header must never decide which algorithm
 // (or key type) verification uses — that is exactly the "alg confusion" class of attack.
@@ -31,12 +30,12 @@ export const resetSinchIdJwtVerifierForTests = (): void => {
 };
 
 /**
- * Verifies a SinchID access token's signature (against the configured JWKS), algorithm, issuer,
- * audience and expiry, and returns the Sinch-namespaced claims it carries. Throws (a
- * `jsonwebtoken` error such as `TokenExpiredError` or `JsonWebTokenError`) for anything that
- * fails verification — an expired, forged, wrong-audience, or wrong-issuer token included.
+ * Verifies signature, algorithm, issuer, audience, expiry and presence of `exp`, and returns the
+ * decoded payload — callers map Sinch claims out of it themselves (see `mapSinchUserClaims`). A
+ * `jsonwebtoken` error means the token itself is invalid; anything else means verification
+ * couldn't run at all (e.g. JWKS unreachable) — see `auth-mode.ts`.
  */
-export const verifySinchIdAccessToken = async (token: string): Promise<SinchUserClaims | undefined> => {
+export const verifySinchIdAccessToken = async (token: string): Promise<JwtPayload> => {
   const decoded = jwt.decode(token, { complete: true });
   if (!decoded || !decoded.header.kid) {
     throw new jwt.JsonWebTokenError('Token header is missing a key id (kid)');
@@ -55,5 +54,10 @@ export const verifySinchIdAccessToken = async (token: string): Promise<SinchUser
     throw new jwt.JsonWebTokenError('Token payload is not a JSON object');
   }
 
-  return mapSinchUserClaims(verified as Record<string, unknown>);
+  // jsonwebtoken only enforces expiry when `exp` is present — an exp-less token would else verify forever.
+  if (typeof verified.exp !== 'number') {
+    throw new jwt.JsonWebTokenError('Token is missing an exp claim');
+  }
+
+  return verified;
 };

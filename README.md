@@ -407,7 +407,7 @@ Two deployments of the same image, each with its own `MCP_AUTH_MODE`, therefore 
 
 #### SinchID token verification (`sinchid-agent` only)
 
-Every `sinchid-agent` request's `Authorization` JWT is verified against the configured JWKS before the request is allowed through: signature (RSA, algorithm pinned to `RS256` — never taken from the token's own `alg` header), issuer, audience, and expiry. A forged, expired, or wrong-issuer/audience token is rejected with `401` and never reaches session creation or tool execution.
+Every `sinchid-agent` request's `Authorization` JWT is verified against the configured JWKS before the request is allowed through: signature (RSA, algorithm pinned to `RS256` — never taken from the token's own `alg` header), issuer, audience, expiry (a token without an `exp` claim is rejected too), and presence of the expected Sinch claims. A forged, expired, wrong-issuer/audience, or claims-less token is rejected with `401` and never reaches session creation or tool execution.
 
 This requires three environment variables, all **required** in `sinchid-agent` mode — the server refuses to start without them:
 
@@ -417,7 +417,7 @@ This requires three environment variables, all **required** in `sinchid-agent` m
 | `SINCHID_JWT_AUDIENCE`   | Expected `aud` claim                                                |
 | `SINCHID_JWT_JWKS_URI`   | URL of the issuer's JWKS document (public signing keys)            |
 
-Resolved signing keys are cached (10 minutes) and refetches are rate-limited, so a burst of tokens carrying unknown key ids cannot be used to hammer the JWKS endpoint.
+Resolved signing keys are cached (10 minutes) and refetches are rate-limited. That rate limit is shared across all key ids, so a burst of tokens carrying unknown key ids can exhaust it and delay lookup of a key that hasn't been cached yet (e.g. right after key rotation). Rather than reporting that as an invalid token, the server responds `503` when verification itself couldn't complete (JWKS unreachable or rate-limited) — only a token that was actually checked and failed gets `401`.
 
 #### `Authorization` credentials format (HTTP only)
 

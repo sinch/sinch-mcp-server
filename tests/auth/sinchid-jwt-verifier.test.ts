@@ -1,3 +1,4 @@
+import jwt from 'jsonwebtoken';
 import { resetSinchIdJwtVerifierForTests, verifySinchIdAccessToken } from '../../src/auth/sinchid-jwt-verifier';
 import { mockEnv, resetMockEnv } from '../helpers/mock-env';
 import { generateUnpublishedKeyPair, startTestJwksServer, type TestJwksServer } from '../helpers/jwks-server';
@@ -24,7 +25,7 @@ describe('verifySinchIdAccessToken', () => {
     mockEnv.SINCHID_JWT_JWKS_URI = server.url;
   });
 
-  it('verifies a validly signed token and returns its Sinch claims', async () => {
+  it('verifies a validly signed token and returns its decoded payload', async () => {
     const token = server.sign({
       iss: ISSUER,
       aud: AUDIENCE,
@@ -32,10 +33,20 @@ describe('verifySinchIdAccessToken', () => {
       'https://sinch.com/project_id': 'project-1',
     });
 
-    const claims = await verifySinchIdAccessToken(token);
+    const payload = await verifySinchIdAccessToken(token);
 
-    expect(claims?.subject).toBe('auth0|user-1');
-    expect(claims?.projectId).toBe('project-1');
+    expect(payload.sub).toBe('auth0|user-1');
+    expect(payload['https://sinch.com/project_id']).toBe('project-1');
+  });
+
+  it('rejects a token with no exp claim', async () => {
+    // Bypasses `server.sign`'s default expiry: this is the one case that must have none.
+    const token = jwt.sign({ iss: ISSUER, aud: AUDIENCE, sub: 'user-1' }, server.privateKey, {
+      algorithm: 'RS256',
+      keyid: server.kid,
+    });
+
+    await expect(verifySinchIdAccessToken(token)).rejects.toThrow(/exp/i);
   });
 
   it('rejects an expired token', async () => {

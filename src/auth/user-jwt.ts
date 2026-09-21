@@ -40,14 +40,16 @@ const decodeJwtPayloadShape = (token: string): Record<string, unknown> | undefin
 };
 
 /**
- * True when Authorization carries a `Bearer` token whose payload decodes as a
- * three-segment JWT. Shape only — no signature, issuer, or expiry check. This
- * is used purely to route a request to the right auth mode (and to skip a
+ * True when `token` decodes as a three-segment JWT. Shape only — no signature, issuer, or
+ * expiry check. This is used purely to route a request to the right auth mode (and to skip a
  * JWKS lookup on something that plainly isn't a JWT); it grants no trust.
  */
+export const isJwtShapedToken = (token: string): boolean => decodeJwtPayloadShape(token) !== undefined;
+
+/** Same as `isJwtShapedToken`, extracting the Bearer token from the raw header first. */
 export const isJwtShapedBearerToken = (authorizationHeader: string | string[] | undefined): boolean => {
   const token = extractBearerToken(authorizationHeader);
-  return token !== undefined && decodeJwtPayloadShape(token) !== undefined;
+  return token !== undefined && isJwtShapedToken(token);
 };
 
 const stringClaim = (payload: Record<string, unknown>, claim: string): string | undefined => {
@@ -77,12 +79,12 @@ export const mapSinchUserClaims = (payload: Record<string, unknown>): SinchUserC
 
 /**
  * Decodes the Sinch claims from a Bearer JWT in Authorization WITHOUT verifying its signature,
- * issuer, or expiry — the claims are self-reported and used for audit purposes only.
+ * issuer, or expiry — self-reported, audit only.
  *
- * Single-tenant only: it is the sole deployment mode with no auth-mode middleware to verify the
- * token first (see `sinchid-jwt-verifier.ts`), and it enforces no Authorization shape at all, so
- * there is no verified alternative there. Multi-tenant modes must use `getVerifiedUserClaims`
- * (from `verified-claims.ts`) instead and must never call this.
+ * Single-tenant only: that mode authenticates no caller at all (every request runs on the
+ * account from PROJECT_ID/KEY_ID/KEY_SECRET regardless of any header), so a forwarded JWT is
+ * decoded only to log who it claims to be, never to authorize anything. Multi-tenant modes must
+ * use `getVerifiedUserClaims` instead and must never call this.
  */
 export const decodeUnverifiedUserJwtHeaderForSingleTenant = (
   authorizationHeader: string | string[] | undefined,
