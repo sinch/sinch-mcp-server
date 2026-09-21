@@ -71,6 +71,30 @@ export const parseSinchCredentialsAuthorizationHeader = (
   return parseSinchCredentialsValue(token);
 };
 
+/**
+ * Name of the env var holding the M2M credentials for one agent installation: the same
+ * Base64 projectId:keyId:keySecret blob used in the client-credentials Authorization header,
+ * keyed by orderId (x-agent-id) and Sinch project id (verified from the SinchID JWT claim) so distinct
+ * installations never collide. Underscore-joined, not dash-joined as the ticket's literal naming suggests:
+ * Kubernetes' default env-var-name validation is a C-identifier (letters/digits/underscore
+ * only), and this name is set as a literal container env var name via envFrom/secretKeyRef.
+ */
+export const buildAgentM2MEnvVarName = (orderId: string, projectId: string): string => {
+  return `SINCH_AGENT_M2M_${orderId}_${projectId}`;
+};
+
+export const sinchOAuthCredentialsFromAgentEnv = (
+  orderId: string,
+  projectId: string,
+): SinchOAuthCredentials | undefined => {
+  const raw = process.env[buildAgentM2MEnvVarName(orderId, projectId)];
+  if (!raw) {
+    return undefined;
+  }
+
+  return parseSinchCredentialsValue(raw);
+};
+
 export const SERVER_CREDENTIAL_ENV_VARS = ['PROJECT_ID', 'KEY_ID', 'KEY_SECRET'] as const;
 
 /** Which of the three server-credential env vars are populated. All three or none is valid. */

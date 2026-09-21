@@ -40,6 +40,11 @@ spec:
             - name: http
               containerPort: {{ .Values.service.targetPort }}
               protocol: TCP
+          {{- if .Values.extraEnvFromSecret }}
+          envFrom:
+            - secretRef:
+                name: {{ .Values.extraEnvFromSecret }}
+          {{- end }}
           env:
             {{- range .Values.env }}
             - name: {{ .name }}

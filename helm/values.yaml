@@ -49,6 +49,10 @@ resources:
 existingSecret: ""
 secretKeys: []
 
+# Optional Secret containing environment variables to inject via envFrom (e.g. tenant M2M credentials
+# formatted as SINCH_AGENT_M2M_<orderId>_<projectId>). Defaults to empty string (no envFrom block).
+extraEnvFromSecret: ""
+
 # Conversation API region — one of: us | eu | br. REQUIRED; there is no default.
 # Set per site in k8s-manifests-mcp-messaging.
 conversationRegion: ""

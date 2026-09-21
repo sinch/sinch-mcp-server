@@ -63,7 +63,7 @@ When `MCP_AUTH_MODE` is set, it also pins the one inbound shape `/mcp` accepts:
 | `MCP_AUTH_MODE`      | `Authorization` header value                                    | Tools run as           |
 | -------------------- | --------------------------------------------------------------- |------------------------|
 | `client-credentials` | `Bearer <base64(projectId:keyId:keySecret)>` — the caller's own | the credentials sent   |
-| `sinchid-agent`      | `Bearer <SinchID access token>`, plus `x-agent-id`              | the user's credentials |
+| `sinchid-agent`      | `Bearer <SinchID access token>`, plus `x-agent-id`              | the `SINCH_AGENT_M2M_<orderId>_<projectId>` env var |
 
 Notes:
 
@@ -85,11 +85,14 @@ Notes:
 - Make sure `Authorization` is passed through to the pod untouched.
 - **`sinchid-agent` verifies the `Authorization` JWT** (signature against a JWKS, algorithm pinned
   to `RS256`, issuer, audience, expiry) before trusting any claim from it or letting the request
-  through. This requires three chart values, all **required** on this auth mode —
-  `sinchidJwtIssuer`, `sinchidJwtAudience`, `sinchidJwtJwksUri` (env vars `SINCHID_JWT_ISSUER`,
-  `SINCHID_JWT_AUDIENCE`, `SINCHID_JWT_JWKS_URI`) — the server refuses to start without them.
-  Credential *resolution* for this mode is still not implemented (DEVEXP-1631); this only covers
-  verifying the token itself.
+  through. This requires `SINCHID_JWT_ISSUER`, `SINCHID_JWT_AUDIENCE`, `SINCHID_JWT_JWKS_URI` —
+  the server refuses to start without them. The caller's Sinch project ID is derived directly
+  from the verified token's `https://sinch.com/project_id` claim, and the installation identifier is
+  provided via the `x-agent-id` header.
+- On `sinch-mcp-server-agent` (the only release running `sinchid-agent`), each onboarded
+  installation needs its own `SINCH_AGENT_M2M_<orderId>_<projectId>` env var (same Base64 blob
+  format as `client-credentials`) reaching the pod without ever being committed to this repo.
+  This can be injected via the chart's `extraEnvFromSecret` setting.
 
 ## Secret skeleton (create in namespace before first deploy)
 
