@@ -3,8 +3,9 @@ import type { Request, Response } from 'express';
 import { createAuthModeMiddleware, isMcpAuthMode, MCP_AUTH_MODES } from '../../src/auth/auth-mode';
 import { AGENT_ID_HEADER } from '../../src/auth/credential-context';
 import { resetSinchIdJwtVerifierForTests } from '../../src/auth/sinchid-jwt-verifier';
-import { SINCH_PROJECT_ID_CLAIM } from '../../src/auth/user-jwt';
+import { SINCH_ACCOUNT_ID_CLAIM, SINCH_GLOBAL_USER_ID_CLAIM, SINCH_PROJECT_ID_CLAIM } from '../../src/auth/user-jwt';
 import { getVerifiedUserClaims } from '../../src/auth/verified-claims';
+import { logger } from '../../src/telemetry/logger';
 import { mockEnv, resetMockEnv } from '../helpers/mock-env';
 import { generateUnpublishedKeyPair, startTestJwksServer, type TestJwksServer } from '../helpers/jwks-server';
 
@@ -49,6 +50,12 @@ const jwt = (payload: Record<string, unknown>): string =>
 /** base64 of projectId:keyId:keySecret — the client-credentials blob. */
 const CREDENTIALS_BLOB = Buffer.from('project-1:key-1:secret-1').toString('base64');
 const SINCHID_TOKEN = `Bearer ${jwt({ [SINCH_PROJECT_ID_CLAIM]: 'project-1', sub: 'user-1' })}`;
+const REQUIRED_SINCH_CLAIMS = {
+  [SINCH_PROJECT_ID_CLAIM]: 'project-1',
+  [SINCH_ACCOUNT_ID_CLAIM]: 'account-1',
+  [SINCH_GLOBAL_USER_ID_CLAIM]: 'user-1',
+  scope: 'openid',
+};
 
 describe('isMcpAuthMode', () => {
   it('accepts the configured modes', () => {
@@ -152,7 +159,7 @@ describe('createAuthModeMiddleware', () => {
     });
 
     it('passes a request carrying a validly signed SinchID token and x-agent-id, and stashes its verified claims', async () => {
-      const token = server.sign({ iss: ISSUER, aud: AUDIENCE, sub: 'user-1', [SINCH_PROJECT_ID_CLAIM]: 'project-1' });
+      const token = server.sign({ iss: ISSUER, aud: AUDIENCE, sub: 'user-1', ...REQUIRED_SINCH_CLAIMS });
 
       const { req, res, next } = await run('sinchid-agent', {
         authorization: `Bearer ${token}`,
@@ -217,8 +224,24 @@ describe('createAuthModeMiddleware', () => {
       });
     });
 
+    it('rejects a validly signed token whose only mapped claim is scope', async () => {
+      const token = server.sign({ iss: ISSUER, aud: AUDIENCE, scope: 'openid' });
+      const { res, next } = await run('sinchid-agent', {
+        authorization: `Bearer ${token}`,
+        [AGENT_ID_HEADER]: 'order-42',
+      });
+
+      expect(next).not.toHaveBeenCalled();
+      expect(res.statusCode).toBe(401);
+      expect(res.body).toEqual({
+        error: 'invalid_token',
+        error_description: 'SinchID access token is missing the expected Sinch claims',
+      });
+    });
+
     it('returns 503, not 401, when the JWKS endpoint cannot be reached', async () => {
       mockEnv.SINCHID_JWT_JWKS_URI = 'http://127.0.0.1:1/jwks.json';
+      const warnSpy = jest.spyOn(logger, 'warn').mockImplementation(() => undefined);
       // Needs a `kid`, or verification fails before ever reaching the JWKS fetch.
       const token = `${encodeSegment({ alg: 'RS256', kid: 'some-kid' })}.${encodeSegment({
         iss: ISSUER,
@@ -226,13 +249,22 @@ describe('createAuthModeMiddleware', () => {
         sub: 'user-1',
       })}.sig`;
 
-      const { res, next } = await run('sinchid-agent', {
-        authorization: `Bearer ${token}`,
-        [AGENT_ID_HEADER]: 'order-42',
-      });
+      try {
+        const { res, next } = await run('sinchid-agent', {
+          authorization: `Bearer ${token}`,
+          [AGENT_ID_HEADER]: 'order-42',
+        });
 
-      expect(next).not.toHaveBeenCalled();
-      expect(res.statusCode).toBe(503);
+        expect(next).not.toHaveBeenCalled();
+        expect(res.statusCode).toBe(503);
+        expect(res.headers['Retry-After']).toBe('2');
+        expect(warnSpy).toHaveBeenCalledWith(
+          expect.objectContaining({ err: expect.objectContaining({ message: expect.any(String) }) }),
+          'Could not verify the SinchID access token: the signing-key service is unavailable',
+        );
+      } finally {
+        warnSpy.mockRestore();
+      }
     });
 
     // A shape-valid but forged/expired/wrong-audience/wrong-issuer/wrong-signature token must
@@ -289,6 +321,19 @@ describe('createAuthModeMiddleware', () => {
 
         expect(next).not.toHaveBeenCalled();
         expect(res.statusCode).toBe(401);
+      });
+
+      it('returns 401, not 503, for a token carrying an unknown key id', async () => {
+        const forgedKey = generateUnpublishedKeyPair();
+        const token = server.sign(
+          { iss: ISSUER, aud: AUDIENCE, sub: 'user-1' },
+          { privateKey: forgedKey, keyid: 'unknown-kid' },
+        );
+        const { res, next } = await run('sinchid-agent', headers(token));
+
+        expect(next).not.toHaveBeenCalled();
+        expect(res.statusCode).toBe(401);
+        expect(res.headers['Retry-After']).toBeUndefined();
       });
     });
   });

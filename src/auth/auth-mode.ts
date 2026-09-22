@@ -7,6 +7,7 @@ import { parseSinchCredentialsAuthorizationHeader } from './sinch-oauth-credenti
 import { verifySinchIdAccessToken } from './sinchid-jwt-verifier';
 import { isJwtShapedToken, mapSinchUserClaims } from './user-jwt';
 import { setVerifiedUserClaims } from './verified-claims';
+import { logger } from '../telemetry/logger';
 import { extractHeaderValue } from '../utils';
 
 /**
@@ -116,6 +117,7 @@ const checkSinchidAgent = async (req: Request): Promise<AuthShapeCheck> => {
         reason: 'SinchID access token failed verification (invalid signature, issuer, audience, or expiry)',
       };
     }
+    logger.warn({ err: error }, 'Could not verify the SinchID access token: the signing-key service is unavailable');
     return {
       ok: false,
       kind: 'unavailable',
@@ -157,7 +159,14 @@ const rejectMissingCredentials = (res: Response, reason: string): void => {
 
 /** Verification itself couldn't run — a transient problem on our side, not the caller's. */
 const rejectUnavailable = (res: Response, reason: string): void => {
+  res.setHeader('Retry-After', '2');
   res.status(503).json({ error: 'temporarily_unavailable', error_description: reason });
+};
+
+const AUTH_SHAPE_REJECTIONS: Record<AuthShapeFailureKind, (res: Response, reason: string) => void> = {
+  invalid: rejectWrongShape,
+  unavailable: rejectUnavailable,
+  missing: rejectMissingCredentials,
 };
 
 export const createAuthModeMiddleware = (mode: McpAuthMode) => {
@@ -168,16 +177,6 @@ export const createAuthModeMiddleware = (mode: McpAuthMode) => {
       return;
     }
 
-    switch (check.kind) {
-      case 'invalid':
-        rejectWrongShape(res, check.reason);
-        return;
-      case 'unavailable':
-        rejectUnavailable(res, check.reason);
-        return;
-      case 'missing':
-        rejectMissingCredentials(res, check.reason);
-        return;
-    }
+    AUTH_SHAPE_REJECTIONS[check.kind](res, check.reason);
   };
 };

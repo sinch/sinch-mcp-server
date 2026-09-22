@@ -17,6 +17,8 @@ export type TestJwksServer = {
   requestCount: () => number;
   /** Signs a token with the published key pair unless `privateKey`/`kid` are overridden. */
   sign: (payload: Record<string, unknown>, options?: SignOptions & { privateKey?: KeyObject }) => string;
+  /** Publishes an additional signing key, simulating issuer key rotation. */
+  publishKey: () => { kid: string; privateKey: KeyObject };
   close: () => Promise<void>;
 };
 
@@ -29,6 +31,7 @@ export const startTestJwksServer = async (): Promise<TestJwksServer> => {
   const kid = 'test-key-1';
   const jwks = toJwks(kid, publicKey);
   let requests = 0;
+  let keyNumber = 1;
 
   const server: Server = http.createServer((_req, res) => {
     requests += 1;
@@ -55,6 +58,12 @@ export const startTestJwksServer = async (): Promise<TestJwksServer> => {
         expiresIn: '1h',
         ...signOptions,
       });
+    },
+    publishKey: () => {
+      const rotatedKeyPair = generateKeyPairSync('rsa', { modulusLength: 2048 });
+      const rotatedKid = `test-key-${(keyNumber += 1)}`;
+      jwks.keys.push(...toJwks(rotatedKid, rotatedKeyPair.publicKey).keys);
+      return { kid: rotatedKid, privateKey: rotatedKeyPair.privateKey };
     },
     close: () => new Promise<void>((resolve, reject) => server.close((err) => (err ? reject(err) : resolve()))),
   };

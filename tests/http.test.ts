@@ -9,7 +9,7 @@ import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/
 import { clearAuthModeForTests, getAuthMode } from '../src/auth/auth-mode';
 import { clearHttpCredentialSourceForTests, getHttpCredentialSource } from '../src/auth/http-credential-mode';
 import { resetSinchIdJwtVerifierForTests } from '../src/auth/sinchid-jwt-verifier';
-import { SINCH_PROJECT_ID_CLAIM } from '../src/auth/user-jwt';
+import { SINCH_ACCOUNT_ID_CLAIM, SINCH_GLOBAL_USER_ID_CLAIM, SINCH_PROJECT_ID_CLAIM } from '../src/auth/user-jwt';
 import { mockEnv, resetMockEnv, type MockServerEnv } from '../src/__mocks__/env';
 import { createHttpApp, main, waitForListening } from '../src/http';
 import { getSessionStoreClientForTests, resetSessionStoreClientForTests } from '../src/session-store';
@@ -612,6 +612,9 @@ describe('auth mode enforcement', () => {
         aud: AUDIENCE,
         sub: 'user-1',
         [SINCH_PROJECT_ID_CLAIM]: 'project-1',
+        [SINCH_ACCOUNT_ID_CLAIM]: 'account-1',
+        [SINCH_GLOBAL_USER_ID_CLAIM]: 'user-1',
+        scope: 'openid',
       });
       const response = await post(baseUrl, initializeBody, {
         Authorization: `Bearer ${token}`,
@@ -621,7 +624,13 @@ describe('auth mode enforcement', () => {
       expect(response.status).toBe(200);
       expect(response.headers.get('mcp-session-id')).toBeTruthy();
       expect(infoSpy).toHaveBeenCalledWith(
-        expect.objectContaining({ project_id: 'project-1' }),
+        expect.objectContaining({
+          project_id: 'project-1',
+          account_id: 'account-1',
+          global_user_id: 'user-1',
+          scope: 'openid',
+          agent_id: 'order-42',
+        }),
         'Agent user request (verified JWT claims)',
       );
     } finally {
@@ -754,7 +763,7 @@ describe('auth mode enforcement', () => {
     }
   });
 
-  test('single-tenant logs unverified JWT claims from Authorization for audit, without verification', async () => {
+  test('single-tenant ignores a JWT in Authorization and does not audit its unverified claims', async () => {
     mockEnv.PROJECT_ID = 'project-1';
     mockEnv.KEY_ID = 'key-1';
     mockEnv.KEY_SECRET = 'secret-1';
@@ -764,7 +773,7 @@ describe('auth mode enforcement', () => {
     try {
       const encodeSegment = (payload: Record<string, unknown>) =>
         Buffer.from(JSON.stringify(payload)).toString('base64url');
-      // Shape-valid but unsigned/forged: single-tenant never verifies it, only audits the claims.
+      // Shape-valid but unsigned/forged: single-tenant does not read Authorization at all.
       const unverifiedJwt = `${encodeSegment({ alg: 'RS256' })}.${encodeSegment({
         sub: 'user-1',
         [SINCH_PROJECT_ID_CLAIM]: 'project-1',
@@ -773,10 +782,7 @@ describe('auth mode enforcement', () => {
       const response = await post(baseUrl, initializeBody, { Authorization: `Bearer ${unverifiedJwt}` });
 
       expect(response.status).toBe(200);
-      expect(infoSpy).toHaveBeenCalledWith(
-        expect.objectContaining({ project_id: 'project-1' }),
-        'Agent user request (unverified JWT claims)',
-      );
+      expect(infoSpy).not.toHaveBeenCalledWith(expect.anything(), expect.stringContaining('Agent user request'));
     } finally {
       infoSpy.mockRestore();
       await close();

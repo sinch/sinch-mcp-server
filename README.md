@@ -407,7 +407,7 @@ Two deployments of the same image, each with its own `MCP_AUTH_MODE`, therefore 
 
 #### SinchID token verification (`sinchid-agent` only)
 
-Every `sinchid-agent` request's `Authorization` JWT is verified against the configured JWKS before the request is allowed through: signature (RSA, algorithm pinned to `RS256` — never taken from the token's own `alg` header), issuer, audience, expiry (a token without an `exp` claim is rejected too), and presence of the expected Sinch claims. A forged, expired, wrong-issuer/audience, or claims-less token is rejected with `401` and never reaches session creation or tool execution.
+Every `sinchid-agent` request's `Authorization` JWT is verified against the configured JWKS before the request is allowed through: signature (RSA, algorithm pinned to `RS256` — never taken from the token's own `alg` header), issuer, audience, expiry (a token without an `exp` claim is rejected too), and non-empty project, account, global-user, and scope claims. A forged, expired, wrong-issuer/audience, or incomplete token is rejected with `401` and never reaches session creation or tool execution.
 
 This requires three environment variables, all **required** in `sinchid-agent` mode — the server refuses to start without them:
 
@@ -417,7 +417,7 @@ This requires three environment variables, all **required** in `sinchid-agent` m
 | `SINCHID_JWT_AUDIENCE`   | Expected `aud` claim                                                |
 | `SINCHID_JWT_JWKS_URI`   | URL of the issuer's JWKS document (public signing keys)            |
 
-Resolved signing keys are cached (10 minutes) and refetches are rate-limited. That rate limit is shared across all key ids, so a burst of tokens carrying unknown key ids can exhaust it and delay lookup of a key that hasn't been cached yet (e.g. right after key rotation). Rather than reporting that as an invalid token, the server responds `503` when verification itself couldn't complete (JWKS unreachable or rate-limited) — only a token that was actually checked and failed gets `401`.
+The complete JWKS document is cached for 10 minutes. A token whose key id is absent can trigger at most one document refresh per 30-second cooldown; further unknown key ids are rejected with `401` without another fetch. Because published keys are cached together and there is no shared per-key lookup budget, a flood of random key ids cannot block verification for a legitimate key in the JWKS. A newly published signing key is picked up on the first refresh after the cooldown. `503` is reserved for cases where verification cannot run because the JWKS endpoint is unreachable.
 
 #### `Authorization` credentials format (HTTP only)
 
@@ -459,7 +459,7 @@ After the end-user completes the OAuth login and consent flow, agent integration
 | --------------- | ------------------- |
 | `Authorization` | `Bearer <user JWT>` |
 
-Once the token has passed verification (see [SinchID token verification](#sinchid-token-verification-sinchid-agent-only) above), the server captures the Sinch claims (`https://sinch.com/project_id`, `https://sinch.com/account_id`, `https://sinch.com/global_user_id`) and the standard `scope` claim in the request context, logging them for **audit purposes**. The claims are never used to resolve API credentials (the `x-agent-id` header serves that purpose). In single-tenant, a missing or malformed token is ignored and the request proceeds normally; in the multi-tenant modes the token must match the deployment's shape and pass verification, or the request is rejected with `401`. In the long term, the user JWT will be exchanged for an M2M JWT, replacing the custom headers.
+Once the token has passed verification (see [SinchID token verification](#sinchid-token-verification-sinchid-agent-only) above), the server captures the Sinch claims (`https://sinch.com/project_id`, `https://sinch.com/account_id`, `https://sinch.com/global_user_id`) and the standard `scope` claim in the request context, logging them for **audit purposes**. The claims are never used to resolve API credentials (the `x-agent-id` header serves that purpose). Single-tenant does not read `Authorization`; in the multi-tenant modes the token must match the deployment's shape and pass verification, or the request is rejected with `401`. In the long term, the user JWT will be exchanged for an M2M JWT, replacing the custom headers.
 
 What the `Authorization` token _is_ depends on the deployment:
 

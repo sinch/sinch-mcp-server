@@ -18,7 +18,6 @@ import {
   SERVER_CREDENTIAL_ENV_VARS,
   sinchOAuthCredentialsFromEnv,
 } from './auth/sinch-oauth-credentials';
-import { decodeUnverifiedUserJwtHeaderForSingleTenant } from './auth/user-jwt';
 import { getVerifiedUserClaims } from './auth/verified-claims';
 import { env } from './env';
 import { buildJsonRpcErrorResponse } from './json-rpc';
@@ -78,7 +77,7 @@ const buildTransport = async (): Promise<StreamableHTTPServerTransport> => {
   return transport;
 };
 
-const logUserJwtAuditTrail = (verified: boolean): void => {
+const logUserJwtAuditTrail = (): void => {
   const claims = getRequestUserClaims();
   if (!claims) {
     return;
@@ -92,7 +91,7 @@ const logUserJwtAuditTrail = (verified: boolean): void => {
       scope: claims.scope,
       agent_id: getRequestAgentId(),
     },
-    `Agent user request (${verified ? 'verified' : 'unverified'} JWT claims)`,
+    'Agent user request (verified JWT claims)',
   );
 };
 
@@ -210,17 +209,6 @@ export const createHttpApp = () => {
     setAuthMode(mode.authMode);
   }
 
-  // Single-tenant enforces no Authorization shape and registers no auth-mode middleware (see
-  // below), so there is nothing that could have verified a JWT there — fall back to decoding it
-  // unverified, for audit only, exactly as every mode used to. Multi-tenant modes only ever use
-  // claims verified by the auth-mode middleware (see verified-claims.ts); a JWT is never trusted
-  // there without passing that check first.
-  const resolveUserClaims =
-    mode.tenancy === 'single-tenant'
-      ? (req: Request) => decodeUnverifiedUserJwtHeaderForSingleTenant(req.headers.authorization)
-      : getVerifiedUserClaims;
-  const userClaimsAreVerified = mode.tenancy !== 'single-tenant';
-
   const handleMcpRequest = async (req: Request, res: Response): Promise<void> => {
     const sessionId = getSessionId(req);
     const isInitRequest = isInitializationBody(req.body);
@@ -247,8 +235,8 @@ export const createHttpApp = () => {
       res.setHeader('mcp-session-id', newSessionId);
       const transport = await buildTransport();
       res.on('close', () => void transport.close());
-      await runWithHttpCredentialHeaders(req.headers, resolveUserClaims(req), () => {
-        logUserJwtAuditTrail(userClaimsAreVerified);
+      await runWithHttpCredentialHeaders(req.headers, getVerifiedUserClaims(req), () => {
+        logUserJwtAuditTrail();
         return transport.handleRequest(req, res, req.body);
       });
       return;
@@ -291,8 +279,8 @@ export const createHttpApp = () => {
 
     const transport = await buildTransport();
     res.on('close', () => void transport.close());
-    await runWithHttpCredentialHeaders(req.headers, resolveUserClaims(req), () => {
-      logUserJwtAuditTrail(userClaimsAreVerified);
+    await runWithHttpCredentialHeaders(req.headers, getVerifiedUserClaims(req), () => {
+      logUserJwtAuditTrail();
       return transport.handleRequest(req, res, req.body);
     });
   };

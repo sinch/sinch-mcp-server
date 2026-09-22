@@ -1,12 +1,19 @@
 import jwt, { type Algorithm, type JwtPayload } from 'jsonwebtoken';
-import { JwksClient } from 'jwks-rsa';
+import { JwksClient, SigningKeyNotFoundError } from 'jwks-rsa';
 import { env } from '../env';
 
 // Pinned, not env-configurable: the token's own `alg` header must never decide which algorithm
 // (or key type) verification uses — that is exactly the "alg confusion" class of attack.
 const ALLOWED_ALGORITHMS: Algorithm[] = ['RS256'];
+const JWKS_CACHE_MAX_AGE_MS = 10 * 60 * 1000;
+const JWKS_REFRESH_COOLDOWN_MS = 30 * 1000;
+
+type SigningKey = Awaited<ReturnType<JwksClient['getSigningKeys']>>[number];
+type SigningKeyCache = { keys: SigningKey[]; refreshedAt: number };
 
 let client: JwksClient | undefined;
+let signingKeyCache: SigningKeyCache | undefined;
+let refreshPromise: Promise<SigningKeyCache> | undefined;
 
 const getClient = (): JwksClient => {
   if (!client) {
@@ -15,18 +22,61 @@ const getClient = (): JwksClient => {
     }
     client = new JwksClient({
       jwksUri: env.SINCHID_JWT_JWKS_URI,
-      cache: true,
-      cacheMaxAge: 10 * 60 * 1000, // how long a resolved signing key is reused before refetching
-      rateLimit: true,
-      jwksRequestsPerMinute: 10, // cooldown: caps refetches even under repeated cache misses
+      // Cache the complete document below. Per-kid caching plus a shared request-rate budget lets
+      // random kids exhaust the budget and block a legitimate key that has not been cached yet.
+      cache: false,
+      rateLimit: false,
     });
   }
   return client;
 };
 
+const refreshSigningKeys = async (): Promise<SigningKeyCache> => {
+  if (!refreshPromise) {
+    refreshPromise = getClient()
+      .getSigningKeys()
+      .then((keys) => {
+        signingKeyCache = { keys, refreshedAt: Date.now() };
+        return signingKeyCache;
+      })
+      .finally(() => {
+        refreshPromise = undefined;
+      });
+  }
+  return refreshPromise;
+};
+
+const findSigningKey = (keys: SigningKey[], kid: string): SigningKey | undefined => keys.find((key) => key.kid === kid);
+
+const getSigningKey = async (kid: string): Promise<SigningKey> => {
+  let cache = signingKeyCache;
+  if (!cache || Date.now() - cache.refreshedAt >= JWKS_CACHE_MAX_AGE_MS) {
+    cache = await refreshSigningKeys();
+  }
+
+  let signingKey = findSigningKey(cache.keys, kid);
+  if (signingKey) {
+    return signingKey;
+  }
+
+  // An unknown kid can prompt one complete-document refresh per cooldown. Junk kids therefore
+  // cannot consume a shared lookup budget, while a newly published key is picked up promptly.
+  if (Date.now() - cache.refreshedAt >= JWKS_REFRESH_COOLDOWN_MS) {
+    cache = await refreshSigningKeys();
+    signingKey = findSigningKey(cache.keys, kid);
+    if (signingKey) {
+      return signingKey;
+    }
+  }
+
+  throw new SigningKeyNotFoundError(`Unable to find a signing key that matches '${kid}'`);
+};
+
 /** Exposed for unit tests, which point SINCHID_JWT_JWKS_URI at a per-test fake JWKS server. */
 export const resetSinchIdJwtVerifierForTests = (): void => {
   client = undefined;
+  signingKeyCache = undefined;
+  refreshPromise = undefined;
 };
 
 /**
@@ -41,7 +91,7 @@ export const verifySinchIdAccessToken = async (token: string): Promise<JwtPayloa
     throw new jwt.JsonWebTokenError('Token header is missing a key id (kid)');
   }
 
-  const signingKey = await getClient().getSigningKey(decoded.header.kid);
+  const signingKey = await getSigningKey(decoded.header.kid);
   const publicKey = signingKey.getPublicKey();
 
   const verified = jwt.verify(token, publicKey, {

@@ -82,6 +82,16 @@ describe('verifySinchIdAccessToken', () => {
     await expect(verifySinchIdAccessToken(unsignedToken)).rejects.toThrow();
   });
 
+  it('rejects an HMAC-signed token even when it names a published RSA key', async () => {
+    const token = jwt.sign({ iss: ISSUER, aud: AUDIENCE, sub: 'user-1' }, 'attacker-controlled-secret', {
+      algorithm: 'HS256',
+      keyid: server.kid,
+      expiresIn: '1h',
+    });
+
+    await expect(verifySinchIdAccessToken(token)).rejects.toThrow(/algorithm/i);
+  });
+
   it('caches the resolved signing key across verifications sharing the same kid', async () => {
     const first = server.sign({ iss: ISSUER, aud: AUDIENCE, sub: 'user-1' });
     const second = server.sign({ iss: ISSUER, aud: AUDIENCE, sub: 'user-2' });
@@ -91,5 +101,71 @@ describe('verifySinchIdAccessToken', () => {
     await verifySinchIdAccessToken(second);
 
     expect(server.requestCount() - requestsBefore).toBe(1);
+  });
+
+  it('does not let a flood of unknown kids block a key published in the cached JWKS', async () => {
+    const unknownKey = generateUnpublishedKeyPair();
+    const requestsBefore = server.requestCount();
+
+    for (let index = 0; index < 12; index += 1) {
+      const token = server.sign(
+        { iss: ISSUER, aud: AUDIENCE, sub: `attacker-${index}` },
+        { privateKey: unknownKey, keyid: `unknown-${index}` },
+      );
+      await expect(verifySinchIdAccessToken(token)).rejects.toThrow(/signing key/i);
+    }
+
+    const validToken = server.sign({ iss: ISSUER, aud: AUDIENCE, sub: 'legitimate-user' });
+    await expect(verifySinchIdAccessToken(validToken)).resolves.toMatchObject({ sub: 'legitimate-user' });
+    expect(server.requestCount() - requestsBefore).toBe(1);
+  });
+
+  it('allows only one unknown-kid refresh per cooldown window', async () => {
+    const now = jest.spyOn(Date, 'now').mockReturnValue(1_000_000);
+    const unknownKey = generateUnpublishedKeyPair();
+
+    try {
+      const validToken = server.sign({ iss: ISSUER, aud: AUDIENCE, sub: 'legitimate-user' });
+      await verifySinchIdAccessToken(validToken);
+      const requestsAfterWarmup = server.requestCount();
+
+      now.mockReturnValue(1_031_000);
+      const firstUnknown = server.sign(
+        { iss: ISSUER, aud: AUDIENCE, sub: 'attacker-1' },
+        { privateKey: unknownKey, keyid: 'unknown-after-cooldown-1' },
+      );
+      await expect(verifySinchIdAccessToken(firstUnknown)).rejects.toThrow(/signing key/i);
+
+      const secondUnknown = server.sign(
+        { iss: ISSUER, aud: AUDIENCE, sub: 'attacker-2' },
+        { privateKey: unknownKey, keyid: 'unknown-after-cooldown-2' },
+      );
+      await expect(verifySinchIdAccessToken(secondUnknown)).rejects.toThrow(/signing key/i);
+
+      expect(server.requestCount() - requestsAfterWarmup).toBe(1);
+    } finally {
+      now.mockRestore();
+    }
+  });
+
+  it('picks up a newly published signing key on the first refresh after the cooldown', async () => {
+    const now = jest.spyOn(Date, 'now').mockReturnValue(2_000_000);
+
+    try {
+      await verifySinchIdAccessToken(server.sign({ iss: ISSUER, aud: AUDIENCE, sub: 'before-rotation' }));
+      const requestsAfterWarmup = server.requestCount();
+      const rotatedKey = server.publishKey();
+      const rotatedToken = server.sign(
+        { iss: ISSUER, aud: AUDIENCE, sub: 'after-rotation' },
+        { privateKey: rotatedKey.privateKey, keyid: rotatedKey.kid },
+      );
+
+      now.mockReturnValue(2_031_000);
+
+      await expect(verifySinchIdAccessToken(rotatedToken)).resolves.toMatchObject({ sub: 'after-rotation' });
+      expect(server.requestCount() - requestsAfterWarmup).toBe(1);
+    } finally {
+      now.mockRestore();
+    }
   });
 });

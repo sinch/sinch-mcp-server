@@ -1,5 +1,3 @@
-import { extractBearerToken } from './bearer-token';
-
 /**
  * Sinch-namespaced claims carried by the Auth0 user JWT that agent
  * integrations (e.g. an agent installed in a Gemini Enterprise app) send in
@@ -46,12 +44,6 @@ const decodeJwtPayloadShape = (token: string): Record<string, unknown> | undefin
  */
 export const isJwtShapedToken = (token: string): boolean => decodeJwtPayloadShape(token) !== undefined;
 
-/** Same as `isJwtShapedToken`, extracting the Bearer token from the raw header first. */
-export const isJwtShapedBearerToken = (authorizationHeader: string | string[] | undefined): boolean => {
-  const token = extractBearerToken(authorizationHeader);
-  return token !== undefined && isJwtShapedToken(token);
-};
-
 const stringClaim = (payload: Record<string, unknown>, claim: string): string | undefined => {
   const value = payload[claim];
   return typeof value === 'string' && value.trim() ? value : undefined;
@@ -60,8 +52,8 @@ const stringClaim = (payload: Record<string, unknown>, claim: string): string | 
 /**
  * Maps the Sinch user claims out of an already-verified JWT payload (signature, issuer,
  * audience and expiry must have been checked by the caller — see
- * `sinchid-jwt-verifier.ts`). Returns undefined when the payload carries none of the
- * expected claims (nothing useful to audit).
+ * `sinchid-jwt-verifier.ts`). Returns undefined unless the payload contains the complete audit
+ * identity required by the SinchID agent contract: project, account, global user, and scope.
  */
 export const mapSinchUserClaims = (payload: Record<string, unknown>): SinchUserClaims | undefined => {
   const claims: SinchUserClaims = {
@@ -73,27 +65,6 @@ export const mapSinchUserClaims = (payload: Record<string, unknown>): SinchUserC
     scope: stringClaim(payload, 'scope'),
   };
 
-  const hasAnyClaim = Object.values(claims).some((value) => value !== undefined);
-  return hasAnyClaim ? claims : undefined;
-};
-
-/**
- * Decodes the Sinch claims from a Bearer JWT in Authorization WITHOUT verifying its signature,
- * issuer, or expiry — self-reported, audit only.
- *
- * Single-tenant only: that mode authenticates no caller at all (every request runs on the
- * account from PROJECT_ID/KEY_ID/KEY_SECRET regardless of any header), so a forwarded JWT is
- * decoded only to log who it claims to be, never to authorize anything. Multi-tenant modes must
- * use `getVerifiedUserClaims` instead and must never call this.
- */
-export const decodeUnverifiedUserJwtHeaderForSingleTenant = (
-  authorizationHeader: string | string[] | undefined,
-): SinchUserClaims | undefined => {
-  const token = extractBearerToken(authorizationHeader);
-  if (!token) {
-    return undefined;
-  }
-
-  const payload = decodeJwtPayloadShape(token);
-  return payload ? mapSinchUserClaims(payload) : undefined;
+  const hasRequiredClaims = Boolean(claims.projectId && claims.accountId && claims.globalUserId && claims.scope);
+  return hasRequiredClaims ? claims : undefined;
 };
