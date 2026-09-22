@@ -23,6 +23,8 @@ export type TestJwksServer = {
   removeKey: (kid: string) => void;
   /** Makes JWKS requests succeed or fail, simulating a transient issuer outage. */
   setAvailable: (available: boolean) => void;
+  /** Delays JWKS responses, allowing request-timeout behaviour to be tested. */
+  setResponseDelay: (delayMs: number) => void;
   close: () => Promise<void>;
 };
 
@@ -37,16 +39,26 @@ export const startTestJwksServer = async (): Promise<TestJwksServer> => {
   let requests = 0;
   let keyNumber = 1;
   let available = true;
+  let responseDelayMs = 0;
 
   const server: Server = http.createServer((_req, res) => {
     requests += 1;
-    if (!available) {
-      res.statusCode = 503;
-      res.end('temporarily unavailable');
+    const respond = () => {
+      if (!available) {
+        res.statusCode = 503;
+        res.end('temporarily unavailable');
+        return;
+      }
+      res.setHeader('Content-Type', 'application/json');
+      res.end(JSON.stringify(jwks));
+    };
+    if (responseDelayMs === 0) {
+      respond();
       return;
     }
-    res.setHeader('Content-Type', 'application/json');
-    res.end(JSON.stringify(jwks));
+    const timer = setTimeout(respond, responseDelayMs);
+    timer.unref();
+    res.once('close', () => clearTimeout(timer));
   });
 
   await new Promise<void>((resolve, reject) => {
@@ -80,6 +92,9 @@ export const startTestJwksServer = async (): Promise<TestJwksServer> => {
     },
     setAvailable: (nextAvailable) => {
       available = nextAvailable;
+    },
+    setResponseDelay: (nextDelayMs) => {
+      responseDelayMs = nextDelayMs;
     },
     close: () => new Promise<void>((resolve, reject) => server.close((err) => (err ? reject(err) : resolve()))),
   };

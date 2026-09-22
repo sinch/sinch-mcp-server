@@ -21,6 +21,7 @@ describe('verifySinchIdAccessToken', () => {
     resetMockEnv();
     resetSinchIdJwtVerifierForTests();
     server.setAvailable(true);
+    server.setResponseDelay(0);
     mockEnv.SINCHID_JWT_ISSUER = ISSUER;
     mockEnv.SINCHID_JWT_AUDIENCE = AUDIENCE;
     mockEnv.SINCHID_JWT_JWKS_URI = server.url;
@@ -92,6 +93,32 @@ describe('verifySinchIdAccessToken', () => {
 
     await expect(verifySinchIdAccessToken(token)).rejects.toThrow(/algorithm/i);
   });
+
+  it('times out one concurrent JWKS fetch and reuses the failure during cooldown', async () => {
+    server.setResponseDelay(6_000);
+    const token = server.sign({ iss: ISSUER, aud: AUDIENCE, sub: 'timeout-user' });
+    const requestsBefore = server.requestCount();
+    const startedAt = Date.now();
+
+    try {
+      const results = await Promise.allSettled([
+        verifySinchIdAccessToken(token),
+        verifySinchIdAccessToken(token),
+        verifySinchIdAccessToken(token),
+      ]);
+      const elapsedMs = Date.now() - startedAt;
+
+      expect(results.every(({ status }) => status === 'rejected')).toBeTrue();
+      expect(elapsedMs).toBeGreaterThanOrEqual(2_500);
+      expect(elapsedMs).toBeLessThan(5_500);
+      expect(server.requestCount() - requestsBefore).toBe(1);
+
+      await expect(verifySinchIdAccessToken(token)).rejects.toThrow();
+      expect(server.requestCount() - requestsBefore).toBe(1);
+    } finally {
+      server.setResponseDelay(0);
+    }
+  }, 8_000);
 
   it('caches the resolved signing key across verifications sharing the same kid', async () => {
     const first = server.sign({ iss: ISSUER, aud: AUDIENCE, sub: 'user-1' });

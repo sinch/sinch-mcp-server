@@ -154,6 +154,7 @@ describe('createAuthModeMiddleware', () => {
     beforeEach(() => {
       resetSinchIdJwtVerifierForTests();
       server.setAvailable(true);
+      server.setResponseDelay(0);
       mockEnv.SINCHID_JWT_ISSUER = ISSUER;
       mockEnv.SINCHID_JWT_AUDIENCE = AUDIENCE;
       mockEnv.SINCHID_JWT_JWKS_URI = server.url;
@@ -244,6 +245,7 @@ describe('createAuthModeMiddleware', () => {
 
     it('identifies malformed required claims without echoing their values', async () => {
       const secretCanary = 'must-not-appear';
+      const warnSpy = jest.spyOn(logger, 'warn').mockImplementation(() => undefined);
       const token = server.sign({
         iss: ISSUER,
         aud: AUDIENCE,
@@ -251,19 +253,34 @@ describe('createAuthModeMiddleware', () => {
         [SINCH_ACCOUNT_ID_CLAIM]: { secretCanary },
         scope: '   ',
       });
-      const { res, next } = await run('sinchid-agent', {
-        authorization: `Bearer ${token}`,
-        [AGENT_ID_HEADER]: 'order-42',
-      });
 
-      expect(next).not.toHaveBeenCalled();
-      expect(res.statusCode).toBe(401);
-      expect(res.body).toEqual({
-        error: 'invalid_token',
-        error_description:
-          'SinchID access token has invalid required claims: account_id (must be a non-empty string); scope (must be a non-empty string)',
-      });
-      expect(JSON.stringify(res.body)).not.toContain(secretCanary);
+      try {
+        const { res, next } = await run('sinchid-agent', {
+          authorization: `Bearer ${token}`,
+          [AGENT_ID_HEADER]: 'order-42',
+        });
+
+        expect(next).not.toHaveBeenCalled();
+        expect(res.statusCode).toBe(401);
+        expect(res.body).toEqual({
+          error: 'invalid_token',
+          error_description:
+            'SinchID access token has invalid required claims: account_id (must be a non-empty string); scope (must be a non-empty string)',
+        });
+        expect(warnSpy).toHaveBeenCalledWith(
+          {
+            agent_id: 'order-42',
+            claim_issues: [
+              { claim: 'account_id', code: 'not_string' },
+              { claim: 'scope', code: 'blank' },
+            ],
+          },
+          'SinchID access token has invalid required claims',
+        );
+        expect(JSON.stringify({ body: res.body, logs: warnSpy.mock.calls })).not.toContain(secretCanary);
+      } finally {
+        warnSpy.mockRestore();
+      }
     });
 
     it('returns 503, not 401, when the JWKS endpoint cannot be reached', async () => {

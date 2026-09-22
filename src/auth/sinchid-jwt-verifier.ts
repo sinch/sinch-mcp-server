@@ -5,6 +5,7 @@ import { env } from '../env';
 // Pinned, not env-configurable: the token's own `alg` header must never decide which algorithm
 // (or key type) verification uses — that is exactly the "alg confusion" class of attack.
 const ALLOWED_ALGORITHMS: Algorithm[] = ['RS256'];
+const JWKS_REQUEST_TIMEOUT_MS = 3 * 1000;
 const JWKS_REFRESH_INTERVAL_MS = 10 * 60 * 1000;
 const JWKS_REFRESH_COOLDOWN_MS = 30 * 1000;
 const JWKS_STALE_MAX_AGE_MS = 60 * 60 * 1000;
@@ -25,6 +26,7 @@ const getClient = (): JwksClient => {
     }
     client = new JwksClient({
       jwksUri: env.SINCHID_JWT_JWKS_URI,
+      timeout: JWKS_REQUEST_TIMEOUT_MS,
       // Cache the complete document below. Per-kid caching plus a shared request-rate budget lets
       // random kids exhaust the budget and block a legitimate key that has not been cached yet.
       cache: false,

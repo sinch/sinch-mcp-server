@@ -134,6 +134,10 @@ const checkSinchidAgent = async (req: Request): Promise<AuthShapeCheck> => {
     const issues = claimsResult.issues
       .map(({ claim, code }) => `${claim} (${code === 'missing' ? 'missing' : 'must be a non-empty string'})`)
       .join('; ');
+    logger.warn(
+      { agent_id: agentId, claim_issues: claimsResult.issues },
+      'SinchID access token has invalid required claims',
+    );
     return {
       ok: false,
       kind: 'invalid',
