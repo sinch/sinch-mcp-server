@@ -19,6 +19,10 @@ export type TestJwksServer = {
   sign: (payload: Record<string, unknown>, options?: SignOptions & { privateKey?: KeyObject }) => string;
   /** Publishes an additional signing key, simulating issuer key rotation. */
   publishKey: () => { kid: string; privateKey: KeyObject };
+  /** Removes a published key, simulating completed rotation or revocation. */
+  removeKey: (kid: string) => void;
+  /** Makes JWKS requests succeed or fail, simulating a transient issuer outage. */
+  setAvailable: (available: boolean) => void;
   close: () => Promise<void>;
 };
 
@@ -32,9 +36,15 @@ export const startTestJwksServer = async (): Promise<TestJwksServer> => {
   const jwks = toJwks(kid, publicKey);
   let requests = 0;
   let keyNumber = 1;
+  let available = true;
 
   const server: Server = http.createServer((_req, res) => {
     requests += 1;
+    if (!available) {
+      res.statusCode = 503;
+      res.end('temporarily unavailable');
+      return;
+    }
     res.setHeader('Content-Type', 'application/json');
     res.end(JSON.stringify(jwks));
   });
@@ -64,6 +74,12 @@ export const startTestJwksServer = async (): Promise<TestJwksServer> => {
       const rotatedKid = `test-key-${(keyNumber += 1)}`;
       jwks.keys.push(...toJwks(rotatedKid, rotatedKeyPair.publicKey).keys);
       return { kid: rotatedKid, privateKey: rotatedKeyPair.privateKey };
+    },
+    removeKey: (removedKid) => {
+      jwks.keys = jwks.keys.filter(({ kid: publishedKid }) => publishedKid !== removedKid);
+    },
+    setAvailable: (nextAvailable) => {
+      available = nextAvailable;
     },
     close: () => new Promise<void>((resolve, reject) => server.close((err) => (err ? reject(err) : resolve()))),
   };

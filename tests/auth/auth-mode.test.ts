@@ -153,6 +153,7 @@ describe('createAuthModeMiddleware', () => {
 
     beforeEach(() => {
       resetSinchIdJwtVerifierForTests();
+      server.setAvailable(true);
       mockEnv.SINCHID_JWT_ISSUER = ISSUER;
       mockEnv.SINCHID_JWT_AUDIENCE = AUDIENCE;
       mockEnv.SINCHID_JWT_JWKS_URI = server.url;
@@ -220,7 +221,8 @@ describe('createAuthModeMiddleware', () => {
       expect(res.statusCode).toBe(401);
       expect(res.body).toEqual({
         error: 'invalid_token',
-        error_description: 'SinchID access token is missing the expected Sinch claims',
+        error_description:
+          'SinchID access token has invalid required claims: project_id (missing); account_id (missing); global_user_id (missing); scope (missing)',
       });
     });
 
@@ -235,8 +237,33 @@ describe('createAuthModeMiddleware', () => {
       expect(res.statusCode).toBe(401);
       expect(res.body).toEqual({
         error: 'invalid_token',
-        error_description: 'SinchID access token is missing the expected Sinch claims',
+        error_description:
+          'SinchID access token has invalid required claims: project_id (missing); account_id (missing); global_user_id (missing)',
       });
+    });
+
+    it('identifies malformed required claims without echoing their values', async () => {
+      const secretCanary = 'must-not-appear';
+      const token = server.sign({
+        iss: ISSUER,
+        aud: AUDIENCE,
+        ...REQUIRED_SINCH_CLAIMS,
+        [SINCH_ACCOUNT_ID_CLAIM]: { secretCanary },
+        scope: '   ',
+      });
+      const { res, next } = await run('sinchid-agent', {
+        authorization: `Bearer ${token}`,
+        [AGENT_ID_HEADER]: 'order-42',
+      });
+
+      expect(next).not.toHaveBeenCalled();
+      expect(res.statusCode).toBe(401);
+      expect(res.body).toEqual({
+        error: 'invalid_token',
+        error_description:
+          'SinchID access token has invalid required claims: account_id (must be a non-empty string); scope (must be a non-empty string)',
+      });
+      expect(JSON.stringify(res.body)).not.toContain(secretCanary);
     });
 
     it('returns 503, not 401, when the JWKS endpoint cannot be reached', async () => {
@@ -259,11 +286,53 @@ describe('createAuthModeMiddleware', () => {
         expect(res.statusCode).toBe(503);
         expect(res.headers['Retry-After']).toBe('2');
         expect(warnSpy).toHaveBeenCalledWith(
-          expect.objectContaining({ err: expect.objectContaining({ message: expect.any(String) }) }),
+          expect.objectContaining({
+            err: expect.objectContaining({ message: expect.any(String) }),
+            agent_id: 'order-42',
+          }),
           'Could not verify the SinchID access token: the signing-key service is unavailable',
         );
       } finally {
         warnSpy.mockRestore();
+      }
+    });
+
+    it('keeps returning 503 without refetching during cooldown after a failed unknown-key refresh', async () => {
+      const now = jest.spyOn(Date, 'now').mockReturnValue(20_000_000);
+      const warnSpy = jest.spyOn(logger, 'warn').mockImplementation(() => undefined);
+
+      try {
+        const validToken = server.sign({ iss: ISSUER, aud: AUDIENCE, ...REQUIRED_SINCH_CLAIMS });
+        await run('sinchid-agent', {
+          authorization: `Bearer ${validToken}`,
+          [AGENT_ID_HEADER]: 'order-42',
+        });
+        const requestsAfterWarmup = server.requestCount();
+
+        server.setAvailable(false);
+        now.mockReturnValue(20_031_000);
+        const unknownKey = generateUnpublishedKeyPair();
+        const unknownToken = server.sign(
+          { iss: ISSUER, aud: AUDIENCE, ...REQUIRED_SINCH_CLAIMS },
+          { privateKey: unknownKey, keyid: 'rotated-during-outage' },
+        );
+        const headers = {
+          authorization: `Bearer ${unknownToken}`,
+          [AGENT_ID_HEADER]: 'order-42',
+        };
+
+        const first = await run('sinchid-agent', headers);
+        const second = await run('sinchid-agent', headers);
+
+        expect(first.res.statusCode).toBe(503);
+        expect(second.res.statusCode).toBe(503);
+        expect(first.res.headers['Retry-After']).toBe('2');
+        expect(second.res.headers['Retry-After']).toBe('2');
+        expect(server.requestCount() - requestsAfterWarmup).toBe(1);
+      } finally {
+        server.setAvailable(true);
+        warnSpy.mockRestore();
+        now.mockRestore();
       }
     });
 

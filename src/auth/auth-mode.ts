@@ -5,7 +5,7 @@ import { AGENT_ID_HEADER } from './credential-context';
 import { buildBearerWwwAuthenticateHeader, extractBearerToken } from './bearer-token';
 import { parseSinchCredentialsAuthorizationHeader } from './sinch-oauth-credentials';
 import { verifySinchIdAccessToken } from './sinchid-jwt-verifier';
-import { isJwtShapedToken, mapSinchUserClaims } from './user-jwt';
+import { isJwtShapedToken, parseSinchUserClaims } from './user-jwt';
 import { setVerifiedUserClaims } from './verified-claims';
 import { logger } from '../telemetry/logger';
 import { extractHeaderValue } from '../utils';
@@ -96,7 +96,8 @@ const checkSinchidAgent = async (req: Request): Promise<AuthShapeCheck> => {
     };
   }
 
-  if (extractHeaderValue(req.headers[AGENT_ID_HEADER]) === undefined) {
+  const agentId = extractHeaderValue(req.headers[AGENT_ID_HEADER]);
+  if (agentId === undefined) {
     return {
       ok: false,
       kind: 'invalid',
@@ -117,7 +118,10 @@ const checkSinchidAgent = async (req: Request): Promise<AuthShapeCheck> => {
         reason: 'SinchID access token failed verification (invalid signature, issuer, audience, or expiry)',
       };
     }
-    logger.warn({ err: error }, 'Could not verify the SinchID access token: the signing-key service is unavailable');
+    logger.warn(
+      { err: error, agent_id: agentId },
+      'Could not verify the SinchID access token: the signing-key service is unavailable',
+    );
     return {
       ok: false,
       kind: 'unavailable',
@@ -125,16 +129,19 @@ const checkSinchidAgent = async (req: Request): Promise<AuthShapeCheck> => {
     };
   }
 
-  const claims = mapSinchUserClaims(payload);
-  if (!claims) {
+  const claimsResult = parseSinchUserClaims(payload);
+  if (!claimsResult.ok) {
+    const issues = claimsResult.issues
+      .map(({ claim, code }) => `${claim} (${code === 'missing' ? 'missing' : 'must be a non-empty string'})`)
+      .join('; ');
     return {
       ok: false,
       kind: 'invalid',
-      reason: 'SinchID access token is missing the expected Sinch claims',
+      reason: `SinchID access token has invalid required claims: ${issues}`,
     };
   }
 
-  setVerifiedUserClaims(req, claims);
+  setVerifiedUserClaims(req, claimsResult.claims);
   return OK;
 };
 

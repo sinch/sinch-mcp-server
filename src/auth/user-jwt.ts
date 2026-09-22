@@ -17,6 +17,22 @@ export type SinchUserClaims = {
   scope?: string;
 };
 
+export type RequiredSinchUserClaim = 'project_id' | 'account_id' | 'global_user_id' | 'scope';
+export type SinchUserClaimIssue = {
+  claim: RequiredSinchUserClaim;
+  code: 'missing' | 'not_string' | 'blank';
+};
+
+export type RequiredSinchUserClaims = SinchUserClaims & {
+  projectId: string;
+  accountId: string;
+  globalUserId: string;
+  scope: string;
+};
+
+export type SinchUserClaimsParseResult =
+  { ok: true; claims: RequiredSinchUserClaims } | { ok: false; issues: SinchUserClaimIssue[] };
+
 const decodeJwtPayloadShape = (token: string): Record<string, unknown> | undefined => {
   const segments = token.split('.');
   if (segments.length !== 3) {
@@ -45,26 +61,55 @@ const decodeJwtPayloadShape = (token: string): Record<string, unknown> | undefin
 export const isJwtShapedToken = (token: string): boolean => decodeJwtPayloadShape(token) !== undefined;
 
 const stringClaim = (payload: Record<string, unknown>, claim: string): string | undefined => {
+  if (!Object.hasOwn(payload, claim)) {
+    return undefined;
+  }
   const value = payload[claim];
   return typeof value === 'string' && value.trim() ? value : undefined;
 };
 
-/**
- * Maps the Sinch user claims out of an already-verified JWT payload (signature, issuer,
- * audience and expiry must have been checked by the caller — see
- * `sinchid-jwt-verifier.ts`). Returns undefined unless the payload contains the complete audit
- * identity required by the SinchID agent contract: project, account, global user, and scope.
- */
-export const mapSinchUserClaims = (payload: Record<string, unknown>): SinchUserClaims | undefined => {
-  const claims: SinchUserClaims = {
-    projectId: stringClaim(payload, SINCH_PROJECT_ID_CLAIM),
-    accountId: stringClaim(payload, SINCH_ACCOUNT_ID_CLAIM),
-    email: stringClaim(payload, SINCH_EMAIL_CLAIM),
-    globalUserId: stringClaim(payload, SINCH_GLOBAL_USER_ID_CLAIM),
-    subject: stringClaim(payload, 'sub'),
-    scope: stringClaim(payload, 'scope'),
-  };
+const requiredClaimIssue = (
+  payload: Record<string, unknown>,
+  claim: string,
+  publicName: RequiredSinchUserClaim,
+): SinchUserClaimIssue | undefined => {
+  if (!Object.hasOwn(payload, claim)) {
+    return { claim: publicName, code: 'missing' };
+  }
+  const value = payload[claim];
+  if (typeof value !== 'string') {
+    return { claim: publicName, code: 'not_string' };
+  }
+  return value.trim() ? undefined : { claim: publicName, code: 'blank' };
+};
 
-  const hasRequiredClaims = Boolean(claims.projectId && claims.accountId && claims.globalUserId && claims.scope);
-  return hasRequiredClaims ? claims : undefined;
+/**
+ * Parses the Sinch user claims out of an already-verified JWT payload (signature, issuer,
+ * audience and expiry must have been checked by the caller — see `sinchid-jwt-verifier.ts`).
+ * Invalid, blank, and absent required claims are reported by their public claim names without
+ * exposing any token values.
+ */
+export const parseSinchUserClaims = (payload: Record<string, unknown>): SinchUserClaimsParseResult => {
+  const issues = [
+    requiredClaimIssue(payload, SINCH_PROJECT_ID_CLAIM, 'project_id'),
+    requiredClaimIssue(payload, SINCH_ACCOUNT_ID_CLAIM, 'account_id'),
+    requiredClaimIssue(payload, SINCH_GLOBAL_USER_ID_CLAIM, 'global_user_id'),
+    requiredClaimIssue(payload, 'scope', 'scope'),
+  ].filter((issue): issue is SinchUserClaimIssue => issue !== undefined);
+
+  if (issues.length > 0) {
+    return { ok: false, issues };
+  }
+
+  return {
+    ok: true,
+    claims: {
+      projectId: payload[SINCH_PROJECT_ID_CLAIM] as string,
+      accountId: payload[SINCH_ACCOUNT_ID_CLAIM] as string,
+      email: stringClaim(payload, SINCH_EMAIL_CLAIM),
+      globalUserId: payload[SINCH_GLOBAL_USER_ID_CLAIM] as string,
+      subject: stringClaim(payload, 'sub'),
+      scope: payload.scope as string,
+    },
+  };
 };

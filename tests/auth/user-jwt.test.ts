@@ -1,6 +1,6 @@
 import {
   isJwtShapedToken,
-  mapSinchUserClaims,
+  parseSinchUserClaims,
   SINCH_ACCOUNT_ID_CLAIM,
   SINCH_EMAIL_CLAIM,
   SINCH_GLOBAL_USER_ID_CLAIM,
@@ -32,6 +32,11 @@ const examplePayload = {
   azp: 'mock-client-id',
 };
 
+const parsedClaims = (payload: Record<string, unknown>) => {
+  const result = parseSinchUserClaims(payload);
+  return result.ok ? result.claims : undefined;
+};
+
 describe('user-jwt', () => {
   describe('isJwtShapedToken', () => {
     it('is true for a well-formed three-segment JWT', () => {
@@ -58,9 +63,9 @@ describe('user-jwt', () => {
     });
   });
 
-  describe('mapSinchUserClaims', () => {
+  describe('parseSinchUserClaims', () => {
     it('maps the Sinch claims from an (already verified) payload', () => {
-      expect(mapSinchUserClaims(examplePayload)).toEqual({
+      expect(parsedClaims(examplePayload)).toEqual({
         projectId: 'mock-project-id',
         accountId: 'mock-account-id',
         email: 'mock-user@example.com',
@@ -70,15 +75,20 @@ describe('user-jwt', () => {
       });
     });
 
-    it.each([SINCH_PROJECT_ID_CLAIM, SINCH_ACCOUNT_ID_CLAIM, SINCH_GLOBAL_USER_ID_CLAIM, 'scope'])(
-      'returns undefined when required claim %s is missing',
-      (claim) => {
-        const incompletePayload: Record<string, unknown> = { ...examplePayload };
-        delete incompletePayload[claim];
+    it.each([
+      [SINCH_PROJECT_ID_CLAIM, 'project_id'],
+      [SINCH_ACCOUNT_ID_CLAIM, 'account_id'],
+      [SINCH_GLOBAL_USER_ID_CLAIM, 'global_user_id'],
+      ['scope', 'scope'],
+    ] as const)('reports required claim %s when it is missing', (claim, publicName) => {
+      const incompletePayload: Record<string, unknown> = { ...examplePayload };
+      delete incompletePayload[claim];
 
-        expect(mapSinchUserClaims(incompletePayload)).toBeUndefined();
-      },
-    );
+      expect(parseSinchUserClaims(incompletePayload)).toEqual({
+        ok: false,
+        issues: [{ claim: publicName, code: 'missing' }],
+      });
+    });
 
     it('rejects empty, whitespace, or non-string values for every required claim', () => {
       const requiredClaims = [SINCH_PROJECT_ID_CLAIM, SINCH_ACCOUNT_ID_CLAIM, SINCH_GLOBAL_USER_ID_CLAIM, 'scope'];
@@ -86,21 +96,47 @@ describe('user-jwt', () => {
 
       for (const claim of requiredClaims) {
         for (const invalidValue of invalidValues) {
-          expect(mapSinchUserClaims({ ...examplePayload, [claim]: invalidValue })).toBeUndefined();
+          const publicName = claim === 'scope' ? 'scope' : claim.match(/[^/]+$/)?.[0];
+          expect(parseSinchUserClaims({ ...examplePayload, [claim]: invalidValue })).toEqual({
+            ok: false,
+            issues: [
+              {
+                claim: publicName,
+                code: typeof invalidValue === 'string' ? 'blank' : 'not_string',
+              },
+            ],
+          });
         }
       }
     });
 
+    it('does not accept inherited properties as required claims', () => {
+      const inheritedProject = Object.create({ [SINCH_PROJECT_ID_CLAIM]: 'inherited-project' }) as Record<
+        string,
+        unknown
+      >;
+      Object.assign(inheritedProject, {
+        [SINCH_ACCOUNT_ID_CLAIM]: 'account-1',
+        [SINCH_GLOBAL_USER_ID_CLAIM]: 'user-1',
+        scope: 'openid',
+      });
+
+      expect(parseSinchUserClaims(inheritedProject)).toEqual({
+        ok: false,
+        issues: [{ claim: 'project_id', code: 'missing' }],
+      });
+    });
+
     it('does not accept standard claims without a Sinch audit identity', () => {
-      expect(mapSinchUserClaims({ email: 'user@example.com', sub: 'auth0|123', scope: 'openid' })).toBeUndefined();
+      expect(parsedClaims({ email: 'user@example.com', sub: 'auth0|123', scope: 'openid' })).toBeUndefined();
     });
 
     it('returns undefined when the payload carries none of the expected claims', () => {
-      expect(mapSinchUserClaims({ iss: 'https://id.sinch.com/' })).toBeUndefined();
+      expect(parsedClaims({ iss: 'https://id.sinch.com/' })).toBeUndefined();
     });
 
     it('ignores non-string claim values', () => {
-      const claims = mapSinchUserClaims({
+      const claims = parsedClaims({
         [SINCH_PROJECT_ID_CLAIM]: 'project-1',
         [SINCH_ACCOUNT_ID_CLAIM]: 'account-1',
         [SINCH_GLOBAL_USER_ID_CLAIM]: 'user-1',
@@ -116,7 +152,7 @@ describe('user-jwt', () => {
     });
 
     it('returns undefined when all claim values are non-string', () => {
-      expect(mapSinchUserClaims({ [SINCH_PROJECT_ID_CLAIM]: 42, sub: null })).toBeUndefined();
+      expect(parsedClaims({ [SINCH_PROJECT_ID_CLAIM]: 42, sub: null })).toBeUndefined();
     });
   });
 });

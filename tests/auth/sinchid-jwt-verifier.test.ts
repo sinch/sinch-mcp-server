@@ -20,6 +20,7 @@ describe('verifySinchIdAccessToken', () => {
   beforeEach(() => {
     resetMockEnv();
     resetSinchIdJwtVerifierForTests();
+    server.setAvailable(true);
     mockEnv.SINCHID_JWT_ISSUER = ISSUER;
     mockEnv.SINCHID_JWT_AUDIENCE = AUDIENCE;
     mockEnv.SINCHID_JWT_JWKS_URI = server.url;
@@ -103,6 +104,21 @@ describe('verifySinchIdAccessToken', () => {
     expect(server.requestCount() - requestsBefore).toBe(1);
   });
 
+  it('coalesces concurrent successful initial fetches into one request', async () => {
+    const token = server.sign({ iss: ISSUER, aud: AUDIENCE, sub: 'concurrent-user' });
+    const requestsBefore = server.requestCount();
+
+    const payloads = await Promise.all([
+      verifySinchIdAccessToken(token),
+      verifySinchIdAccessToken(token),
+      verifySinchIdAccessToken(token),
+    ]);
+
+    expect(payloads).toHaveLength(3);
+    expect(payloads.every(({ sub }) => sub === 'concurrent-user')).toBeTrue();
+    expect(server.requestCount() - requestsBefore).toBe(1);
+  });
+
   it('does not let a flood of unknown kids block a key published in the cached JWKS', async () => {
     const unknownKey = generateUnpublishedKeyPair();
     const requestsBefore = server.requestCount();
@@ -165,6 +181,133 @@ describe('verifySinchIdAccessToken', () => {
       await expect(verifySinchIdAccessToken(rotatedToken)).resolves.toMatchObject({ sub: 'after-rotation' });
       expect(server.requestCount() - requestsAfterWarmup).toBe(1);
     } finally {
+      now.mockRestore();
+    }
+  });
+
+  it('keeps using a known cached key when a scheduled refresh fails', async () => {
+    const now = jest.spyOn(Date, 'now').mockReturnValue(3_000_000);
+
+    try {
+      const token = server.sign({ iss: ISSUER, aud: AUDIENCE, sub: 'cached-user' });
+      await verifySinchIdAccessToken(token);
+      const requestsAfterWarmup = server.requestCount();
+
+      server.setAvailable(false);
+      now.mockReturnValue(3_600_001);
+
+      await expect(verifySinchIdAccessToken(token)).resolves.toMatchObject({ sub: 'cached-user' });
+      await expect(verifySinchIdAccessToken(token)).resolves.toMatchObject({ sub: 'cached-user' });
+      expect(server.requestCount() - requestsAfterWarmup).toBe(1);
+    } finally {
+      server.setAvailable(true);
+      now.mockRestore();
+    }
+  });
+
+  it('cooldowns failed refresh attempts for unknown kids', async () => {
+    const now = jest.spyOn(Date, 'now').mockReturnValue(4_000_000);
+    const unknownKey = generateUnpublishedKeyPair();
+
+    try {
+      await verifySinchIdAccessToken(server.sign({ iss: ISSUER, aud: AUDIENCE, sub: 'cached-user' }));
+      const requestsAfterWarmup = server.requestCount();
+      server.setAvailable(false);
+      now.mockReturnValue(4_031_000);
+
+      const first = server.sign(
+        { iss: ISSUER, aud: AUDIENCE, sub: 'rotated-user' },
+        { privateKey: unknownKey, keyid: 'unknown-during-outage-1' },
+      );
+      const second = server.sign(
+        { iss: ISSUER, aud: AUDIENCE, sub: 'rotated-user' },
+        { privateKey: unknownKey, keyid: 'unknown-during-outage-2' },
+      );
+
+      await expect(verifySinchIdAccessToken(first)).rejects.toThrow();
+      await expect(verifySinchIdAccessToken(second)).rejects.toThrow();
+      expect(server.requestCount() - requestsAfterWarmup).toBe(1);
+    } finally {
+      server.setAvailable(true);
+      now.mockRestore();
+    }
+  });
+
+  it('cooldowns failed initial JWKS fetches when no cache exists', async () => {
+    const now = jest.spyOn(Date, 'now').mockReturnValue(5_000_000);
+
+    try {
+      server.setAvailable(false);
+      const token = server.sign({ iss: ISSUER, aud: AUDIENCE, sub: 'cold-start-user' });
+      const requestsBefore = server.requestCount();
+
+      await expect(verifySinchIdAccessToken(token)).rejects.toThrow();
+      await expect(verifySinchIdAccessToken(token)).rejects.toThrow();
+      expect(server.requestCount() - requestsBefore).toBe(1);
+
+      server.setAvailable(true);
+      now.mockReturnValue(5_030_000);
+      await expect(verifySinchIdAccessToken(token)).resolves.toMatchObject({ sub: 'cold-start-user' });
+      expect(server.requestCount() - requestsBefore).toBe(2);
+    } finally {
+      server.setAvailable(true);
+      now.mockRestore();
+    }
+  });
+
+  it('stops using a stale key one hour after the last successful fetch', async () => {
+    const now = jest.spyOn(Date, 'now').mockReturnValue(6_000_000);
+
+    try {
+      const token = server.sign({ iss: ISSUER, aud: AUDIENCE, sub: 'cached-user' });
+      await verifySinchIdAccessToken(token);
+      server.setAvailable(false);
+      now.mockReturnValue(9_600_000);
+
+      await expect(verifySinchIdAccessToken(token)).rejects.toThrow();
+    } finally {
+      server.setAvailable(true);
+      now.mockRestore();
+    }
+  });
+
+  it('rejects a cached key immediately after a successful refresh removes it', async () => {
+    const now = jest.spyOn(Date, 'now').mockReturnValue(10_000_000);
+    const removableKey = server.publishKey();
+
+    try {
+      const token = server.sign(
+        { iss: ISSUER, aud: AUDIENCE, sub: 'removed-key-user' },
+        { privateKey: removableKey.privateKey, keyid: removableKey.kid },
+      );
+      await verifySinchIdAccessToken(token);
+      server.removeKey(removableKey.kid);
+      now.mockReturnValue(10_600_001);
+
+      await expect(verifySinchIdAccessToken(token)).rejects.toThrow(/signing key/i);
+    } finally {
+      now.mockRestore();
+    }
+  });
+
+  it('coalesces concurrent failed initial fetches into one request', async () => {
+    const now = jest.spyOn(Date, 'now').mockReturnValue(11_000_000);
+
+    try {
+      server.setAvailable(false);
+      const token = server.sign({ iss: ISSUER, aud: AUDIENCE, sub: 'concurrent-user' });
+      const requestsBefore = server.requestCount();
+
+      const results = await Promise.allSettled([
+        verifySinchIdAccessToken(token),
+        verifySinchIdAccessToken(token),
+        verifySinchIdAccessToken(token),
+      ]);
+
+      expect(results.every(({ status }) => status === 'rejected')).toBeTrue();
+      expect(server.requestCount() - requestsBefore).toBe(1);
+    } finally {
+      server.setAvailable(true);
       now.mockRestore();
     }
   });
