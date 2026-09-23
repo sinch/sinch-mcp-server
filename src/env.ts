@@ -32,6 +32,7 @@ export const env = createEnv({
     SINCHID_JWT_ISSUER: z.string().optional(),
     SINCHID_JWT_AUDIENCE: z.string().optional(),
     SINCHID_JWT_JWKS_URI: z.string().optional(),
+    GOOGLE_APPLICATION_CREDENTIALS: z.string().optional(),
   },
   runtimeEnvStrict: {
     PROJECT_ID: process.env.PROJECT_ID,
@@ -60,6 +61,7 @@ export const env = createEnv({
     SINCHID_JWT_ISSUER: process.env.SINCHID_JWT_ISSUER,
     SINCHID_JWT_AUDIENCE: process.env.SINCHID_JWT_AUDIENCE,
     SINCHID_JWT_JWKS_URI: process.env.SINCHID_JWT_JWKS_URI,
+    GOOGLE_APPLICATION_CREDENTIALS: process.env.GOOGLE_APPLICATION_CREDENTIALS,
   },
   emptyStringAsUndefined: true,
   onValidationError: (issues: readonly StandardSchemaV1.Issue[]) => {

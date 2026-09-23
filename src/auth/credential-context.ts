@@ -14,6 +14,7 @@ export const AGENT_ID_HEADER = 'x-agent-id';
 
 type RequestAuthContext = {
   credentials?: SinchOAuthCredentials;
+  agentCredentials?: SinchOAuthCredentials;
   agentId?: string;
   userClaims?: SinchUserClaims;
 };
@@ -22,6 +23,10 @@ const requestAuthStorage = new AsyncLocalStorage<RequestAuthContext>();
 
 export const getRequestSinchOAuthCredentials = (): SinchOAuthCredentials | undefined => {
   return requestAuthStorage.getStore()?.credentials;
+};
+
+export const getRequestAgentSinchOAuthCredentials = (): SinchOAuthCredentials | undefined => {
+  return requestAuthStorage.getStore()?.agentCredentials;
 };
 
 export const getRequestAgentId = (): string | undefined => {
@@ -40,9 +45,11 @@ export const runWithHttpCredentialHeaders = <T>(
   headers: IncomingHttpHeaders,
   userClaims: SinchUserClaims | undefined,
   fn: () => T,
+  agentCredentials?: SinchOAuthCredentials,
 ): T => {
   const context: RequestAuthContext = {
     credentials: parseSinchCredentialsAuthorizationHeader(headers.authorization),
+    agentCredentials,
     agentId: extractHeaderValue(headers[AGENT_ID_HEADER]),
     userClaims,
   };
