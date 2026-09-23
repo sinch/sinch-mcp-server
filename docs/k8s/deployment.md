@@ -92,8 +92,10 @@ Notes:
 - On `sinch-mcp-server-agent` (the only release running `sinchid-agent`), each onboarded
   installation needs its own `sinch-agent-m2m_<orderId>_<projectId>` env var (same Base64 blob
   format as `client-credentials`) reaching the pod without ever being committed to this repo.
-  This is injected from the Kubernetes Secret named by the chart's required
-  `extraEnvFromSecret` setting. The chart rejects this setting outside `sinchid-agent` mode.
+  Both identifiers are canonical UUIDs. The Kubernetes Secret named by the chart's required
+  `extraEnvFromSecret` setting contains one data key per installation/project pair; `envFrom`
+  injects all of them into the agent pod. The chart rejects this setting outside
+  `sinchid-agent` mode.
   Updating a Secret does not update a running process environment: rotate credentials by
   updating the Secret and restarting the deployment, and remove revoked installation keys
   before restarting.
@@ -106,6 +108,10 @@ this repository or placed directly in Helm values. Cluster configuration must en
 Secrets at rest and restrict API read access to deployment operators and controllers. The agent
 workload consumes only the injected environment and does not need Kubernetes Secret read
 permissions.
+
+Helm configures only the name of that Kubernetes Secret, not each user's credentials. Onboarding
+automation adds, updates, or removes one key/value entry per installation/project pair. Users
+sharing that pair use the same M2M credentials; separate pairs receive separate entries.
 
 All agent pods receive every installation credential in that deployment, so this environment-based
 approach has a broader blast radius and requires a rollout for onboarding, rotation, and revocation.

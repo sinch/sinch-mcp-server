@@ -49,8 +49,10 @@ resources:
 existingSecret: ""
 secretKeys: []
 
-# Secret containing tenant M2M credentials formatted as
-# sinch-agent-m2m_<orderId>_<projectId>. Required in sinchid-agent mode and rejected otherwise.
+# One Kubernetes Secret containing tenant M2M credentials. Add one data key per
+# installation/project pair, formatted as sinch-agent-m2m_<orderId>_<projectId>;
+# envFrom injects every key/value into the agent pod. Required in sinchid-agent
+# mode and rejected otherwise.
 extraEnvFromSecret: ""
 
 # Conversation API region — one of: us | eu | br. REQUIRED; there is no default.

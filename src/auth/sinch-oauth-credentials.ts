@@ -6,8 +6,7 @@ import { extractBearerToken } from './bearer-token';
 // and silently drops invalid characters, so validate the shape explicitly: a token that
 // is not Base64 (e.g. a JWT or an opaque API key) must never be mistaken for credentials.
 const BASE64_PATTERN = /^[A-Za-z0-9+/]+={0,2}$/;
-const AGENT_M2M_KEY_PART_PATTERN = /^[A-Za-z0-9.-]+$/;
-const MAX_AGENT_M2M_ENV_VAR_NAME_LENGTH = 253;
+const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 export type SinchOAuthCredentials = {
   projectId: string;
@@ -77,16 +76,15 @@ export const parseSinchCredentialsAuthorizationHeader = (
  * Name of the env var holding the M2M credentials for one agent installation: the same
  * Base64 projectId:keyId:keySecret blob used in the client-credentials Authorization header,
  * keyed by orderId (x-agent-id) and Sinch project id (verified from the SinchID JWT claim).
- * Identifiers are restricted to the Kubernetes Secret/env-name character set without `_`,
- * because `_` separates the two components and accepting it would make the mapping ambiguous.
+ * Gemini order IDs and Sinch project IDs are UUIDs; lower-casing them makes the
+ * resulting environment-variable name canonical.
  */
 export const buildAgentM2MEnvVarName = (orderId: string, projectId: string): string | undefined => {
-  if (!AGENT_M2M_KEY_PART_PATTERN.test(orderId) || !AGENT_M2M_KEY_PART_PATTERN.test(projectId)) {
+  if (!UUID_PATTERN.test(orderId) || !UUID_PATTERN.test(projectId)) {
     return undefined;
   }
 
-  const name = `sinch-agent-m2m_${orderId}_${projectId}`;
-  return name.length <= MAX_AGENT_M2M_ENV_VAR_NAME_LENGTH ? name : undefined;
+  return `sinch-agent-m2m_${orderId.toLowerCase()}_${projectId.toLowerCase()}`;
 };
 
 export const sinchOAuthCredentialsFromAgentEnv = (
@@ -104,7 +102,9 @@ export const sinchOAuthCredentialsFromAgentEnv = (
   }
 
   const credentials = parseSinchCredentialsValue(raw);
-  return credentials?.projectId === projectId ? credentials : undefined;
+  // Keep this fail-closed until SinchID supplies an explicit project selector and
+  // master-to-subproject authorization can be validated independently.
+  return credentials?.projectId.toLowerCase() === projectId.toLowerCase() ? credentials : undefined;
 };
 
 export const SERVER_CREDENTIAL_ENV_VARS = ['PROJECT_ID', 'KEY_ID', 'KEY_SECRET'] as const;

@@ -642,20 +642,22 @@ describe('auth mode enforcement', () => {
 
   test('sinchid-agent tool calls reject credentials for a different project than the verified JWT', async () => {
     mockEnv.MCP_AUTH_MODE = 'sinchid-agent';
-    const envVarName = 'sinch-agent-m2m_order-42_project-1';
-    process.env[envVarName] = Buffer.from('project-2:key-1:secret-1').toString('base64');
+    const orderId = '11111111-1111-4111-8111-111111111111';
+    const projectId = '22222222-2222-4222-8222-222222222222';
+    const envVarName = `sinch-agent-m2m_${orderId}_${projectId}`;
+    process.env[envVarName] = Buffer.from('33333333-3333-4333-8333-333333333333:key-1:secret-1').toString('base64');
     const { baseUrl, close } = await listen(createHttpApp());
     const token = jwksServer.sign({
       iss: ISSUER,
       aud: AUDIENCE,
       sub: 'user-1',
-      [SINCH_PROJECT_ID_CLAIM]: 'project-1',
+      [SINCH_PROJECT_ID_CLAIM]: projectId,
       [SINCH_ACCOUNT_ID_CLAIM]: 'account-1',
       [SINCH_GLOBAL_USER_ID_CLAIM]: 'user-1',
       scope: 'openid',
     });
     const clientTransport = new StreamableHTTPClientTransport(new URL(`${baseUrl}/mcp`), {
-      requestInit: { headers: { Authorization: `Bearer ${token}`, 'x-agent-id': 'order-42' } },
+      requestInit: { headers: { Authorization: `Bearer ${token}`, 'x-agent-id': orderId } },
     });
     const client = new Client({ name: 'test-client', version: '1.0.0' });
 
