@@ -1,3 +1,18 @@
+{{- $authMode := required "authMode is required (client-credentials | sinchid-agent)." .Values.authMode -}}
+{{- if not (has $authMode (list "client-credentials" "sinchid-agent")) -}}
+{{- fail "authMode must be one of: client-credentials, sinchid-agent." -}}
+{{- end -}}
+{{- $conversationRegion := required "conversationRegion is required (us | eu | br)." .Values.conversationRegion -}}
+{{- if not (has $conversationRegion (list "us" "eu" "br")) -}}
+{{- fail "conversationRegion must be one of: us, eu, br." -}}
+{{- end -}}
+{{- if eq $authMode "sinchid-agent" -}}
+{{- if not .Values.extraEnvFromSecret -}}
+{{- fail "extraEnvFromSecret is required when authMode is sinchid-agent." -}}
+{{- end -}}
+{{- else if .Values.extraEnvFromSecret -}}
+{{- fail "extraEnvFromSecret may only be set when authMode is sinchid-agent." -}}
+{{- end -}}
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -40,10 +55,10 @@ spec:
             - name: http
               containerPort: {{ .Values.service.targetPort }}
               protocol: TCP
-          {{- if .Values.extraEnvFromSecret }}
+          {{- if eq $authMode "sinchid-agent" }}
           envFrom:
             - secretRef:
-                name: {{ .Values.extraEnvFromSecret }}
+                name: {{ .Values.extraEnvFromSecret | quote }}
           {{- end }}
           env:
             {{- range .Values.env }}
@@ -54,13 +69,13 @@ spec:
             # server, which refuses to start without a region. Failing at template time gives
             # a clear error instead of a crash-looping pod.
             - name: CONVERSATION_REGION
-              value: {{ required "conversationRegion is required (us | eu | br). Without it the server would route customer data to another region." .Values.conversationRegion | quote }}
+              value: {{ $conversationRegion | quote }}
             # Required, not optional: the server refuses to start without it, and a
             # deployment without a pinned auth mode would accept every shape on an
             # edge-unauthenticated endpoint.
             - name: MCP_AUTH_MODE
-              value: {{ required "authMode is required (client-credentials | sinchid-agent). Without it this deployment would accept every inbound auth shape." .Values.authMode | quote }}
-            {{- if eq .Values.authMode "sinchid-agent" }}
+              value: {{ $authMode | quote }}
+            {{- if eq $authMode "sinchid-agent" }}
             # Required, not optional, on this auth mode: the server verifies the inbound SinchID
             # token against this JWKS (signature, issuer, audience, expiry) before trusting any
             # claim from it, and refuses to start without all three.

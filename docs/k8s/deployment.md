@@ -63,7 +63,7 @@ When `MCP_AUTH_MODE` is set, it also pins the one inbound shape `/mcp` accepts:
 | `MCP_AUTH_MODE`      | `Authorization` header value                                    | Tools run as           |
 | -------------------- | --------------------------------------------------------------- |------------------------|
 | `client-credentials` | `Bearer <base64(projectId:keyId:keySecret)>` — the caller's own | the credentials sent   |
-| `sinchid-agent`      | `Bearer <SinchID access token>`, plus `x-agent-id`              | the `SINCH_AGENT_M2M_<orderId>_<projectId>` env var |
+| `sinchid-agent`      | `Bearer <SinchID access token>`, plus `x-agent-id`              | the `sinch-agent-m2m_<orderId>_<projectId>` env var |
 
 Notes:
 
@@ -90,9 +90,28 @@ Notes:
   from the verified token's `https://sinch.com/project_id` claim, and the installation identifier is
   provided via the `x-agent-id` header.
 - On `sinch-mcp-server-agent` (the only release running `sinchid-agent`), each onboarded
-  installation needs its own `SINCH_AGENT_M2M_<orderId>_<projectId>` env var (same Base64 blob
+  installation needs its own `sinch-agent-m2m_<orderId>_<projectId>` env var (same Base64 blob
   format as `client-credentials`) reaching the pod without ever being committed to this repo.
-  This can be injected via the chart's `extraEnvFromSecret` setting.
+  This is injected from the Kubernetes Secret named by the chart's required
+  `extraEnvFromSecret` setting. The chart rejects this setting outside `sinchid-agent` mode.
+  Updating a Secret does not update a running process environment: rotate credentials by
+  updating the Secret and restarting the deployment, and remove revoked installation keys
+  before restarting.
+
+### Agent credential deployment decision
+
+The chart supports deployment of these credentials only when `authMode=sinchid-agent`. The
+credential Secret must be created and managed by the deployment infrastructure, not checked into
+this repository or placed directly in Helm values. Cluster configuration must encrypt Kubernetes
+Secrets at rest and restrict API read access to deployment operators and controllers. The agent
+workload consumes only the injected environment and does not need Kubernetes Secret read
+permissions.
+
+All agent pods receive every installation credential in that deployment, so this environment-based
+approach has a broader blast radius and requires a rollout for onboarding, rotation, and revocation.
+That trade-off is accepted for this temporary integration; a secret-manager lookup or OAuth token
+exchange should replace it before installation count or rotation frequency makes pod-wide
+environment injection impractical.
 
 ## Secret skeleton (create in namespace before first deploy)
 

@@ -93,19 +93,22 @@ describe('sinch-oauth-credentials', () => {
 
   describe('sinchOAuthCredentialsFromAgentEnv', () => {
     const envVarName = buildAgentM2MEnvVarName('order-42', 'project-1');
+    if (!envVarName) {
+      throw new Error('expected valid agent credential env var name');
+    }
 
     afterEach(() => {
       delete process.env[envVarName];
     });
 
     it('builds an underscore-joined env var name from orderId and projectId', () => {
-      expect(envVarName).toBe('SINCH_AGENT_M2M_order-42_project-1');
+      expect(envVarName).toBe('sinch-agent-m2m_order-42_project-1');
     });
 
     it('reads and parses the credential blob for the given installation', () => {
-      process.env[envVarName] = encodeCredentials('agent-project:agent-key:agent-secret');
+      process.env[envVarName] = encodeCredentials('project-1:agent-key:agent-secret');
 
-      expect(sinchOAuthCredentialsFromAgentEnv('order-42', 'project-1')?.projectId).toBe('agent-project');
+      expect(sinchOAuthCredentialsFromAgentEnv('order-42', 'project-1')?.projectId).toBe('project-1');
     });
 
     it('returns undefined when the env var is missing', () => {
@@ -118,12 +121,32 @@ describe('sinch-oauth-credentials', () => {
       expect(sinchOAuthCredentialsFromAgentEnv('order-42', 'project-1')).toBeUndefined();
     });
 
+    it('returns undefined when the credential project does not match the verified project', () => {
+      process.env[envVarName] = encodeCredentials('other-project:agent-key:agent-secret');
+
+      expect(sinchOAuthCredentialsFromAgentEnv('order-42', 'project-1')).toBeUndefined();
+    });
+
+    it.each([
+      ['an orderId containing the separator', 'order_42', 'project-1'],
+      ['a projectId containing the separator', 'order-42', 'project_1'],
+      ['an orderId containing unsupported characters', 'orders/42', 'project-1'],
+      ['an oversized composite name', 'a'.repeat(240), 'project-1'],
+    ])('rejects %s', (_label, orderId, projectId) => {
+      expect(buildAgentM2MEnvVarName(orderId, projectId)).toBeUndefined();
+      expect(sinchOAuthCredentialsFromAgentEnv(orderId, projectId)).toBeUndefined();
+    });
+
     it('does not read a different installation env var', () => {
-      process.env[buildAgentM2MEnvVarName('order-99', 'project-9')] = encodeCredentials('other:key:secret');
+      const otherEnvVarName = buildAgentM2MEnvVarName('order-99', 'project-9');
+      if (!otherEnvVarName) {
+        throw new Error('expected valid agent credential env var name');
+      }
+      process.env[otherEnvVarName] = encodeCredentials('project-9:key:secret');
 
       expect(sinchOAuthCredentialsFromAgentEnv('order-42', 'project-1')).toBeUndefined();
 
-      delete process.env[buildAgentM2MEnvVarName('order-99', 'project-9')];
+      delete process.env[otherEnvVarName];
     });
   });
 
@@ -240,6 +263,9 @@ describe('sinch-oauth-credentials', () => {
   describe('sinchid-agent mode', () => {
     const promptText = (response: PromptResponse): string => response.promptResponse.content[0].text;
     const envVarName = buildAgentM2MEnvVarName('order-42', 'project-1');
+    if (!envVarName) {
+      throw new Error('expected valid agent credential env var name');
+    }
 
     afterEach(() => {
       delete process.env[envVarName];
@@ -300,7 +326,7 @@ describe('sinch-oauth-credentials', () => {
     it('resolves credentials from the env var named by orderId and verified projectId', () => {
       setHttpCredentialSource('request-header');
       setAuthMode('sinchid-agent');
-      process.env[envVarName] = encodeCredentials('agent-project:agent-key:agent-secret');
+      process.env[envVarName] = encodeCredentials('project-1:agent-key:agent-secret');
 
       const resolved = runWithHttpCredentialHeaders({ [AGENT_ID_HEADER]: 'order-42' }, { projectId: 'project-1' }, () =>
         resolveSinchOAuthCredentials(),
@@ -309,7 +335,20 @@ describe('sinch-oauth-credentials', () => {
       if (resolved instanceof PromptResponse) {
         throw new Error('expected credentials');
       }
-      expect(resolved.projectId).toBe('agent-project');
+      expect(resolved.projectId).toBe('project-1');
+    });
+
+    it('fails closed when the configured credential belongs to another project', () => {
+      setHttpCredentialSource('request-header');
+      setAuthMode('sinchid-agent');
+      process.env[envVarName] = encodeCredentials('other-project:agent-key:agent-secret');
+
+      const resolved = runWithHttpCredentialHeaders({ [AGENT_ID_HEADER]: 'order-42' }, { projectId: 'project-1' }, () =>
+        resolveSinchOAuthCredentials(),
+      );
+
+      expect(resolved).toBeInstanceOf(PromptResponse);
+      expect(promptText(resolved as PromptResponse)).toBe(MISSING_AGENT_CREDENTIALS_MESSAGE);
     });
 
     it('still points client-credentials callers at the Authorization header', () => {

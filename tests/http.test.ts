@@ -8,6 +8,7 @@ import { StreamableHTTPClientTransport } from '@modelcontextprotocol/sdk/client/
 import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js';
 import { clearAuthModeForTests, getAuthMode } from '../src/auth/auth-mode';
 import { clearHttpCredentialSourceForTests, getHttpCredentialSource } from '../src/auth/http-credential-mode';
+import { MISSING_AGENT_CREDENTIALS_MESSAGE } from '../src/auth/resolve-sinch-oauth-credentials';
 import { resetSinchIdJwtVerifierForTests } from '../src/auth/sinchid-jwt-verifier';
 import { SINCH_ACCOUNT_ID_CLAIM, SINCH_GLOBAL_USER_ID_CLAIM, SINCH_PROJECT_ID_CLAIM } from '../src/auth/user-jwt';
 import { mockEnv, resetMockEnv, type MockServerEnv } from '../src/__mocks__/env';
@@ -635,6 +636,39 @@ describe('auth mode enforcement', () => {
       );
     } finally {
       infoSpy.mockRestore();
+      await close();
+    }
+  });
+
+  test('sinchid-agent tool calls reject credentials for a different project than the verified JWT', async () => {
+    mockEnv.MCP_AUTH_MODE = 'sinchid-agent';
+    const envVarName = 'sinch-agent-m2m_order-42_project-1';
+    process.env[envVarName] = Buffer.from('project-2:key-1:secret-1').toString('base64');
+    const { baseUrl, close } = await listen(createHttpApp());
+    const token = jwksServer.sign({
+      iss: ISSUER,
+      aud: AUDIENCE,
+      sub: 'user-1',
+      [SINCH_PROJECT_ID_CLAIM]: 'project-1',
+      [SINCH_ACCOUNT_ID_CLAIM]: 'account-1',
+      [SINCH_GLOBAL_USER_ID_CLAIM]: 'user-1',
+      scope: 'openid',
+    });
+    const clientTransport = new StreamableHTTPClientTransport(new URL(`${baseUrl}/mcp`), {
+      requestInit: { headers: { Authorization: `Bearer ${token}`, 'x-agent-id': 'order-42' } },
+    });
+    const client = new Client({ name: 'test-client', version: '1.0.0' });
+
+    try {
+      await client.connect(clientTransport);
+      const result = await client.callTool({ name: 'list-conversation-apps', arguments: {} });
+
+      expect(result).toMatchObject({
+        content: [{ type: 'text', text: MISSING_AGENT_CREDENTIALS_MESSAGE }],
+      });
+    } finally {
+      delete process.env[envVarName];
+      await client.close();
       await close();
     }
   });

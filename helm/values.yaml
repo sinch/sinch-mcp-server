@@ -49,8 +49,8 @@ resources:
 existingSecret: ""
 secretKeys: []
 
-# Optional Secret containing environment variables to inject via envFrom (e.g. tenant M2M credentials
-# formatted as SINCH_AGENT_M2M_<orderId>_<projectId>). Defaults to empty string (no envFrom block).
+# Secret containing tenant M2M credentials formatted as
+# sinch-agent-m2m_<orderId>_<projectId>. Required in sinchid-agent mode and rejected otherwise.
 extraEnvFromSecret: ""
 
 # Conversation API region — one of: us | eu | br. REQUIRED; there is no default.

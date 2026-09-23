@@ -6,6 +6,8 @@ import { extractBearerToken } from './bearer-token';
 // and silently drops invalid characters, so validate the shape explicitly: a token that
 // is not Base64 (e.g. a JWT or an opaque API key) must never be mistaken for credentials.
 const BASE64_PATTERN = /^[A-Za-z0-9+/]+={0,2}$/;
+const AGENT_M2M_KEY_PART_PATTERN = /^[A-Za-z0-9.-]+$/;
+const MAX_AGENT_M2M_ENV_VAR_NAME_LENGTH = 253;
 
 export type SinchOAuthCredentials = {
   projectId: string;
@@ -74,25 +76,35 @@ export const parseSinchCredentialsAuthorizationHeader = (
 /**
  * Name of the env var holding the M2M credentials for one agent installation: the same
  * Base64 projectId:keyId:keySecret blob used in the client-credentials Authorization header,
- * keyed by orderId (x-agent-id) and Sinch project id (verified from the SinchID JWT claim) so distinct
- * installations never collide. Underscore-joined, not dash-joined as the ticket's literal naming suggests:
- * Kubernetes' default env-var-name validation is a C-identifier (letters/digits/underscore
- * only), and this name is set as a literal container env var name via envFrom/secretKeyRef.
+ * keyed by orderId (x-agent-id) and Sinch project id (verified from the SinchID JWT claim).
+ * Identifiers are restricted to the Kubernetes Secret/env-name character set without `_`,
+ * because `_` separates the two components and accepting it would make the mapping ambiguous.
  */
-export const buildAgentM2MEnvVarName = (orderId: string, projectId: string): string => {
-  return `SINCH_AGENT_M2M_${orderId}_${projectId}`;
+export const buildAgentM2MEnvVarName = (orderId: string, projectId: string): string | undefined => {
+  if (!AGENT_M2M_KEY_PART_PATTERN.test(orderId) || !AGENT_M2M_KEY_PART_PATTERN.test(projectId)) {
+    return undefined;
+  }
+
+  const name = `sinch-agent-m2m_${orderId}_${projectId}`;
+  return name.length <= MAX_AGENT_M2M_ENV_VAR_NAME_LENGTH ? name : undefined;
 };
 
 export const sinchOAuthCredentialsFromAgentEnv = (
   orderId: string,
   projectId: string,
 ): SinchOAuthCredentials | undefined => {
-  const raw = process.env[buildAgentM2MEnvVarName(orderId, projectId)];
+  const envVarName = buildAgentM2MEnvVarName(orderId, projectId);
+  if (!envVarName) {
+    return undefined;
+  }
+
+  const raw = process.env[envVarName];
   if (!raw) {
     return undefined;
   }
 
-  return parseSinchCredentialsValue(raw);
+  const credentials = parseSinchCredentialsValue(raw);
+  return credentials?.projectId === projectId ? credentials : undefined;
 };
 
 export const SERVER_CREDENTIAL_ENV_VARS = ['PROJECT_ID', 'KEY_ID', 'KEY_SECRET'] as const;
