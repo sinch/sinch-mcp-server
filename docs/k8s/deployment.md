@@ -78,10 +78,18 @@ Notes:
 - Multi-tenant requires `CONVERSATION_REGION`, which cannot be overridden per request.
 - Encode `projectId:keyId:keySecret` with standard Base64 (no line breaks, not base64url) and
   send it on every request, including after `initialize`.
-- A request carrying the wrong token shape is rejected with `401` plus a `WWW-Authenticate`
-  challenge. Where a tool is reached without usable credentials it answers with a prompt response:
+- A request carrying the wrong token shape, or a `sinchid-agent` JWT that fails verification, is
+  rejected with `401` plus a `WWW-Authenticate` challenge. Where a tool is reached without usable
+  credentials it answers with a prompt response:
   `Missing or invalid Authorization header (expected "Bearer <Base64 of projectId:keyId:keySecret>").`
 - Make sure `Authorization` is passed through to the pod untouched.
+- **`sinchid-agent` verifies the `Authorization` JWT** (signature against a JWKS, algorithm pinned
+  to `RS256`, issuer, audience, expiry) before trusting any claim from it or letting the request
+  through. This requires three chart values, all **required** on this auth mode —
+  `sinchidJwtIssuer`, `sinchidJwtAudience`, `sinchidJwtJwksUri` (env vars `SINCHID_JWT_ISSUER`,
+  `SINCHID_JWT_AUDIENCE`, `SINCHID_JWT_JWKS_URI`) — the server refuses to start without them.
+  Credential *resolution* for this mode is still not implemented (DEVEXP-1631); this only covers
+  verifying the token itself.
 
 ## Secret skeleton (create in namespace before first deploy)
 

@@ -1,8 +1,13 @@
 import type { NextFunction, Request, Response } from 'express';
+import jwt from 'jsonwebtoken';
+import { SigningKeyNotFoundError } from 'jwks-rsa';
 import { AGENT_ID_HEADER } from './credential-context';
-import { buildBearerWwwAuthenticateHeader } from './bearer-token';
+import { buildBearerWwwAuthenticateHeader, extractBearerToken } from './bearer-token';
 import { parseSinchCredentialsAuthorizationHeader } from './sinch-oauth-credentials';
-import { isJwtShapedBearerToken } from './user-jwt';
+import { verifySinchIdAccessToken } from './sinchid-jwt-verifier';
+import { isJwtShapedToken, parseSinchUserClaims } from './user-jwt';
+import { setVerifiedUserClaims } from './verified-claims';
+import { logger } from '../telemetry/logger';
 import { extractHeaderValue } from '../utils';
 
 /**
@@ -34,8 +39,9 @@ export const clearAuthModeForTests = (): void => {
   configuredAuthMode = undefined;
 };
 
-/** invalidToken false means no credentials were sent — a realm-only challenge, per RFC 6750. */
-type AuthShapeCheck = { ok: true } | { ok: false; reason: string; invalidToken: boolean };
+/** missing: realm-only 401 (RFC 6750). invalid: 401 naming why. unavailable: 503, just retry. */
+type AuthShapeFailureKind = 'missing' | 'invalid' | 'unavailable';
+type AuthShapeCheck = { ok: true } | { ok: false; reason: string; kind: AuthShapeFailureKind };
 
 const OK: AuthShapeCheck = { ok: true };
 
@@ -50,7 +56,7 @@ const checkClientCredentials = (req: Request): AuthShapeCheck => {
   if (extractHeaderValue(req.headers.authorization) === undefined) {
     return {
       ok: false,
-      invalidToken: false,
+      kind: 'missing',
       reason: 'Missing Sinch API credentials in the Authorization header',
     };
   }
@@ -58,7 +64,7 @@ const checkClientCredentials = (req: Request): AuthShapeCheck => {
   if (parseSinchCredentialsAuthorizationHeader(req.headers.authorization) === undefined) {
     return {
       ok: false,
-      invalidToken: true,
+      kind: 'invalid',
       reason: 'Authorization must carry Base64 projectId:keyId:keySecret as a Bearer token',
     };
   }
@@ -67,40 +73,83 @@ const checkClientCredentials = (req: Request): AuthShapeCheck => {
 };
 
 /**
- * The SinchID access token in Authorization is the credential, so it is required and must be
- * JWT-shaped. That rejects a Base64 credential triple, which is not a JWT. `x-agent-id` is
- * required alongside it: credentials are resolved from the agent installation it names, so a
- * request without it cannot complete anyway.
+ * The SinchID token is the credential: required, JWT-shaped, and paired with `x-agent-id`. It's
+ * then verified against the JWKS and mapped to Sinch claims — a forged, expired, wrong-audience/
+ * issuer, or claims-less token is a 401. If verification couldn't run at all (JWKS unreachable
+ * or rate-limited), that's a 503, not a 401.
  */
-const checkSinchidAgent = (req: Request): AuthShapeCheck => {
-  if (extractHeaderValue(req.headers.authorization) === undefined) {
+const checkSinchidAgent = async (req: Request): Promise<AuthShapeCheck> => {
+  const token = extractBearerToken(req.headers.authorization);
+  if (token === undefined) {
     return {
       ok: false,
-      invalidToken: false,
+      kind: 'missing',
       reason: 'Missing SinchID access token in the Authorization header',
     };
   }
 
-  if (!isJwtShapedBearerToken(req.headers.authorization)) {
+  if (!isJwtShapedToken(token)) {
     return {
       ok: false,
-      invalidToken: true,
+      kind: 'invalid',
       reason: 'Authorization must carry a SinchID access token as a Bearer JWT',
     };
   }
 
-  if (extractHeaderValue(req.headers[AGENT_ID_HEADER]) === undefined) {
+  const agentId = extractHeaderValue(req.headers[AGENT_ID_HEADER]);
+  if (agentId === undefined) {
     return {
       ok: false,
-      invalidToken: true,
+      kind: 'invalid',
       reason: `${AGENT_ID_HEADER} is required alongside the SinchID access token`,
     };
   }
 
+  let payload: jwt.JwtPayload;
+  try {
+    payload = await verifySinchIdAccessToken(token);
+  } catch (error) {
+    // A jsonwebtoken error or unresolvable kid means the token itself is bad; anything else
+    // (JWKS unreachable, rate-limited) means we just couldn't check it.
+    if (error instanceof jwt.JsonWebTokenError || error instanceof SigningKeyNotFoundError) {
+      return {
+        ok: false,
+        kind: 'invalid',
+        reason: 'SinchID access token failed verification (invalid signature, issuer, audience, or expiry)',
+      };
+    }
+    logger.warn(
+      { err: error, agent_id: agentId },
+      'Could not verify the SinchID access token: the signing-key service is unavailable',
+    );
+    return {
+      ok: false,
+      kind: 'unavailable',
+      reason: 'Could not verify the SinchID access token: the signing-key service is temporarily unavailable',
+    };
+  }
+
+  const claimsResult = parseSinchUserClaims(payload);
+  if (!claimsResult.ok) {
+    const issues = claimsResult.issues
+      .map(({ claim, code }) => `${claim} (${code === 'missing' ? 'missing' : 'must be a non-empty string'})`)
+      .join('; ');
+    logger.warn(
+      { agent_id: agentId, claim_issues: claimsResult.issues },
+      'SinchID access token has invalid required claims',
+    );
+    return {
+      ok: false,
+      kind: 'invalid',
+      reason: `SinchID access token has invalid required claims: ${issues}`,
+    };
+  }
+
+  setVerifiedUserClaims(req, claimsResult.claims);
   return OK;
 };
 
-const AUTH_SHAPE_CHECKS: Record<McpAuthMode, (req: Request) => AuthShapeCheck> = {
+const AUTH_SHAPE_CHECKS: Record<McpAuthMode, (req: Request) => AuthShapeCheck | Promise<AuthShapeCheck>> = {
   'client-credentials': checkClientCredentials,
   'sinchid-agent': checkSinchidAgent,
 };
@@ -119,19 +168,26 @@ const rejectMissingCredentials = (res: Response, reason: string): void => {
   res.status(401).json({ error: 'Unauthorized', error_description: reason });
 };
 
+/** Verification itself couldn't run — a transient problem on our side, not the caller's. */
+const rejectUnavailable = (res: Response, reason: string): void => {
+  res.setHeader('Retry-After', '2');
+  res.status(503).json({ error: 'temporarily_unavailable', error_description: reason });
+};
+
+const AUTH_SHAPE_REJECTIONS: Record<AuthShapeFailureKind, (res: Response, reason: string) => void> = {
+  invalid: rejectWrongShape,
+  unavailable: rejectUnavailable,
+  missing: rejectMissingCredentials,
+};
+
 export const createAuthModeMiddleware = (mode: McpAuthMode) => {
-  return (req: Request, res: Response, next: NextFunction): void => {
-    const check = AUTH_SHAPE_CHECKS[mode](req);
+  return async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    const check = await AUTH_SHAPE_CHECKS[mode](req);
     if (check.ok) {
       next();
       return;
     }
 
-    if (check.invalidToken) {
-      rejectWrongShape(res, check.reason);
-      return;
-    }
-
-    rejectMissingCredentials(res, check.reason);
+    AUTH_SHAPE_REJECTIONS[check.kind](res, check.reason);
   };
 };

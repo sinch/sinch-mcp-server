@@ -1,5 +1,3 @@
-import { extractBearerToken } from './bearer-token';
-
 /**
  * Sinch-namespaced claims carried by the Auth0 user JWT that agent
  * integrations (e.g. an agent installed in a Gemini Enterprise app) send in
@@ -19,7 +17,23 @@ export type SinchUserClaims = {
   scope?: string;
 };
 
-const decodeJwtPayload = (token: string): Record<string, unknown> | undefined => {
+export type RequiredSinchUserClaim = 'project_id' | 'account_id' | 'global_user_id' | 'scope';
+export type SinchUserClaimIssue = {
+  claim: RequiredSinchUserClaim;
+  code: 'missing' | 'not_string' | 'blank';
+};
+
+export type RequiredSinchUserClaims = SinchUserClaims & {
+  projectId: string;
+  accountId: string;
+  globalUserId: string;
+  scope: string;
+};
+
+export type SinchUserClaimsParseResult =
+  { ok: true; claims: RequiredSinchUserClaims } | { ok: false; issues: SinchUserClaimIssue[] };
+
+const decodeJwtPayloadShape = (token: string): Record<string, unknown> | undefined => {
   const segments = token.split('.');
   if (segments.length !== 3) {
     return undefined;
@@ -40,54 +54,62 @@ const decodeJwtPayload = (token: string): Record<string, unknown> | undefined =>
 };
 
 /**
- * True when Authorization carries a `Bearer` token whose payload decodes as a
- * three-segment JWT. Shape only — no signature, issuer, or expiry check.
+ * True when `token` decodes as a three-segment JWT. Shape only — no signature, issuer, or
+ * expiry check. This is used purely to route a request to the right auth mode (and to skip a
+ * JWKS lookup on something that plainly isn't a JWT); it grants no trust.
  */
-export const isJwtShapedBearerToken = (authorizationHeader: string | string[] | undefined): boolean => {
-  const token = extractBearerToken(authorizationHeader);
-  return token !== undefined && decodeJwtPayload(token) !== undefined;
-};
+export const isJwtShapedToken = (token: string): boolean => decodeJwtPayloadShape(token) !== undefined;
 
 const stringClaim = (payload: Record<string, unknown>, claim: string): string | undefined => {
+  if (!Object.hasOwn(payload, claim)) {
+    return undefined;
+  }
   const value = payload[claim];
   return typeof value === 'string' && value.trim() ? value : undefined;
 };
 
+const requiredClaimIssue = (
+  payload: Record<string, unknown>,
+  claim: string,
+  publicName: RequiredSinchUserClaim,
+): SinchUserClaimIssue | undefined => {
+  if (!Object.hasOwn(payload, claim)) {
+    return { claim: publicName, code: 'missing' };
+  }
+  const value = payload[claim];
+  if (typeof value !== 'string') {
+    return { claim: publicName, code: 'not_string' };
+  }
+  return value.trim() ? undefined : { claim: publicName, code: 'blank' };
+};
+
 /**
- * Extracts the Sinch user claims from a `Bearer <JWT>` Authorization header.
- *
- * The payload is base64url-decoded WITHOUT verifying the token signature,
- * issuer, or expiry: the claims are self-reported and used for audit purposes
- * only (credentials are resolved through other mechanisms). Verification will
- * come with the future user-JWT to M2M-JWT token exchange.
- *
- * Returns undefined for anything that is not a well-formed three-segment JWT
- * with a JSON object payload (e.g. an opaque MCP API key in single-tenant
- * mode, or a missing header), and for JWTs that carry none of the expected
- * claims (nothing useful to audit).
+ * Parses the Sinch user claims out of an already-verified JWT payload (signature, issuer,
+ * audience and expiry must have been checked by the caller — see `sinchid-jwt-verifier.ts`).
+ * Invalid, blank, and absent required claims are reported by their public claim names without
+ * exposing any token values.
  */
-export const decodeUserJwtHeader = (
-  authorizationHeader: string | string[] | undefined,
-): SinchUserClaims | undefined => {
-  const token = extractBearerToken(authorizationHeader);
-  if (!token) {
-    return undefined;
+export const parseSinchUserClaims = (payload: Record<string, unknown>): SinchUserClaimsParseResult => {
+  const issues = [
+    requiredClaimIssue(payload, SINCH_PROJECT_ID_CLAIM, 'project_id'),
+    requiredClaimIssue(payload, SINCH_ACCOUNT_ID_CLAIM, 'account_id'),
+    requiredClaimIssue(payload, SINCH_GLOBAL_USER_ID_CLAIM, 'global_user_id'),
+    requiredClaimIssue(payload, 'scope', 'scope'),
+  ].filter((issue): issue is SinchUserClaimIssue => issue !== undefined);
+
+  if (issues.length > 0) {
+    return { ok: false, issues };
   }
 
-  const payload = decodeJwtPayload(token);
-  if (!payload) {
-    return undefined;
-  }
-
-  const claims: SinchUserClaims = {
-    projectId: stringClaim(payload, SINCH_PROJECT_ID_CLAIM),
-    accountId: stringClaim(payload, SINCH_ACCOUNT_ID_CLAIM),
-    email: stringClaim(payload, SINCH_EMAIL_CLAIM),
-    globalUserId: stringClaim(payload, SINCH_GLOBAL_USER_ID_CLAIM),
-    subject: stringClaim(payload, 'sub'),
-    scope: stringClaim(payload, 'scope'),
+  return {
+    ok: true,
+    claims: {
+      projectId: payload[SINCH_PROJECT_ID_CLAIM] as string,
+      accountId: payload[SINCH_ACCOUNT_ID_CLAIM] as string,
+      email: stringClaim(payload, SINCH_EMAIL_CLAIM),
+      globalUserId: payload[SINCH_GLOBAL_USER_ID_CLAIM] as string,
+      subject: stringClaim(payload, 'sub'),
+      scope: payload.scope as string,
+    },
   };
-
-  const hasAnyClaim = Object.values(claims).some((value) => value !== undefined);
-  return hasAnyClaim ? claims : undefined;
 };

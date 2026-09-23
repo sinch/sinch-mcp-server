@@ -108,7 +108,7 @@ describe('sinch-oauth-credentials', () => {
     it('uses the Authorization Bearer credentials in multi-tenant mode', () => {
       setHttpCredentialSource('request-header');
 
-      const resolved = runWithHttpCredentialHeaders({ authorization: `Bearer ${encoded}` }, () =>
+      const resolved = runWithHttpCredentialHeaders({ authorization: `Bearer ${encoded}` }, undefined, () =>
         resolveSinchOAuthCredentials(),
       );
 
@@ -122,7 +122,9 @@ describe('sinch-oauth-credentials', () => {
     it('does not read credentials from unrelated headers in multi-tenant mode', () => {
       setHttpCredentialSource('request-header');
 
-      const resolved = runWithHttpCredentialHeaders({ 'other-header': encoded }, () => resolveSinchOAuthCredentials());
+      const resolved = runWithHttpCredentialHeaders({ 'other-header': encoded }, undefined, () =>
+        resolveSinchOAuthCredentials(),
+      );
 
       expect(expectPromptText(resolved)).toBe(MISSING_AUTHORIZATION_CREDENTIALS_MESSAGE);
     });
@@ -135,6 +137,7 @@ describe('sinch-oauth-credentials', () => {
           authorization: `Bearer ${encoded}`,
           'other-header': encodeCredentials('other:lkey:lsecret'),
         },
+        undefined,
         () => resolveSinchOAuthCredentials(),
       );
 
@@ -147,7 +150,7 @@ describe('sinch-oauth-credentials', () => {
     it('returns a PromptResponse naming Authorization when the header is missing in multi-tenant mode', () => {
       setHttpCredentialSource('request-header');
 
-      const resolved = runWithHttpCredentialHeaders({}, () => resolveSinchOAuthCredentials());
+      const resolved = runWithHttpCredentialHeaders({}, undefined, () => resolveSinchOAuthCredentials());
 
       const text = expectPromptText(resolved);
       expect(text).toBe(MISSING_AUTHORIZATION_CREDENTIALS_MESSAGE);
@@ -164,7 +167,9 @@ describe('sinch-oauth-credentials', () => {
     ])('returns a PromptResponse naming Authorization for %s in multi-tenant mode', (_label, header) => {
       setHttpCredentialSource('request-header');
 
-      const resolved = runWithHttpCredentialHeaders({ authorization: header }, () => resolveSinchOAuthCredentials());
+      const resolved = runWithHttpCredentialHeaders({ authorization: header }, undefined, () =>
+        resolveSinchOAuthCredentials(),
+      );
 
       expect(expectPromptText(resolved)).toBe(MISSING_AUTHORIZATION_CREDENTIALS_MESSAGE);
     });
@@ -175,7 +180,7 @@ describe('sinch-oauth-credentials', () => {
       mockEnv.KEY_ID = 'env-key';
       mockEnv.KEY_SECRET = 'env-secret';
 
-      const resolved = runWithHttpCredentialHeaders({ authorization: `Bearer ${encoded}` }, () =>
+      const resolved = runWithHttpCredentialHeaders({ authorization: `Bearer ${encoded}` }, undefined, () =>
         resolveSinchOAuthCredentials(),
       );
 
@@ -199,7 +204,7 @@ describe('sinch-oauth-credentials', () => {
       setHttpCredentialSource('request-header');
       setAuthMode('sinchid-agent');
 
-      const resolved = runWithHttpCredentialHeaders({}, () => resolveSinchOAuthCredentials());
+      const resolved = runWithHttpCredentialHeaders({}, undefined, () => resolveSinchOAuthCredentials());
 
       expect(resolved).toBeInstanceOf(PromptResponse);
       const text = promptText(resolved as PromptResponse);
@@ -212,7 +217,7 @@ describe('sinch-oauth-credentials', () => {
       setHttpCredentialSource('request-header');
       setAuthMode('client-credentials');
 
-      const resolved = runWithHttpCredentialHeaders({}, () => resolveSinchOAuthCredentials());
+      const resolved = runWithHttpCredentialHeaders({}, undefined, () => resolveSinchOAuthCredentials());
 
       expect(resolved).toBeInstanceOf(PromptResponse);
       expect(promptText(resolved as PromptResponse)).toBe(MISSING_AUTHORIZATION_CREDENTIALS_MESSAGE);

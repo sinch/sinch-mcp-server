@@ -18,6 +18,7 @@ import {
   SERVER_CREDENTIAL_ENV_VARS,
   sinchOAuthCredentialsFromEnv,
 } from './auth/sinch-oauth-credentials';
+import { getVerifiedUserClaims } from './auth/verified-claims';
 import { env } from './env';
 import { buildJsonRpcErrorResponse } from './json-rpc';
 import { getToolsFilter, instantiateMcpServer, registerCapabilities } from './server';
@@ -90,7 +91,7 @@ const logUserJwtAuditTrail = (): void => {
       scope: claims.scope,
       agent_id: getRequestAgentId(),
     },
-    'Agent user request (unverified JWT claims)',
+    'Agent user request (verified JWT claims)',
   );
 };
 
@@ -116,6 +117,24 @@ const requireConversationRegion = (): void => {
   throw new Error(
     'In multi-tenant mode, the CONVERSATION_REGION environment variable is required: ' +
       'refusing to start rather than defaulting to a region.',
+  );
+};
+
+/**
+ * sinchid-agent trusts the Authorization JWT only after verifying it against a JWKS, so it cannot
+ * run without knowing which issuer, audience, and JWKS endpoint to verify against. Refuse to
+ * start rather than falling back to trusting unverified claims.
+ */
+const requireSinchIdJwtConfig = (): void => {
+  const required = ['SINCHID_JWT_ISSUER', 'SINCHID_JWT_AUDIENCE', 'SINCHID_JWT_JWKS_URI'] as const;
+  const missing = required.filter((key) => !env[key]);
+  if (missing.length === 0) {
+    return;
+  }
+
+  throw new Error(
+    `MCP_AUTH_MODE=sinchid-agent requires ${missing.join(', ')} to verify inbound SinchID access ` +
+      'tokens: refusing to start rather than trusting unverified JWT claims.',
   );
 };
 
@@ -183,6 +202,9 @@ export const createHttpApp = () => {
     );
   } else {
     requireConversationRegion();
+    if (mode.authMode === 'sinchid-agent') {
+      requireSinchIdJwtConfig();
+    }
     setHttpCredentialSource('request-header');
     setAuthMode(mode.authMode);
   }
@@ -213,7 +235,7 @@ export const createHttpApp = () => {
       res.setHeader('mcp-session-id', newSessionId);
       const transport = await buildTransport();
       res.on('close', () => void transport.close());
-      await runWithHttpCredentialHeaders(req.headers, () => {
+      await runWithHttpCredentialHeaders(req.headers, getVerifiedUserClaims(req), () => {
         logUserJwtAuditTrail();
         return transport.handleRequest(req, res, req.body);
       });
@@ -257,7 +279,7 @@ export const createHttpApp = () => {
 
     const transport = await buildTransport();
     res.on('close', () => void transport.close());
-    await runWithHttpCredentialHeaders(req.headers, () => {
+    await runWithHttpCredentialHeaders(req.headers, getVerifiedUserClaims(req), () => {
       logUserJwtAuditTrail();
       return transport.handleRequest(req, res, req.body);
     });

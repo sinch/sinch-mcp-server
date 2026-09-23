@@ -55,6 +55,17 @@ spec:
             # edge-unauthenticated endpoint.
             - name: MCP_AUTH_MODE
               value: {{ required "authMode is required (client-credentials | sinchid-agent). Without it this deployment would accept every inbound auth shape." .Values.authMode | quote }}
+            {{- if eq .Values.authMode "sinchid-agent" }}
+            # Required, not optional, on this auth mode: the server verifies the inbound SinchID
+            # token against this JWKS (signature, issuer, audience, expiry) before trusting any
+            # claim from it, and refuses to start without all three.
+            - name: SINCHID_JWT_ISSUER
+              value: {{ required "sinchidJwtIssuer is required when authMode is sinchid-agent." .Values.sinchidJwtIssuer | quote }}
+            - name: SINCHID_JWT_AUDIENCE
+              value: {{ required "sinchidJwtAudience is required when authMode is sinchid-agent." .Values.sinchidJwtAudience | quote }}
+            - name: SINCHID_JWT_JWKS_URI
+              value: {{ required "sinchidJwtJwksUri is required when authMode is sinchid-agent." .Values.sinchidJwtJwksUri | quote }}
+            {{- end }}
             {{- if .Values.toolTags }}
             - name: MCP_TAGS
               value: {{ .Values.toolTags | quote }}
