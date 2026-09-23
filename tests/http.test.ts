@@ -518,6 +518,8 @@ describe('auth mode enforcement', () => {
   const credentialsBlob = CREDENTIALS_BLOB;
   const ISSUER = 'https://issuer.example/';
   const AUDIENCE = 'https://agent-auth-api-test.sinch.com';
+  const AGENT_ORDER_ID = '11111111-1111-4111-8111-111111111111';
+  const AGENT_PROJECT_ID = '22222222-2222-4222-8222-222222222222';
   let jwksServer: TestJwksServer;
 
   beforeAll(async () => {
@@ -619,6 +621,13 @@ describe('auth mode enforcement', () => {
 
   test('sinchid-agent deployment accepts a validly signed SinchID token with x-agent-id', async () => {
     mockEnv.MCP_AUTH_MODE = 'sinchid-agent';
+    secretManagerAccess.mockResolvedValue([
+      {
+        payload: {
+          data: Buffer.from(Buffer.from(`${AGENT_PROJECT_ID}:key-1:secret-1`).toString('base64')),
+        },
+      },
+    ]);
     const infoSpy = jest.spyOn(logger, 'info').mockImplementation(() => undefined);
     const { baseUrl, close } = await listen(createHttpApp());
 
@@ -627,31 +636,31 @@ describe('auth mode enforcement', () => {
         iss: ISSUER,
         aud: AUDIENCE,
         sub: 'user-1',
-        [SINCH_PROJECT_ID_CLAIM]: 'project-1',
+        [SINCH_PROJECT_ID_CLAIM]: AGENT_PROJECT_ID,
         [SINCH_ACCOUNT_ID_CLAIM]: 'account-1',
         [SINCH_GLOBAL_USER_ID_CLAIM]: 'user-1',
         scope: 'openid',
       });
       const response = await post(baseUrl, initializeBody, {
         Authorization: `Bearer ${token}`,
-        'x-agent-id': 'order-42',
+        'x-agent-id': AGENT_ORDER_ID,
       });
 
       expect(response.status).toBe(200);
       expect(response.headers.get('mcp-session-id')).toBeTruthy();
       expect(secretManagerAccess).toHaveBeenCalledWith(
         {
-          name: 'projects/google-project/secrets/sinch-agent-m2m_order-42_project-1/versions/latest',
+          name: `projects/google-project/secrets/sinch-agent-m2m_${AGENT_ORDER_ID}_${AGENT_PROJECT_ID}/versions/latest`,
         },
         { timeout: 3_000 },
       );
       expect(infoSpy).toHaveBeenCalledWith(
         expect.objectContaining({
-          project_id: 'project-1',
+          project_id: AGENT_PROJECT_ID,
           account_id: 'account-1',
           global_user_id: 'user-1',
           scope: 'openid',
-          agent_id: 'order-42',
+          agent_id: AGENT_ORDER_ID,
         }),
         'Agent user request (verified JWT claims)',
       );

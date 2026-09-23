@@ -6,8 +6,7 @@ import { extractBearerToken } from './bearer-token';
 // and silently drops invalid characters, so validate the shape explicitly: a token that
 // is not Base64 (e.g. a JWT or an opaque API key) must never be mistaken for credentials.
 const BASE64_PATTERN = /^[A-Za-z0-9+/]+={0,2}$/;
-const AGENT_M2M_KEY_PART_PATTERN = /^[A-Za-z0-9.-]+$/;
-const MAX_GOOGLE_SECRET_ID_LENGTH = 255;
+const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 export type SinchOAuthCredentials = {
   projectId: string;
@@ -76,16 +75,15 @@ export const parseSinchCredentialsAuthorizationHeader = (
 /**
  * Google Secret Manager secret ID holding the M2M credentials for one agent installation.
  * The payload is the same Base64 projectId:keyId:keySecret blob used by client-credentials.
- * Identifiers are restricted to the Secret Manager ID character set without `_`,
- * because `_` separates the two components and accepting it would make the mapping ambiguous.
+ * Gemini order IDs and Sinch project IDs are UUIDs; lower-casing them makes the
+ * resulting secret ID canonical.
  */
 export const buildAgentM2MSecretId = (orderId: string, projectId: string): string | undefined => {
-  if (!AGENT_M2M_KEY_PART_PATTERN.test(orderId) || !AGENT_M2M_KEY_PART_PATTERN.test(projectId)) {
+  if (!UUID_PATTERN.test(orderId) || !UUID_PATTERN.test(projectId)) {
     return undefined;
   }
 
-  const name = `sinch-agent-m2m_${orderId}_${projectId}`;
-  return name.length <= MAX_GOOGLE_SECRET_ID_LENGTH ? name : undefined;
+  return `sinch-agent-m2m_${orderId.toLowerCase()}_${projectId.toLowerCase()}`;
 };
 
 export const SERVER_CREDENTIAL_ENV_VARS = ['PROJECT_ID', 'KEY_ID', 'KEY_SECRET'] as const;

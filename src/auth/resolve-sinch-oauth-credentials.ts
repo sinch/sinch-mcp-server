@@ -33,7 +33,7 @@ const resolveAgentInstallationCredentials = (): SinchOAuthCredentials | PromptRe
   }
 
   const credentials = getRequestAgentSinchOAuthCredentials();
-  if (!credentials || credentials.projectId !== projectId) {
+  if (!credentials || credentials.projectId.toLowerCase() !== projectId.toLowerCase()) {
     logger.warn({ agent_id: orderId }, 'No Sinch API credentials configured for this agent installation');
     return new PromptResponse(MISSING_AGENT_CREDENTIALS_MESSAGE);
   }

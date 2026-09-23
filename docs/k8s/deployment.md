@@ -91,10 +91,11 @@ Notes:
   provided via the `x-agent-id` header.
 - On `sinch-mcp-server-agent` (the only release running `sinchid-agent`), each onboarded
   installation needs a Google Secret Manager secret named
-  `sinch-agent-m2m_<orderId>_<projectId>`. Its latest payload uses the same Base64 blob format
-  as `client-credentials`. The server fetches it on each MCP request, validates that its embedded
-  project matches the verified JWT project, and never injects customer credentials into the pod
-  environment. Missing, inaccessible, empty, malformed, or mismatched secrets fail closed.
+  `sinch-agent-m2m_<orderId>_<projectId>`. Both identifiers are canonical UUIDs. Its latest
+  payload uses the same Base64 blob format as `client-credentials`. The server fetches it on each
+  MCP request, validates that its embedded project matches the verified JWT project, and never
+  injects customer credentials into the pod environment. Missing, inaccessible, empty, malformed,
+  or mismatched secrets fail closed.
 
 ### Agent credential deployment decision
 
@@ -104,6 +105,11 @@ Only the agent release mounts a Google service-account JSON key. Deployment infr
 2. Store the JSON key in an encrypted Kubernetes Secret (never in this repository or Helm values).
 3. Set `googleServiceAccount.existingSecret` to that Kubernetes Secret name. Override
    `googleServiceAccount.key` only when the data key is not `sa-key.json`.
+
+Helm configures only this Secret Manager reader identity; it does not contain a list of customer
+credentials. Onboarding automation creates, versions, disables, and deletes one Google Secret
+Manager secret per installation/project pair. Users sharing that pair use the same M2M
+credentials, while a separate installation or project gets a separate secret.
 
 The chart mounts the selected key read-only at `/var/run/secrets/google/sa-key.json` and sets
 `GOOGLE_APPLICATION_CREDENTIALS` to that path. It requires this configuration for

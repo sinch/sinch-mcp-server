@@ -57,7 +57,9 @@ export const loadAgentM2MCredentials = async (
 
     const encodedCredentials = typeof data === 'string' ? data : Buffer.from(data).toString('utf8');
     const credentials = parseSinchCredentialsValue(encodedCredentials);
-    if (!credentials || credentials.projectId !== projectId) {
+    // Keep this fail-closed until SinchID supplies an explicit project selector and
+    // master-to-subproject authorization can be validated independently.
+    if (!credentials || credentials.projectId.toLowerCase() !== projectId.toLowerCase()) {
       logger.warn(
         { secret_id: secretId, agent_id: orderId },
         'Agent credential secret is malformed or belongs to a different project',

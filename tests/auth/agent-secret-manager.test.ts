@@ -1,6 +1,8 @@
 import { loadAgentM2MCredentials, setAgentSecretManagerClientForTests } from '../../src/auth/agent-secret-manager';
 
 const encodeCredentials = (value: string): string => Buffer.from(value).toString('base64');
+const ORDER_ID = '11111111-1111-4111-8111-111111111111';
+const PROJECT_ID = '22222222-2222-4222-8222-222222222222';
 
 describe('agent-secret-manager', () => {
   const getProjectId = jest.fn<Promise<string>, []>();
@@ -18,29 +20,31 @@ describe('agent-secret-manager', () => {
 
   it('loads the latest secret version using Application Default Credentials project discovery', async () => {
     accessSecretVersion.mockResolvedValue([
-      { payload: { data: Buffer.from(encodeCredentials('project-1:key-id:key-secret')) } },
+      { payload: { data: Buffer.from(encodeCredentials(`${PROJECT_ID}:key-id:key-secret`)) } },
     ]);
 
-    const credentials = await loadAgentM2MCredentials('order-42', 'project-1');
+    const credentials = await loadAgentM2MCredentials(ORDER_ID, PROJECT_ID);
 
     expect(accessSecretVersion).toHaveBeenCalledWith(
       {
-        name: 'projects/google-project/secrets/sinch-agent-m2m_order-42_project-1/versions/latest',
+        name: `projects/google-project/secrets/sinch-agent-m2m_${ORDER_ID}_${PROJECT_ID}/versions/latest`,
       },
       { timeout: 3_000 },
     );
     expect(credentials).toMatchObject({
-      projectId: 'project-1',
+      projectId: PROJECT_ID,
       keyId: 'key-id',
       keySecret: 'key-secret',
     });
   });
 
-  it('accepts a string payload returned by the client', async () => {
-    accessSecretVersion.mockResolvedValue([{ payload: { data: encodeCredentials('project-1:key-id:key-secret') } }]);
+  it('accepts a string payload and compares UUIDs case-insensitively', async () => {
+    accessSecretVersion.mockResolvedValue([
+      { payload: { data: encodeCredentials(`${PROJECT_ID}:key-id:key-secret`) } },
+    ]);
 
-    await expect(loadAgentM2MCredentials('order-42', 'project-1')).resolves.toMatchObject({
-      projectId: 'project-1',
+    await expect(loadAgentM2MCredentials(ORDER_ID.toUpperCase(), PROJECT_ID.toUpperCase())).resolves.toMatchObject({
+      projectId: PROJECT_ID,
     });
   });
 
@@ -55,7 +59,7 @@ describe('agent-secret-manager', () => {
   ])('fails closed for %s', async (_label, version) => {
     accessSecretVersion.mockResolvedValue([version]);
 
-    await expect(loadAgentM2MCredentials('order-42', 'project-1')).resolves.toBeUndefined();
+    await expect(loadAgentM2MCredentials(ORDER_ID, PROJECT_ID)).resolves.toBeUndefined();
   });
 
   it.each([
@@ -67,11 +71,11 @@ describe('agent-secret-manager', () => {
   ])('fails closed on %s', async (_label, arrange) => {
     arrange();
 
-    await expect(loadAgentM2MCredentials('order-42', 'project-1')).resolves.toBeUndefined();
+    await expect(loadAgentM2MCredentials(ORDER_ID, PROJECT_ID)).resolves.toBeUndefined();
   });
 
   it('rejects invalid identifiers without calling Google', async () => {
-    await expect(loadAgentM2MCredentials('order_with_separator', 'project-1')).resolves.toBeUndefined();
+    await expect(loadAgentM2MCredentials('not-a-uuid', PROJECT_ID)).resolves.toBeUndefined();
 
     expect(getProjectId).not.toHaveBeenCalled();
     expect(accessSecretVersion).not.toHaveBeenCalled();

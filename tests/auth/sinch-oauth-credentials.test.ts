@@ -17,6 +17,8 @@ import { PromptResponse } from '../../src/types';
 import { mockEnv, resetMockEnv } from '../helpers/mock-env';
 
 const encodeCredentials = (value: string): string => Buffer.from(value).toString('base64');
+const ORDER_ID = '11111111-1111-4111-8111-111111111111';
+const PROJECT_ID = '22222222-2222-4222-8222-222222222222';
 
 const expectPromptText = (result: unknown): string => {
   expect(result).toBeInstanceOf(PromptResponse);
@@ -91,15 +93,17 @@ describe('sinch-oauth-credentials', () => {
   });
 
   describe('buildAgentM2MSecretId', () => {
-    it('builds an underscore-joined Secret Manager ID from orderId and projectId', () => {
-      expect(buildAgentM2MSecretId('order-42', 'project-1')).toBe('sinch-agent-m2m_order-42_project-1');
+    it('builds a canonical Secret Manager ID from UUID orderId and projectId', () => {
+      expect(buildAgentM2MSecretId(ORDER_ID.toUpperCase(), PROJECT_ID.toUpperCase())).toBe(
+        `sinch-agent-m2m_${ORDER_ID}_${PROJECT_ID}`,
+      );
     });
 
     it.each([
-      ['an orderId containing the separator', 'order_42', 'project-1'],
-      ['a projectId containing the separator', 'order-42', 'project_1'],
-      ['an orderId containing unsupported characters', 'orders/42', 'project-1'],
-      ['an oversized composite name', 'a'.repeat(242), 'project-1'],
+      ['a non-UUID orderId', 'order-42', PROJECT_ID],
+      ['a non-UUID projectId', ORDER_ID, 'project-1'],
+      ['a UUID with a missing group', '11111111-1111-1111-111111111111', PROJECT_ID],
+      ['a UUID containing a non-hex character', ORDER_ID, '22222222-2222-4222-8222-22222222222g'],
     ])('rejects %s', (_label, orderId, projectId) => {
       expect(buildAgentM2MSecretId(orderId, projectId)).toBeUndefined();
     });

@@ -51,6 +51,8 @@ secretKeys: []
 
 # Google service-account key used to access Secret Manager. The Secret itself is
 # provisioned by deployment infrastructure and mounted only by sinchid-agent releases.
+# Customer credentials are not listed in Helm: each installation has its own Google
+# Secret Manager secret, and this one service account reads the authorized set.
 # Both values are required in sinchid-agent mode and rejected otherwise.
 googleServiceAccount:
   existingSecret: ""
