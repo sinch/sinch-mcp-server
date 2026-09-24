@@ -46,11 +46,11 @@
 
 `MCP_AUTH_MODE` selects the tenancy, and it is read **first**:
 
-| `MCP_AUTH_MODE`     | Tenancy       | `PROJECT_ID`/`KEY_ID`/`KEY_SECRET` | Tools run as              |
-| ------------------- | ------------- | ---------------------------------- | ------------------------- |
-| set to a known mode | Multi-tenant  | **never read**                     | whatever the caller sends |
-| set to anything else| —             | —                                  | refuses to start          |
-| unset               | Single-tenant | **required**, all three            | the env credentials       |
+| `MCP_AUTH_MODE`      | Tenancy       | `PROJECT_ID`/`KEY_ID`/`KEY_SECRET` | Tools run as              |
+| -------------------- | ------------- | ---------------------------------- | ------------------------- |
+| set to a known mode  | Multi-tenant  | **never read**                     | whatever the caller sends |
+| set to anything else | —             | —                                  | refuses to start          |
+| unset                | Single-tenant | **required**, all three            | the env credentials       |
 
 That ordering is the point: the decision rests on one variable the chart always sets, never on
 the absence of something. A credential left in the environment — a stale Secret key, a local
@@ -60,10 +60,10 @@ for anything else.
 
 When `MCP_AUTH_MODE` is set, it also pins the one inbound shape `/mcp` accepts:
 
-| `MCP_AUTH_MODE`      | `Authorization` header value                                    | Tools run as           |
-| -------------------- | --------------------------------------------------------------- |------------------------|
-| `client-credentials` | `Bearer <base64(projectId:keyId:keySecret)>` — the caller's own | the credentials sent   |
-| `sinchid-agent`      | `Bearer <SinchID access token>`, plus `x-agent-id`              | the user's credentials |
+| `MCP_AUTH_MODE`      | `Authorization` header value                                    | Tools run as          |
+| -------------------- | --------------------------------------------------------------- | --------------------- |
+| `client-credentials` | `Bearer <base64(projectId:keyId:keySecret)>` — the caller's own | the credentials sent  |
+| `sinchid-agent`      | `Bearer <SinchID access token>`, plus `x-agent-id`              | Google Secret Manager |
 
 Notes:
 
@@ -85,18 +85,50 @@ Notes:
 - Make sure `Authorization` is passed through to the pod untouched.
 - **`sinchid-agent` verifies the `Authorization` JWT** (signature against a JWKS, algorithm pinned
   to `RS256`, issuer, audience, expiry) before trusting any claim from it or letting the request
-  through. This requires three chart values, all **required** on this auth mode —
-  `sinchidJwtIssuer`, `sinchidJwtAudience`, `sinchidJwtJwksUri` (env vars `SINCHID_JWT_ISSUER`,
-  `SINCHID_JWT_AUDIENCE`, `SINCHID_JWT_JWKS_URI`) — the server refuses to start without them.
-  Credential *resolution* for this mode is still not implemented (DEVEXP-1631); this only covers
-  verifying the token itself.
+  through. This requires `SINCHID_JWT_ISSUER`, `SINCHID_JWT_AUDIENCE`, `SINCHID_JWT_JWKS_URI` —
+  the server refuses to start without them. The caller's Sinch project ID is derived directly
+  from the verified token's `https://sinch.com/project_id` claim, and the installation identifier is
+  provided via the `x-agent-id` header.
+- On `sinch-mcp-server-agent` (the only release running `sinchid-agent`), each onboarded
+  installation needs a Google Secret Manager secret named
+  `sinch-agent-m2m_<orderId>_<projectId>`. Both identifiers are canonical UUIDs. Its latest
+  payload uses the same Base64 blob format as `client-credentials`. The server fetches it on each
+  MCP request, validates that its embedded project matches the verified JWT project, and never
+  injects customer credentials into the pod environment. Missing, inaccessible, empty, malformed,
+  or mismatched secrets fail closed.
 
-## Secret skeleton (create in namespace before first deploy)
+### Agent credential deployment decision
 
-Do not put `PROJECT_ID`/`KEY_ID`/`KEY_SECRET` in this secret. The chart always sets
-`MCP_AUTH_MODE`, so they would be inert rather than dangerous — but they would still be live
-Sinch credentials sitting in a namespace with nothing to read them, which is worth avoiding on
-its own.
+Google authentication for the MCP workload is separate from customer credential resolution.
+Secret Manager is the only customer-credential source in `sinchid-agent`; the Google
+credential below only authorizes the workload to read it and is never an environment fallback.
+
+Only the agent release mounts a Google service-account JSON key. Deployment infrastructure must:
+
+1. Grant that account only `roles/secretmanager.secretAccessor` on the installation secrets.
+2. Store the JSON key as `sa-key.json` in an encrypted Kubernetes Secret (never in this repository
+   or Helm values).
+3. Set `googleServiceAccount.existingSecret` to that Kubernetes Secret name.
+
+The chart mounts that single file read-only at `/var/run/secrets/google/sa-key.json` and sets
+`GOOGLE_APPLICATION_CREDENTIALS` to the same path. This configuration is required for
+`authMode=sinchid-agent` and rejected for other releases.
+
+Helm configures only the Secret Manager reader identity; it does not contain a list of customer
+credentials. Onboarding automation creates, versions, disables, and deletes one Google Secret
+Manager secret per installation/project pair. Users sharing that pair use the same M2M
+credentials, while a separate installation or project gets a separate secret.
+
+Example Secret creation (deployment automation should provide the real key file):
+
+```bash
+kubectl -n mcp-messaging create secret generic sinch-mcp-agent-google-sa \
+  --from-file=sa-key.json=/secure/path/sa-key.json
+```
+
+Do not add customer `PROJECT_ID`/`KEY_ID`/`KEY_SECRET` values to this Kubernetes Secret. Customer
+credentials belong only in Google Secret Manager. Adding or rotating the latest Secret Manager
+version takes effect on the next request without a pod rollout.
 
 `CONVERSATION_REGION` and `MCP_AUTH_MODE` are chart values (`conversationRegion`, `authMode`),
 not secret keys.

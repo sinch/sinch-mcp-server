@@ -11,7 +11,13 @@ import {
   setAuthMode,
   type McpAuthMode,
 } from './auth/auth-mode';
-import { getRequestAgentId, getRequestUserClaims, runWithHttpCredentialHeaders } from './auth/credential-context';
+import { loadAgentM2MCredentials } from './auth/agent-secret-manager';
+import {
+  AGENT_ID_HEADER,
+  getRequestAgentId,
+  getRequestUserClaims,
+  runWithHttpCredentialHeaders,
+} from './auth/credential-context';
 import { setHttpCredentialSource } from './auth/http-credential-mode';
 import {
   presentServerCredentialEnvVars,
@@ -30,6 +36,7 @@ import {
   validateAndTouchSession,
 } from './session-store';
 import { logger } from './telemetry/logger';
+import { extractHeaderValue } from './utils';
 
 dotenv.config();
 
@@ -209,6 +216,21 @@ export const createHttpApp = () => {
     setAuthMode(mode.authMode);
   }
 
+  const runWithRequestCredentialContext = async <T>(req: Request, fn: () => T): Promise<Awaited<T>> => {
+    const userClaims = getVerifiedUserClaims(req);
+    let agentCredentials;
+
+    if (mode.tenancy === 'multi-tenant' && mode.authMode === 'sinchid-agent') {
+      const agentId = extractHeaderValue(req.headers[AGENT_ID_HEADER]);
+      const projectId = userClaims?.projectId;
+      if (agentId && projectId) {
+        agentCredentials = await loadAgentM2MCredentials(agentId, projectId);
+      }
+    }
+
+    return await runWithHttpCredentialHeaders(req.headers, userClaims, fn, agentCredentials);
+  };
+
   const handleMcpRequest = async (req: Request, res: Response): Promise<void> => {
     const sessionId = getSessionId(req);
     const isInitRequest = isInitializationBody(req.body);
@@ -235,7 +257,7 @@ export const createHttpApp = () => {
       res.setHeader('mcp-session-id', newSessionId);
       const transport = await buildTransport();
       res.on('close', () => void transport.close());
-      await runWithHttpCredentialHeaders(req.headers, getVerifiedUserClaims(req), () => {
+      await runWithRequestCredentialContext(req, () => {
         logUserJwtAuditTrail();
         return transport.handleRequest(req, res, req.body);
       });
@@ -279,7 +301,7 @@ export const createHttpApp = () => {
 
     const transport = await buildTransport();
     res.on('close', () => void transport.close());
-    await runWithHttpCredentialHeaders(req.headers, getVerifiedUserClaims(req), () => {
+    await runWithRequestCredentialContext(req, () => {
       logUserJwtAuditTrail();
       return transport.handleRequest(req, res, req.body);
     });

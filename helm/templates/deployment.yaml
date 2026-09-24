@@ -1,3 +1,18 @@
+{{- $authMode := required "authMode is required (client-credentials | sinchid-agent)." .Values.authMode -}}
+{{- if not (has $authMode (list "client-credentials" "sinchid-agent")) -}}
+{{- fail "authMode must be one of: client-credentials, sinchid-agent." -}}
+{{- end -}}
+{{- $conversationRegion := required "conversationRegion is required (us | eu | br)." .Values.conversationRegion -}}
+{{- if not (has $conversationRegion (list "us" "eu" "br")) -}}
+{{- fail "conversationRegion must be one of: us, eu, br." -}}
+{{- end -}}
+{{- if eq $authMode "sinchid-agent" -}}
+{{- if not .Values.googleServiceAccount.existingSecret -}}
+{{- fail "googleServiceAccount.existingSecret is required when authMode is sinchid-agent." -}}
+{{- end -}}
+{{- else if .Values.googleServiceAccount.existingSecret -}}
+{{- fail "googleServiceAccount may only be configured when authMode is sinchid-agent." -}}
+{{- end -}}
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -49,13 +64,13 @@ spec:
             # server, which refuses to start without a region. Failing at template time gives
             # a clear error instead of a crash-looping pod.
             - name: CONVERSATION_REGION
-              value: {{ required "conversationRegion is required (us | eu | br). Without it the server would route customer data to another region." .Values.conversationRegion | quote }}
+              value: {{ $conversationRegion | quote }}
             # Required, not optional: the server refuses to start without it, and a
             # deployment without a pinned auth mode would accept every shape on an
             # edge-unauthenticated endpoint.
             - name: MCP_AUTH_MODE
-              value: {{ required "authMode is required (client-credentials | sinchid-agent). Without it this deployment would accept every inbound auth shape." .Values.authMode | quote }}
-            {{- if eq .Values.authMode "sinchid-agent" }}
+              value: {{ $authMode | quote }}
+            {{- if eq $authMode "sinchid-agent" }}
             # Required, not optional, on this auth mode: the server verifies the inbound SinchID
             # token against this JWKS (signature, issuer, audience, expiry) before trusting any
             # claim from it, and refuses to start without all three.
@@ -65,6 +80,10 @@ spec:
               value: {{ required "sinchidJwtAudience is required when authMode is sinchid-agent." .Values.sinchidJwtAudience | quote }}
             - name: SINCHID_JWT_JWKS_URI
               value: {{ required "sinchidJwtJwksUri is required when authMode is sinchid-agent." .Values.sinchidJwtJwksUri | quote }}
+            # Google client libraries use the mounted service-account key as Application
+            # Default Credentials when fetching this installation's latest secret version.
+            - name: GOOGLE_APPLICATION_CREDENTIALS
+              value: "/var/run/secrets/google/sa-key.json"
             {{- end }}
             {{- if .Values.toolTags }}
             - name: MCP_TAGS
@@ -100,6 +119,11 @@ spec:
           volumeMounts:
             - name: tmp
               mountPath: /tmp
+            {{- if eq $authMode "sinchid-agent" }}
+            - name: google-service-account
+              mountPath: "/var/run/secrets/google"
+              readOnly: true
+            {{- end }}
           {{- if .Values.lifecycle.preStop.sleepSeconds }}
           lifecycle:
             preStop:
@@ -131,6 +155,15 @@ spec:
       volumes:
         - name: tmp
           emptyDir: {}
+        {{- if eq $authMode "sinchid-agent" }}
+        - name: google-service-account
+          secret:
+            secretName: {{ .Values.googleServiceAccount.existingSecret | quote }}
+            defaultMode: 0440
+            items:
+              - key: "sa-key.json"
+                path: "sa-key.json"
+        {{- end }}
       {{- with .Values.nodeSelector }}
       nodeSelector:
         {{- toYaml . | nindent 8 }}

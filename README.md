@@ -397,27 +397,29 @@ In the multi-tenant modes, `CONVERSATION_REGION` is **required**: the server ref
 The shape check exists only in the multi-tenant modes. Requests are checked against the configured shape and rejected with `401` plus a `WWW-Authenticate: Bearer` challenge otherwise:
 
 - **`client-credentials`** requires a token that decodes to `projectId:keyId:keySecret`. A SinchID JWT contains `.` separators, so it never decodes to a credential triple and is rejected here. `x-agent-id` is ignored: this deployment never reads it.
-- **`sinchid-agent`** requires a three-segment JWT **and** an `x-agent-id` header — credentials are resolved from the agent installation it names, so a request without it cannot complete. A Base64 credential triple is not a JWT, so it is rejected here. Being JWT-shaped is not enough on its own: the token is then cryptographically verified (see [SinchID token verification](#sinchid-token-verification-sinchid-agent-only) below) before the request is allowed through.
+- **`sinchid-agent`** requires a three-segment JWT **and** an `x-agent-id` header — credentials are resolved from the agent installation it names and the Sinch project id from the verified token claim, so a request without it cannot complete. A Base64 credential triple is not a JWT, so it is rejected here. Being JWT-shaped is not enough on its own: the token is then cryptographically verified (see [SinchID token verification](#sinchid-token-verification-sinchid-agent-only) below) before the request is allowed through.
 
 A request with no `Authorization` at all gets the RFC 6750 realm-only challenge (`Bearer realm="sinch-mcp"`) with the reason in the response body; a request carrying the wrong _kind_ of token, or a JWT that fails verification, gets `error="invalid_token"` plus a description.
 
 Two deployments of the same image, each with its own `MCP_AUTH_MODE`, therefore serve the two audiences on separate hostnames without either accepting the other's credentials. `MCP_AUTH_MODE` has no effect over stdio.
 
-> **`sinchid-agent` credential resolution is not functional yet.** Looking up Sinch API credentials from the agent installation lands in [DEVEXP-1631](https://sinchenterprise.atlassian.net/browse/DEVEXP-1631); until then its tools return an explanatory prompt instead of running. The `Authorization` JWT itself, however, **is** fully verified today (signature, issuer, audience, expiry) — see below.
-
 #### SinchID token verification (`sinchid-agent` only)
 
 Every `sinchid-agent` request's `Authorization` JWT is verified against the configured JWKS before the request is allowed through: signature (RSA, algorithm pinned to `RS256` — never taken from the token's own `alg` header), issuer, audience, expiry (a token without an `exp` claim is rejected too), and non-empty project, account, global-user, and scope claims. A forged, expired, wrong-issuer/audience, or incomplete token is rejected with `401` and never reaches session creation or tool execution.
 
-This requires three environment variables, all **required** in `sinchid-agent` mode — the server refuses to start without them:
+JWT verification requires three environment variables, all **required** in `sinchid-agent` mode — the server refuses to start without them:
 
-| Variable                | Value                                                             |
-| ------------------------ | ------------------------------------------------------------------ |
-| `SINCHID_JWT_ISSUER`     | Expected `iss` claim (e.g. `https://id.sinch.com/`)                |
-| `SINCHID_JWT_AUDIENCE`   | Expected `aud` claim                                                |
-| `SINCHID_JWT_JWKS_URI`   | URL of the issuer's JWKS document (public signing keys)            |
+| Variable               | Value                                                   |
+| ---------------------- | ------------------------------------------------------- |
+| `SINCHID_JWT_ISSUER`   | Expected `iss` claim (e.g. `https://id.sinch.com/`)     |
+| `SINCHID_JWT_AUDIENCE` | Expected `aud` claim                                    |
+| `SINCHID_JWT_JWKS_URI` | URL of the issuer's JWKS document (public signing keys) |
+
+Secret Manager authentication uses [Google Application Default Credentials](https://cloud.google.com/docs/authentication/application-default-credentials). For local development, run `gcloud auth application-default login`; the Google client then uses developer ADC without a per-agent environment-variable credential or fallback. Set `GOOGLE_CLOUD_PROJECT` when ADC cannot infer the project that owns the secrets. `GOOGLE_APPLICATION_CREDENTIALS` is only needed locally when a service-account JSON file is supplied; point it at that file's absolute path and never commit it. In Kubernetes, the agent release mounts its deployment-managed `sa-key.json` from a Secret.
 
 The complete JWKS document is retained in memory. JWKS HTTP requests are aborted after 3 seconds without network activity. After 10 minutes the server attempts to refresh the document, but it does not discard known keys first: if that scheduled refresh fails, tokens using a cached key can still be verified for up to one hour from the last successful fetch. A later successful refresh replaces the document immediately and removes keys the issuer no longer publishes. A token whose key id is absent can trigger at most one refresh attempt per 30-second cooldown, measured from every attempt (including failures), so an outage or a flood of random key ids cannot hammer the JWKS endpoint. A newly published signing key is picked up on the first successful refresh after the cooldown. Unknown keys are rejected with `401` after a successful JWKS lookup; `503` is reserved for cases where an attempted lookup could not complete or the last successful document is too old for stale fallback.
+
+`sinchid-agent` credentials are loaded at request time from the latest Google Secret Manager version named `sinch-agent-m2m_<orderId>_<projectId>`. Its payload is the same Base64 `projectId:keyId:keySecret` blob used by `client-credentials`. `orderId` comes from the `x-agent-id` header, and `projectId` is derived from the verified token's `https://sinch.com/project_id` claim. Both identifiers must be canonical UUIDs and are lower-cased when constructing the secret ID. The decoded credential's project must match the verified project. A missing, inaccessible, empty, malformed, mismatched, or invalidly named secret fails closed with a prompt response. This mode never falls back to `PROJECT_ID`, `KEY_ID`, or `KEY_SECRET`; those variables remain exclusive to standalone single-tenant mode.
 
 #### `Authorization` credentials format (HTTP only)
 
@@ -445,7 +447,7 @@ curl -X POST "http://localhost:8000/mcp" \
 
 #### `x-agent-id` header (`sinchid-agent` only)
 
-Agent integrations (e.g. an agent installed in a Gemini Enterprise app) send an `x-agent-id` header carrying the unique installation identifier (the Marketplace **OrderId**). Its purpose is to distinguish which installation is calling the MCP server, so it is **required** on deployments running with `MCP_AUTH_MODE=sinchid-agent`: it will be used to resolve the caller's Sinch credentials in an upcoming release. Elsewhere it is simply not read — the other modes ignore it, and over stdio credentials always come from the environment. This custom header is a temporary mechanism until a token-exchange capability is available over M2M authentication.
+Agent integrations (e.g. an agent installed in a Gemini Enterprise app) send an `x-agent-id` header carrying the unique installation identifier (the Marketplace **OrderId**). The Sinch project id is derived from the verified `https://sinch.com/project_id` claim in the `Authorization` JWT. Together they name which Google Secret Manager secret (`sinch-agent-m2m_<orderId>_<projectId>`) the server resolves the caller's Sinch credentials from. The `x-agent-id` header is **required** on deployments running with `MCP_AUTH_MODE=sinchid-agent`; a request missing it is rejected with `401` before reaching a tool. Elsewhere it is simply not read — the other modes ignore it, and over stdio credentials always come from the environment. This custom header is a temporary mechanism until a token-exchange capability is available over M2M authentication.
 
 | Header       | Value                                             |
 | ------------ | ------------------------------------------------- |
@@ -459,15 +461,15 @@ After the end-user completes the OAuth login and consent flow, agent integration
 | --------------- | ------------------- |
 | `Authorization` | `Bearer <user JWT>` |
 
-Once the token has passed verification (see [SinchID token verification](#sinchid-token-verification-sinchid-agent-only) above), the server captures the Sinch claims (`https://sinch.com/project_id`, `https://sinch.com/account_id`, `https://sinch.com/global_user_id`) and the standard `scope` claim in the request context, logging them for **audit purposes**. The claims are never used to resolve API credentials (the `x-agent-id` header serves that purpose). Single-tenant does not read `Authorization`; in the multi-tenant modes the token must match the deployment's shape and pass verification, or the request is rejected with `401`. In the long term, the user JWT will be exchanged for an M2M JWT, replacing the custom headers.
+Once the token has passed verification (see [SinchID token verification](#sinchid-token-verification-sinchid-agent-only) above), the server captures the Sinch claims (`https://sinch.com/project_id`, `https://sinch.com/account_id`, `https://sinch.com/global_user_id`) and the standard `scope` claim in the request context, logging them for **audit purposes**. The verified `https://sinch.com/project_id` claim is paired with `x-agent-id` to resolve M2M API credentials from Secret Manager (`sinch-agent-m2m_<orderId>_<projectId>`). Single-tenant does not read `Authorization`; in the multi-tenant modes the token must match the deployment's shape and pass verification, or the request is rejected with `401`. In the long term, the user JWT will be exchanged for an M2M JWT, replacing the custom headers.
 
 What the `Authorization` token _is_ depends on the deployment:
 
-| Deployment                         | Bearer token                             | Sinch credentials come from                                |
-| ---------------------------------- | ---------------------------------------- | ---------------------------------------------------------- |
-| Single-tenant                      | not read, and not required               | the server's `PROJECT_ID`/`KEY_ID`/`KEY_SECRET`            |
-| Multi-tenant, `client-credentials` | Base64 `projectId:keyId:keySecret`       | the token itself                                           |
-| Multi-tenant, `sinchid-agent`      | SinchID access token (three-segment JWT) | the agent installation — not implemented yet (DEVEXP-1631) |
+| Deployment                         | Bearer token                             | Sinch credentials come from                     |
+| ---------------------------------- | ---------------------------------------- | ----------------------------------------------- |
+| Single-tenant                      | not read, and not required               | the server's `PROJECT_ID`/`KEY_ID`/`KEY_SECRET` |
+| Multi-tenant, `client-credentials` | Base64 `projectId:keyId:keySecret`       | the token itself                                |
+| Multi-tenant, `sinchid-agent`      | SinchID access token (three-segment JWT) | the agent installation (Google Secret Manager)  |
 
 The two multi-tenant shapes are disjoint: a JWT contains `.` separators, which are not in the Base64 alphabet, so a credential triple is never read as a token and a JWT never resolves to credentials. Each multi-tenant deployment accepts only its own shape and answers `401` to the other — see [`MCP_AUTH_MODE`](#step-2-pick-a-tenancy).
 

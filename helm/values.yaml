@@ -49,6 +49,13 @@ resources:
 existingSecret: ""
 secretKeys: []
 
+# Google service-account key used to access Secret Manager. Deployment infrastructure
+# provisions this Kubernetes Secret with one `sa-key.json` data entry. It is required
+# for sinchid-agent and rejected for other releases. Customer credentials are never
+# listed in Helm: each installation has its own Google Secret Manager secret.
+googleServiceAccount:
+  existingSecret: ""
+
 # Conversation API region — one of: us | eu | br. REQUIRED; there is no default.
 # Set per site in k8s-manifests-mcp-messaging.
 conversationRegion: ""

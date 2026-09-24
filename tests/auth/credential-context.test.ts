@@ -1,6 +1,7 @@
 import {
   AGENT_ID_HEADER,
   getRequestAgentId,
+  getRequestAgentSinchOAuthCredentials,
   getRequestSinchOAuthCredentials,
   getRequestUserClaims,
   runWithHttpCredentialHeaders,
@@ -46,6 +47,29 @@ describe('credential-context', () => {
     }));
     expect(credentialsOnly.agentId).toBeUndefined();
     expect(credentialsOnly.credentials?.projectId).toBe('proj');
+  });
+
+  it('keeps preloaded agent credentials separate from Authorization credentials', () => {
+    const authorization = `Bearer ${Buffer.from('header-project:header-key:header-secret').toString('base64')}`;
+    const agentCredentials = {
+      projectId: 'agent-project',
+      keyId: 'agent-key',
+      keySecret: 'agent-secret',
+      cacheKey: 'agent-cache-key',
+    };
+
+    const credentials = runWithHttpCredentialHeaders(
+      { [AGENT_ID_HEADER]: 'order-42', authorization },
+      { projectId: 'agent-project' },
+      () => ({
+        header: getRequestSinchOAuthCredentials(),
+        agent: getRequestAgentSinchOAuthCredentials(),
+      }),
+      agentCredentials,
+    );
+
+    expect(credentials.header?.projectId).toBe('header-project');
+    expect(credentials.agent).toBe(agentCredentials);
   });
 
   describe('Sinch credentials in Authorization', () => {
