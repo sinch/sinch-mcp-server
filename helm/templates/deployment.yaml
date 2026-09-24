@@ -7,17 +7,16 @@
 {{- fail "conversationRegion must be one of: us, eu, br." -}}
 {{- end -}}
 {{- if eq $authMode "sinchid-agent" -}}
-{{- if not .Values.googleServiceAccount.existingSecret -}}
-{{- fail "googleServiceAccount.existingSecret is required when authMode is sinchid-agent." -}}
-{{- end -}}
+{{- if .Values.googleServiceAccount.existingSecret -}}
 {{- if not .Values.googleServiceAccount.key -}}
-{{- fail "googleServiceAccount.key is required when authMode is sinchid-agent." -}}
+{{- fail "googleServiceAccount.key is required when googleServiceAccount.existingSecret is configured." -}}
 {{- end -}}
 {{- if not (regexMatch "^[A-Za-z0-9._-]+$" .Values.googleServiceAccount.key) -}}
 {{- fail "googleServiceAccount.key must be a single valid Kubernetes Secret data key." -}}
 {{- end -}}
 {{- if not (hasPrefix "/" .Values.googleServiceAccount.mountDirectory) -}}
-{{- fail "googleServiceAccount.mountDirectory must be an absolute path when authMode is sinchid-agent." -}}
+{{- fail "googleServiceAccount.mountDirectory must be an absolute path when googleServiceAccount.existingSecret is configured." -}}
+{{- end -}}
 {{- end -}}
 {{- else if .Values.googleServiceAccount.existingSecret -}}
 {{- fail "googleServiceAccount may only be configured when authMode is sinchid-agent." -}}
@@ -90,10 +89,12 @@ spec:
               value: {{ required "sinchidJwtAudience is required when authMode is sinchid-agent." .Values.sinchidJwtAudience | quote }}
             - name: SINCHID_JWT_JWKS_URI
               value: {{ required "sinchidJwtJwksUri is required when authMode is sinchid-agent." .Values.sinchidJwtJwksUri | quote }}
-            # Google client libraries use this mounted service-account key as Application
-            # Default Credentials when fetching this installation's latest secret version.
+            {{- if .Values.googleServiceAccount.existingSecret }}
+            # Optional file-based ADC. Leave unconfigured when the pod receives Google
+            # credentials from the platform's approved ambient workload identity.
             - name: GOOGLE_APPLICATION_CREDENTIALS
               value: {{ $googleCredentialsPath | quote }}
+            {{- end }}
             {{- end }}
             {{- if .Values.toolTags }}
             - name: MCP_TAGS
@@ -129,7 +130,7 @@ spec:
           volumeMounts:
             - name: tmp
               mountPath: /tmp
-            {{- if eq $authMode "sinchid-agent" }}
+            {{- if and (eq $authMode "sinchid-agent") .Values.googleServiceAccount.existingSecret }}
             - name: google-service-account
               mountPath: {{ .Values.googleServiceAccount.mountDirectory | quote }}
               readOnly: true
@@ -165,7 +166,7 @@ spec:
       volumes:
         - name: tmp
           emptyDir: {}
-        {{- if eq $authMode "sinchid-agent" }}
+        {{- if and (eq $authMode "sinchid-agent") .Values.googleServiceAccount.existingSecret }}
         - name: google-service-account
           secret:
             secretName: {{ .Values.googleServiceAccount.existingSecret | quote }}

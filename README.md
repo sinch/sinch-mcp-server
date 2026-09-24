@@ -407,20 +407,19 @@ Two deployments of the same image, each with its own `MCP_AUTH_MODE`, therefore 
 
 Every `sinchid-agent` request's `Authorization` JWT is verified against the configured JWKS before the request is allowed through: signature (RSA, algorithm pinned to `RS256` — never taken from the token's own `alg` header), issuer, audience, expiry (a token without an `exp` claim is rejected too), and non-empty project, account, global-user, and scope claims. A forged, expired, wrong-issuer/audience, or incomplete token is rejected with `401` and never reaches session creation or tool execution.
 
-This requires three environment variables, all **required** in `sinchid-agent` mode — the server refuses to start without them:
+JWT verification requires three environment variables, all **required** in `sinchid-agent` mode — the server refuses to start without them:
 
-| Variable                | Value                                                             |
-| ------------------------ | ------------------------------------------------------------------ |
-| `SINCHID_JWT_ISSUER`     | Expected `iss` claim (e.g. `https://id.sinch.com/`)                |
-| `SINCHID_JWT_AUDIENCE`   | Expected `aud` claim                                                |
-| `SINCHID_JWT_JWKS_URI`   | URL of the issuer's JWKS document (public signing keys)            |
-| `GOOGLE_APPLICATION_CREDENTIALS` | Path to the Google service-account JSON key used for Secret Manager |
+| Variable               | Value                                                   |
+| ---------------------- | ------------------------------------------------------- |
+| `SINCHID_JWT_ISSUER`   | Expected `iss` claim (e.g. `https://id.sinch.com/`)     |
+| `SINCHID_JWT_AUDIENCE` | Expected `aud` claim                                    |
+| `SINCHID_JWT_JWKS_URI` | URL of the issuer's JWKS document (public signing keys) |
 
-The Google client derives the Secret Manager project from Application Default Credentials. For local development, obtain the service-account JSON key from the agent deployment owner and set `GOOGLE_APPLICATION_CREDENTIALS` to its absolute path. Never commit the key. In Kubernetes, the agent release mounts it from an infrastructure-managed Secret.
+Secret Manager authentication uses [Google Application Default Credentials](https://cloud.google.com/docs/authentication/application-default-credentials). For local development, run `gcloud auth application-default login`; the Google client then uses developer ADC without a per-agent environment-variable credential or fallback. Set `GOOGLE_CLOUD_PROJECT` when ADC cannot infer the project that owns the secrets. `GOOGLE_APPLICATION_CREDENTIALS` is only needed when an approved ADC JSON file is supplied; point it at that file's absolute path and never commit it. In Kubernetes, the agent release uses the platform-approved ambient workload identity or mounts a deployment-managed Google credential file from a Secret.
 
 The complete JWKS document is retained in memory. JWKS HTTP requests are aborted after 3 seconds without network activity. After 10 minutes the server attempts to refresh the document, but it does not discard known keys first: if that scheduled refresh fails, tokens using a cached key can still be verified for up to one hour from the last successful fetch. A later successful refresh replaces the document immediately and removes keys the issuer no longer publishes. A token whose key id is absent can trigger at most one refresh attempt per 30-second cooldown, measured from every attempt (including failures), so an outage or a flood of random key ids cannot hammer the JWKS endpoint. A newly published signing key is picked up on the first successful refresh after the cooldown. Unknown keys are rejected with `401` after a successful JWKS lookup; `503` is reserved for cases where an attempted lookup could not complete or the last successful document is too old for stale fallback.
 
-`sinchid-agent` credentials are loaded at request time from the latest Google Secret Manager version named `sinch-agent-m2m_<orderId>_<projectId>`. Its payload is the same Base64 `projectId:keyId:keySecret` blob used by `client-credentials`. `orderId` comes from the `x-agent-id` header, and `projectId` is derived from the verified token's `https://sinch.com/project_id` claim. Both identifiers must be canonical UUIDs and are lower-cased when constructing the secret ID. The decoded credential's project must match the verified project. A missing, inaccessible, empty, malformed, mismatched, or invalidly named secret fails closed with a prompt response.
+`sinchid-agent` credentials are loaded at request time from the latest Google Secret Manager version named `sinch-agent-m2m_<orderId>_<projectId>`. Its payload is the same Base64 `projectId:keyId:keySecret` blob used by `client-credentials`. `orderId` comes from the `x-agent-id` header, and `projectId` is derived from the verified token's `https://sinch.com/project_id` claim. Both identifiers must be canonical UUIDs and are lower-cased when constructing the secret ID. The decoded credential's project must match the verified project. A missing, inaccessible, empty, malformed, mismatched, or invalidly named secret fails closed with a prompt response. This mode never falls back to `PROJECT_ID`, `KEY_ID`, or `KEY_SECRET`; those variables remain exclusive to standalone single-tenant mode.
 
 #### `Authorization` credentials format (HTTP only)
 
@@ -466,11 +465,11 @@ Once the token has passed verification (see [SinchID token verification](#sinchi
 
 What the `Authorization` token _is_ depends on the deployment:
 
-| Deployment                         | Bearer token                             | Sinch credentials come from                                |
-| ---------------------------------- | ---------------------------------------- | ---------------------------------------------------------- |
-| Single-tenant                      | not read, and not required               | the server's `PROJECT_ID`/`KEY_ID`/`KEY_SECRET`            |
-| Multi-tenant, `client-credentials` | Base64 `projectId:keyId:keySecret`       | the token itself                                           |
-| Multi-tenant, `sinchid-agent`      | SinchID access token (three-segment JWT) | the agent installation (Google Secret Manager)                         |
+| Deployment                         | Bearer token                             | Sinch credentials come from                     |
+| ---------------------------------- | ---------------------------------------- | ----------------------------------------------- |
+| Single-tenant                      | not read, and not required               | the server's `PROJECT_ID`/`KEY_ID`/`KEY_SECRET` |
+| Multi-tenant, `client-credentials` | Base64 `projectId:keyId:keySecret`       | the token itself                                |
+| Multi-tenant, `sinchid-agent`      | SinchID access token (three-segment JWT) | the agent installation (Google Secret Manager)  |
 
 The two multi-tenant shapes are disjoint: a JWT contains `.` separators, which are not in the Base64 alphabet, so a credential triple is never read as a token and a JWT never resolves to credentials. Each multi-tenant deployment accepts only its own shape and answers `401` to the other — see [`MCP_AUTH_MODE`](#step-2-pick-a-tenancy).
 

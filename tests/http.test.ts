@@ -673,20 +673,24 @@ describe('auth mode enforcement', () => {
   test('sinchid-agent tool calls reject credentials for a different project than the verified JWT', async () => {
     mockEnv.MCP_AUTH_MODE = 'sinchid-agent';
     secretManagerAccess.mockResolvedValue([
-      { payload: { data: Buffer.from(Buffer.from('project-2:key-1:secret-1').toString('base64')) } },
+      {
+        payload: {
+          data: Buffer.from(Buffer.from('33333333-3333-4333-8333-333333333333:key-1:secret-1').toString('base64')),
+        },
+      },
     ]);
     const { baseUrl, close } = await listen(createHttpApp());
     const token = jwksServer.sign({
       iss: ISSUER,
       aud: AUDIENCE,
       sub: 'user-1',
-      [SINCH_PROJECT_ID_CLAIM]: 'project-1',
+      [SINCH_PROJECT_ID_CLAIM]: AGENT_PROJECT_ID,
       [SINCH_ACCOUNT_ID_CLAIM]: 'account-1',
       [SINCH_GLOBAL_USER_ID_CLAIM]: 'user-1',
       scope: 'openid',
     });
     const clientTransport = new StreamableHTTPClientTransport(new URL(`${baseUrl}/mcp`), {
-      requestInit: { headers: { Authorization: `Bearer ${token}`, 'x-agent-id': 'order-42' } },
+      requestInit: { headers: { Authorization: `Bearer ${token}`, 'x-agent-id': AGENT_ORDER_ID } },
     });
     const client = new Client({ name: 'test-client', version: '1.0.0' });
 
@@ -697,6 +701,7 @@ describe('auth mode enforcement', () => {
       expect(result).toMatchObject({
         content: [{ type: 'text', text: MISSING_AGENT_CREDENTIALS_MESSAGE }],
       });
+      expect(secretManagerAccess).toHaveBeenCalled();
     } finally {
       await client.close();
       await close();

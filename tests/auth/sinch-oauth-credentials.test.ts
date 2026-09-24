@@ -278,6 +278,21 @@ describe('sinch-oauth-credentials', () => {
       expect(promptText(resolved as PromptResponse)).toBe(MISSING_AGENT_CREDENTIALS_MESSAGE);
     });
 
+    it('does not fall back to single-tenant environment credentials', () => {
+      setHttpCredentialSource('request-header');
+      setAuthMode('sinchid-agent');
+      mockEnv.PROJECT_ID = 'project-1';
+      mockEnv.KEY_ID = 'env-key';
+      mockEnv.KEY_SECRET = 'env-secret';
+
+      const resolved = runWithHttpCredentialHeaders({ [AGENT_ID_HEADER]: 'order-42' }, { projectId: 'project-1' }, () =>
+        resolveSinchOAuthCredentials(),
+      );
+
+      expect(resolved).toBeInstanceOf(PromptResponse);
+      expect(promptText(resolved as PromptResponse)).toBe(MISSING_AGENT_CREDENTIALS_MESSAGE);
+    });
+
     it('resolves credentials loaded for the orderId and verified projectId', () => {
       setHttpCredentialSource('request-header');
       setAuthMode('sinchid-agent');

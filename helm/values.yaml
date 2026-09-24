@@ -49,11 +49,11 @@ resources:
 existingSecret: ""
 secretKeys: []
 
-# Google service-account key used to access Secret Manager. The Secret itself is
-# provisioned by deployment infrastructure and mounted only by sinchid-agent releases.
-# Customer credentials are not listed in Helm: each installation has its own Google
-# Secret Manager secret, and this one service account reads the authorized set.
-# Both values are required in sinchid-agent mode and rejected otherwise.
+# Optional file-based Google ADC used to access Secret Manager. Leave existingSecret
+# empty when the platform supplies an approved ambient workload identity. Otherwise,
+# deployment infrastructure provisions this Kubernetes Secret and the chart mounts its
+# credential file only for sinchid-agent releases. Customer credentials are never listed
+# in Helm: each installation has its own Google Secret Manager secret.
 googleServiceAccount:
   existingSecret: ""
   key: "sa-key.json"

@@ -46,11 +46,11 @@
 
 `MCP_AUTH_MODE` selects the tenancy, and it is read **first**:
 
-| `MCP_AUTH_MODE`     | Tenancy       | `PROJECT_ID`/`KEY_ID`/`KEY_SECRET` | Tools run as              |
-| ------------------- | ------------- | ---------------------------------- | ------------------------- |
-| set to a known mode | Multi-tenant  | **never read**                     | whatever the caller sends |
-| set to anything else| —             | —                                  | refuses to start          |
-| unset               | Single-tenant | **required**, all three            | the env credentials       |
+| `MCP_AUTH_MODE`      | Tenancy       | `PROJECT_ID`/`KEY_ID`/`KEY_SECRET` | Tools run as              |
+| -------------------- | ------------- | ---------------------------------- | ------------------------- |
+| set to a known mode  | Multi-tenant  | **never read**                     | whatever the caller sends |
+| set to anything else | —             | —                                  | refuses to start          |
+| unset                | Single-tenant | **required**, all three            | the env credentials       |
 
 That ordering is the point: the decision rests on one variable the chart always sets, never on
 the absence of something. A credential left in the environment — a stale Secret key, a local
@@ -60,9 +60,9 @@ for anything else.
 
 When `MCP_AUTH_MODE` is set, it also pins the one inbound shape `/mcp` accepts:
 
-| `MCP_AUTH_MODE`      | `Authorization` header value                                    | Tools run as           |
-| -------------------- | --------------------------------------------------------------- |------------------------|
-| `client-credentials` | `Bearer <base64(projectId:keyId:keySecret)>` — the caller's own | the credentials sent   |
+| `MCP_AUTH_MODE`      | `Authorization` header value                                    | Tools run as          |
+| -------------------- | --------------------------------------------------------------- | --------------------- |
+| `client-credentials` | `Bearer <base64(projectId:keyId:keySecret)>` — the caller's own | the credentials sent  |
 | `sinchid-agent`      | `Bearer <SinchID access token>`, plus `x-agent-id`              | Google Secret Manager |
 
 Notes:
@@ -99,24 +99,33 @@ Notes:
 
 ### Agent credential deployment decision
 
-Only the agent release mounts a Google service-account JSON key. Deployment infrastructure must:
+Google authentication for the MCP workload is separate from customer credential resolution.
+Secret Manager remains the only customer-credential source in `sinchid-agent`; the Google
+credential below only authorizes the workload to read it and is never an environment fallback.
 
-1. Grant that account only `roles/secretmanager.secretAccessor` on the installation secrets.
-2. Store the JSON key in an encrypted Kubernetes Secret (never in this repository or Helm values).
+Prefer the platform-approved ambient workload identity. In that setup,
+`googleServiceAccount.existingSecret` remains empty and the Google client discovers credentials
+through ADC without a mounted private key.
+
+When the approved mechanism instead provides a file-based ADC configuration:
+
+1. Grant its Google identity only `roles/secretmanager.secretAccessor` on the installation secrets.
+2. Store the ADC file in an encrypted Kubernetes Secret (never in this repository or Helm values).
 3. Set `googleServiceAccount.existingSecret` to that Kubernetes Secret name. Override
-   `googleServiceAccount.key` only when the data key is not `sa-key.json`.
+   `googleServiceAccount.key` when its data key is not `sa-key.json`.
 
-Helm configures only this Secret Manager reader identity; it does not contain a list of customer
+With `existingSecret` configured, the chart mounts the selected file read-only at
+`/var/run/secrets/google/sa-key.json` and sets `GOOGLE_APPLICATION_CREDENTIALS` to that path.
+Without it, the chart sets no Google credential environment variable or volume and leaves ADC
+discovery to the platform. File-based Google credentials remain forbidden on non-agent releases.
+
+Helm configures only the Secret Manager reader identity; it does not contain a list of customer
 credentials. Onboarding automation creates, versions, disables, and deletes one Google Secret
 Manager secret per installation/project pair. Users sharing that pair use the same M2M
 credentials, while a separate installation or project gets a separate secret.
 
-The chart mounts the selected key read-only at `/var/run/secrets/google/sa-key.json` and sets
-`GOOGLE_APPLICATION_CREDENTIALS` to that path. It requires this configuration for
-`authMode=sinchid-agent` and rejects it for other releases. The application infers the Google
-project from the service account, so no separate project setting is needed.
-
-Example Secret creation (deployment automation should provide the real key file):
+Example Secret creation when file-based ADC is explicitly approved (deployment automation should
+provide the real file):
 
 ```bash
 kubectl -n mcp-messaging create secret generic sinch-mcp-agent-google-sa \
