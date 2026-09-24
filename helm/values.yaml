@@ -45,15 +45,19 @@ resources:
 # Do NOT populate PROJECT_ID / KEY_ID / KEY_SECRET here. This chart always sets authMode, so
 # the server runs multi-tenant and never reads them — they would be inert, but they would
 # still be live Sinch credentials sitting in the namespace with nothing to read them.
-# Leaving existingSecret empty means the chart mounts no secret at all.
+# Leaving existingSecret empty means the chart mounts no legacy application-credential secret.
 existingSecret: ""
 secretKeys: []
 
-# One Kubernetes Secret containing tenant M2M credentials. Add one data key per
-# installation/project pair, formatted as sinch-agent-m2m_<orderId>_<projectId>;
-# envFrom injects every key/value into the agent pod. Required in sinchid-agent
-# mode and rejected otherwise.
-extraEnvFromSecret: ""
+# Google service-account key used to access Secret Manager. The Secret itself is
+# provisioned by deployment infrastructure and mounted only by sinchid-agent releases.
+# Customer credentials are not listed in Helm: each installation has its own Google
+# Secret Manager secret, and this one service account reads the authorized set.
+# Both values are required in sinchid-agent mode and rejected otherwise.
+googleServiceAccount:
+  existingSecret: ""
+  key: "sa-key.json"
+  mountDirectory: "/var/run/secrets/google"
 
 # Conversation API region — one of: us | eu | br. REQUIRED; there is no default.
 # Set per site in k8s-manifests-mcp-messaging.

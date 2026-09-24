@@ -63,7 +63,7 @@ When `MCP_AUTH_MODE` is set, it also pins the one inbound shape `/mcp` accepts:
 | `MCP_AUTH_MODE`      | `Authorization` header value                                    | Tools run as           |
 | -------------------- | --------------------------------------------------------------- |------------------------|
 | `client-credentials` | `Bearer <base64(projectId:keyId:keySecret)>` — the caller's own | the credentials sent   |
-| `sinchid-agent`      | `Bearer <SinchID access token>`, plus `x-agent-id`              | the `sinch-agent-m2m_<orderId>_<projectId>` env var |
+| `sinchid-agent`      | `Bearer <SinchID access token>`, plus `x-agent-id`              | Google Secret Manager |
 
 Notes:
 
@@ -90,41 +90,42 @@ Notes:
   from the verified token's `https://sinch.com/project_id` claim, and the installation identifier is
   provided via the `x-agent-id` header.
 - On `sinch-mcp-server-agent` (the only release running `sinchid-agent`), each onboarded
-  installation needs its own `sinch-agent-m2m_<orderId>_<projectId>` env var (same Base64 blob
-  format as `client-credentials`) reaching the pod without ever being committed to this repo.
-  Both identifiers are canonical UUIDs. The Kubernetes Secret named by the chart's required
-  `extraEnvFromSecret` setting contains one data key per installation/project pair; `envFrom`
-  injects all of them into the agent pod. The chart rejects this setting outside
-  `sinchid-agent` mode.
-  Updating a Secret does not update a running process environment: rotate credentials by
-  updating the Secret and restarting the deployment, and remove revoked installation keys
-  before restarting.
+  installation needs a Google Secret Manager secret named
+  `sinch-agent-m2m_<orderId>_<projectId>`. Both identifiers are canonical UUIDs. Its latest
+  payload uses the same Base64 blob format as `client-credentials`. The server fetches it on each
+  MCP request, validates that its embedded project matches the verified JWT project, and never
+  injects customer credentials into the pod environment. Missing, inaccessible, empty, malformed,
+  or mismatched secrets fail closed.
 
 ### Agent credential deployment decision
 
-The chart supports deployment of these credentials only when `authMode=sinchid-agent`. The
-credential Secret must be created and managed by the deployment infrastructure, not checked into
-this repository or placed directly in Helm values. Cluster configuration must encrypt Kubernetes
-Secrets at rest and restrict API read access to deployment operators and controllers. The agent
-workload consumes only the injected environment and does not need Kubernetes Secret read
-permissions.
+Only the agent release mounts a Google service-account JSON key. Deployment infrastructure must:
 
-Helm configures only the name of that Kubernetes Secret, not each user's credentials. Onboarding
-automation adds, updates, or removes one key/value entry per installation/project pair. Users
-sharing that pair use the same M2M credentials; separate pairs receive separate entries.
+1. Grant that account only `roles/secretmanager.secretAccessor` on the installation secrets.
+2. Store the JSON key in an encrypted Kubernetes Secret (never in this repository or Helm values).
+3. Set `googleServiceAccount.existingSecret` to that Kubernetes Secret name. Override
+   `googleServiceAccount.key` only when the data key is not `sa-key.json`.
 
-All agent pods receive every installation credential in that deployment, so this environment-based
-approach has a broader blast radius and requires a rollout for onboarding, rotation, and revocation.
-That trade-off is accepted for this temporary integration; a secret-manager lookup or OAuth token
-exchange should replace it before installation count or rotation frequency makes pod-wide
-environment injection impractical.
+Helm configures only this Secret Manager reader identity; it does not contain a list of customer
+credentials. Onboarding automation creates, versions, disables, and deletes one Google Secret
+Manager secret per installation/project pair. Users sharing that pair use the same M2M
+credentials, while a separate installation or project gets a separate secret.
 
-## Secret skeleton (create in namespace before first deploy)
+The chart mounts the selected key read-only at `/var/run/secrets/google/sa-key.json` and sets
+`GOOGLE_APPLICATION_CREDENTIALS` to that path. It requires this configuration for
+`authMode=sinchid-agent` and rejects it for other releases. The application infers the Google
+project from the service account, so no separate project setting is needed.
 
-Do not put `PROJECT_ID`/`KEY_ID`/`KEY_SECRET` in this secret. The chart always sets
-`MCP_AUTH_MODE`, so they would be inert rather than dangerous — but they would still be live
-Sinch credentials sitting in a namespace with nothing to read them, which is worth avoiding on
-its own.
+Example Secret creation (deployment automation should provide the real key file):
+
+```bash
+kubectl -n mcp-messaging create secret generic sinch-mcp-agent-google-sa \
+  --from-file=sa-key.json=/secure/path/sa-key.json
+```
+
+Do not add customer `PROJECT_ID`/`KEY_ID`/`KEY_SECRET` values to this Kubernetes Secret. Customer
+credentials belong only in Google Secret Manager. Adding or rotating the latest Secret Manager
+version takes effect on the next request without a pod rollout.
 
 `CONVERSATION_REGION` and `MCP_AUTH_MODE` are chart values (`conversationRegion`, `authMode`),
 not secret keys.

@@ -7,12 +7,22 @@
 {{- fail "conversationRegion must be one of: us, eu, br." -}}
 {{- end -}}
 {{- if eq $authMode "sinchid-agent" -}}
-{{- if not .Values.extraEnvFromSecret -}}
-{{- fail "extraEnvFromSecret is required when authMode is sinchid-agent." -}}
+{{- if not .Values.googleServiceAccount.existingSecret -}}
+{{- fail "googleServiceAccount.existingSecret is required when authMode is sinchid-agent." -}}
 {{- end -}}
-{{- else if .Values.extraEnvFromSecret -}}
-{{- fail "extraEnvFromSecret may only be set when authMode is sinchid-agent." -}}
+{{- if not .Values.googleServiceAccount.key -}}
+{{- fail "googleServiceAccount.key is required when authMode is sinchid-agent." -}}
 {{- end -}}
+{{- if not (regexMatch "^[A-Za-z0-9._-]+$" .Values.googleServiceAccount.key) -}}
+{{- fail "googleServiceAccount.key must be a single valid Kubernetes Secret data key." -}}
+{{- end -}}
+{{- if not (hasPrefix "/" .Values.googleServiceAccount.mountDirectory) -}}
+{{- fail "googleServiceAccount.mountDirectory must be an absolute path when authMode is sinchid-agent." -}}
+{{- end -}}
+{{- else if .Values.googleServiceAccount.existingSecret -}}
+{{- fail "googleServiceAccount may only be configured when authMode is sinchid-agent." -}}
+{{- end -}}
+{{- $googleCredentialsPath := printf "%s/%s" (trimSuffix "/" .Values.googleServiceAccount.mountDirectory) .Values.googleServiceAccount.key -}}
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -55,11 +65,6 @@ spec:
             - name: http
               containerPort: {{ .Values.service.targetPort }}
               protocol: TCP
-          {{- if eq $authMode "sinchid-agent" }}
-          envFrom:
-            - secretRef:
-                name: {{ .Values.extraEnvFromSecret | quote }}
-          {{- end }}
           env:
             {{- range .Values.env }}
             - name: {{ .name }}
@@ -85,6 +90,10 @@ spec:
               value: {{ required "sinchidJwtAudience is required when authMode is sinchid-agent." .Values.sinchidJwtAudience | quote }}
             - name: SINCHID_JWT_JWKS_URI
               value: {{ required "sinchidJwtJwksUri is required when authMode is sinchid-agent." .Values.sinchidJwtJwksUri | quote }}
+            # Google client libraries use this mounted service-account key as Application
+            # Default Credentials when fetching this installation's latest secret version.
+            - name: GOOGLE_APPLICATION_CREDENTIALS
+              value: {{ $googleCredentialsPath | quote }}
             {{- end }}
             {{- if .Values.toolTags }}
             - name: MCP_TAGS
@@ -120,6 +129,11 @@ spec:
           volumeMounts:
             - name: tmp
               mountPath: /tmp
+            {{- if eq $authMode "sinchid-agent" }}
+            - name: google-service-account
+              mountPath: {{ .Values.googleServiceAccount.mountDirectory | quote }}
+              readOnly: true
+            {{- end }}
           {{- if .Values.lifecycle.preStop.sleepSeconds }}
           lifecycle:
             preStop:
@@ -151,6 +165,15 @@ spec:
       volumes:
         - name: tmp
           emptyDir: {}
+        {{- if eq $authMode "sinchid-agent" }}
+        - name: google-service-account
+          secret:
+            secretName: {{ .Values.googleServiceAccount.existingSecret | quote }}
+            defaultMode: 0440
+            items:
+              - key: {{ .Values.googleServiceAccount.key | quote }}
+                path: {{ .Values.googleServiceAccount.key | quote }}
+        {{- end }}
       {{- with .Values.nodeSelector }}
       nodeSelector:
         {{- toYaml . | nindent 8 }}

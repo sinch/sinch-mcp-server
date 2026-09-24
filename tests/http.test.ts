@@ -6,6 +6,7 @@ jest.mock('ioredis', () => jest.requireActual('ioredis-mock'));
 import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { StreamableHTTPClientTransport } from '@modelcontextprotocol/sdk/client/streamableHttp.js';
 import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js';
+import { setAgentSecretManagerClientForTests } from '../src/auth/agent-secret-manager';
 import { clearAuthModeForTests, getAuthMode } from '../src/auth/auth-mode';
 import { clearHttpCredentialSourceForTests, getHttpCredentialSource } from '../src/auth/http-credential-mode';
 import { MISSING_AGENT_CREDENTIALS_MESSAGE } from '../src/auth/resolve-sinch-oauth-credentials';
@@ -28,6 +29,7 @@ jest.mock(
 const ACCEPT_HEADER = 'application/json, text/event-stream';
 const CREDENTIALS_BLOB = Buffer.from('project-1:key-1:secret-1').toString('base64');
 const CREDENTIALS_HEADER = `Bearer ${CREDENTIALS_BLOB}`;
+const secretManagerAccess = jest.fn();
 
 const listen = async (
   app: ReturnType<typeof createHttpApp>,
@@ -98,9 +100,15 @@ describe('HTTP MCP session handling (Redis-backed)', () => {
     mockEnv.REDIS_PORT = '6379';
     mockEnv.MCP_AUTH_MODE = 'client-credentials';
     mockEnv.CONVERSATION_REGION = 'eu';
+    secretManagerAccess.mockReset().mockResolvedValue([{ payload: { data: Buffer.from(CREDENTIALS_BLOB) } }]);
+    setAgentSecretManagerClientForTests({
+      getProjectId: jest.fn().mockResolvedValue('google-project'),
+      accessSecretVersion: secretManagerAccess,
+    });
   });
 
   afterEach(() => {
+    setAgentSecretManagerClientForTests(undefined);
     resetSessionStoreClientForTests();
     resetMockEnv();
     clearHttpCredentialSourceForTests();
@@ -510,6 +518,8 @@ describe('auth mode enforcement', () => {
   const credentialsBlob = CREDENTIALS_BLOB;
   const ISSUER = 'https://issuer.example/';
   const AUDIENCE = 'https://agent-auth-api-test.sinch.com';
+  const AGENT_ORDER_ID = '11111111-1111-4111-8111-111111111111';
+  const AGENT_PROJECT_ID = '22222222-2222-4222-8222-222222222222';
   let jwksServer: TestJwksServer;
 
   beforeAll(async () => {
@@ -527,9 +537,15 @@ describe('auth mode enforcement', () => {
     mockEnv.SINCHID_JWT_ISSUER = ISSUER;
     mockEnv.SINCHID_JWT_AUDIENCE = AUDIENCE;
     mockEnv.SINCHID_JWT_JWKS_URI = jwksServer.url;
+    secretManagerAccess.mockReset().mockResolvedValue([{ payload: { data: Buffer.from(CREDENTIALS_BLOB) } }]);
+    setAgentSecretManagerClientForTests({
+      getProjectId: jest.fn().mockResolvedValue('google-project'),
+      accessSecretVersion: secretManagerAccess,
+    });
   });
 
   afterEach(() => {
+    setAgentSecretManagerClientForTests(undefined);
     clearHttpCredentialSourceForTests();
     clearAuthModeForTests();
   });
@@ -546,6 +562,7 @@ describe('auth mode enforcement', () => {
 
       expect(response.status).toBe(200);
       expect(response.headers.get('mcp-session-id')).toBeTruthy();
+      expect(secretManagerAccess).not.toHaveBeenCalled();
     } finally {
       await close();
     }
@@ -604,6 +621,13 @@ describe('auth mode enforcement', () => {
 
   test('sinchid-agent deployment accepts a validly signed SinchID token with x-agent-id', async () => {
     mockEnv.MCP_AUTH_MODE = 'sinchid-agent';
+    secretManagerAccess.mockResolvedValue([
+      {
+        payload: {
+          data: Buffer.from(Buffer.from(`${AGENT_PROJECT_ID}:key-1:secret-1`).toString('base64')),
+        },
+      },
+    ]);
     const infoSpy = jest.spyOn(logger, 'info').mockImplementation(() => undefined);
     const { baseUrl, close } = await listen(createHttpApp());
 
@@ -612,25 +636,31 @@ describe('auth mode enforcement', () => {
         iss: ISSUER,
         aud: AUDIENCE,
         sub: 'user-1',
-        [SINCH_PROJECT_ID_CLAIM]: 'project-1',
+        [SINCH_PROJECT_ID_CLAIM]: AGENT_PROJECT_ID,
         [SINCH_ACCOUNT_ID_CLAIM]: 'account-1',
         [SINCH_GLOBAL_USER_ID_CLAIM]: 'user-1',
         scope: 'openid',
       });
       const response = await post(baseUrl, initializeBody, {
         Authorization: `Bearer ${token}`,
-        'x-agent-id': 'order-42',
+        'x-agent-id': AGENT_ORDER_ID,
       });
 
       expect(response.status).toBe(200);
       expect(response.headers.get('mcp-session-id')).toBeTruthy();
+      expect(secretManagerAccess).toHaveBeenCalledWith(
+        {
+          name: `projects/google-project/secrets/sinch-agent-m2m_${AGENT_ORDER_ID}_${AGENT_PROJECT_ID}/versions/latest`,
+        },
+        { timeout: 3_000 },
+      );
       expect(infoSpy).toHaveBeenCalledWith(
         expect.objectContaining({
-          project_id: 'project-1',
+          project_id: AGENT_PROJECT_ID,
           account_id: 'account-1',
           global_user_id: 'user-1',
           scope: 'openid',
-          agent_id: 'order-42',
+          agent_id: AGENT_ORDER_ID,
         }),
         'Agent user request (verified JWT claims)',
       );
@@ -642,22 +672,21 @@ describe('auth mode enforcement', () => {
 
   test('sinchid-agent tool calls reject credentials for a different project than the verified JWT', async () => {
     mockEnv.MCP_AUTH_MODE = 'sinchid-agent';
-    const orderId = '11111111-1111-4111-8111-111111111111';
-    const projectId = '22222222-2222-4222-8222-222222222222';
-    const envVarName = `sinch-agent-m2m_${orderId}_${projectId}`;
-    process.env[envVarName] = Buffer.from('33333333-3333-4333-8333-333333333333:key-1:secret-1').toString('base64');
+    secretManagerAccess.mockResolvedValue([
+      { payload: { data: Buffer.from(Buffer.from('project-2:key-1:secret-1').toString('base64')) } },
+    ]);
     const { baseUrl, close } = await listen(createHttpApp());
     const token = jwksServer.sign({
       iss: ISSUER,
       aud: AUDIENCE,
       sub: 'user-1',
-      [SINCH_PROJECT_ID_CLAIM]: projectId,
+      [SINCH_PROJECT_ID_CLAIM]: 'project-1',
       [SINCH_ACCOUNT_ID_CLAIM]: 'account-1',
       [SINCH_GLOBAL_USER_ID_CLAIM]: 'user-1',
       scope: 'openid',
     });
     const clientTransport = new StreamableHTTPClientTransport(new URL(`${baseUrl}/mcp`), {
-      requestInit: { headers: { Authorization: `Bearer ${token}`, 'x-agent-id': orderId } },
+      requestInit: { headers: { Authorization: `Bearer ${token}`, 'x-agent-id': 'order-42' } },
     });
     const client = new Client({ name: 'test-client', version: '1.0.0' });
 
@@ -669,7 +698,6 @@ describe('auth mode enforcement', () => {
         content: [{ type: 'text', text: MISSING_AGENT_CREDENTIALS_MESSAGE }],
       });
     } finally {
-      delete process.env[envVarName];
       await client.close();
       await close();
     }

@@ -2,16 +2,12 @@ import { getAuthMode } from './auth-mode';
 import {
   AGENT_ID_HEADER,
   getRequestAgentId,
+  getRequestAgentSinchOAuthCredentials,
   getRequestSinchOAuthCredentials,
   getRequestUserClaims,
 } from './credential-context';
 import { getHttpCredentialSource } from './http-credential-mode';
-import {
-  buildAgentM2MEnvVarName,
-  sinchOAuthCredentialsFromAgentEnv,
-  sinchOAuthCredentialsFromEnv,
-  type SinchOAuthCredentials,
-} from './sinch-oauth-credentials';
+import { sinchOAuthCredentialsFromEnv, type SinchOAuthCredentials } from './sinch-oauth-credentials';
 import { PromptResponse } from '../types';
 import { logger } from '../telemetry/logger';
 
@@ -26,8 +22,8 @@ export const MISSING_AGENT_CREDENTIALS_MESSAGE = 'No Sinch API credentials are c
 
 /**
  * Resolves the M2M credentials for a `sinchid-agent` request: orderId (x-agent-id) and Sinch
- * project id (from verified SinchID JWT claims) together name an env var holding the same Base64 blob
- * used in client-credentials Authorization headers.
+ * project id (from verified SinchID JWT claims) together name a Google Secret Manager secret.
+ * The HTTP request layer loads and validates that secret before dispatching the MCP request.
  */
 const resolveAgentInstallationCredentials = (): SinchOAuthCredentials | PromptResponse => {
   const orderId = getRequestAgentId();
@@ -36,12 +32,9 @@ const resolveAgentInstallationCredentials = (): SinchOAuthCredentials | PromptRe
     return new PromptResponse(MISSING_AGENT_INSTALLATION_MESSAGE);
   }
 
-  const credentials = sinchOAuthCredentialsFromAgentEnv(orderId, projectId);
-  if (!credentials) {
-    logger.warn(
-      { env_var: buildAgentM2MEnvVarName(orderId, projectId), agent_id: orderId },
-      'No Sinch API credentials configured for this agent installation',
-    );
+  const credentials = getRequestAgentSinchOAuthCredentials();
+  if (!credentials || credentials.projectId.toLowerCase() !== projectId.toLowerCase()) {
+    logger.warn({ agent_id: orderId }, 'No Sinch API credentials configured for this agent installation');
     return new PromptResponse(MISSING_AGENT_CREDENTIALS_MESSAGE);
   }
 

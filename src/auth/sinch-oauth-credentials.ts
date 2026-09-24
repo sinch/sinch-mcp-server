@@ -73,38 +73,17 @@ export const parseSinchCredentialsAuthorizationHeader = (
 };
 
 /**
- * Name of the env var holding the M2M credentials for one agent installation: the same
- * Base64 projectId:keyId:keySecret blob used in the client-credentials Authorization header,
- * keyed by orderId (x-agent-id) and Sinch project id (verified from the SinchID JWT claim).
+ * Google Secret Manager secret ID holding the M2M credentials for one agent installation.
+ * The payload is the same Base64 projectId:keyId:keySecret blob used by client-credentials.
  * Gemini order IDs and Sinch project IDs are UUIDs; lower-casing them makes the
- * resulting environment-variable name canonical.
+ * resulting secret ID canonical.
  */
-export const buildAgentM2MEnvVarName = (orderId: string, projectId: string): string | undefined => {
+export const buildAgentM2MSecretId = (orderId: string, projectId: string): string | undefined => {
   if (!UUID_PATTERN.test(orderId) || !UUID_PATTERN.test(projectId)) {
     return undefined;
   }
 
   return `sinch-agent-m2m_${orderId.toLowerCase()}_${projectId.toLowerCase()}`;
-};
-
-export const sinchOAuthCredentialsFromAgentEnv = (
-  orderId: string,
-  projectId: string,
-): SinchOAuthCredentials | undefined => {
-  const envVarName = buildAgentM2MEnvVarName(orderId, projectId);
-  if (!envVarName) {
-    return undefined;
-  }
-
-  const raw = process.env[envVarName];
-  if (!raw) {
-    return undefined;
-  }
-
-  const credentials = parseSinchCredentialsValue(raw);
-  // Keep this fail-closed until SinchID supplies an explicit project selector and
-  // master-to-subproject authorization can be validated independently.
-  return credentials?.projectId.toLowerCase() === projectId.toLowerCase() ? credentials : undefined;
 };
 
 export const SERVER_CREDENTIAL_ENV_VARS = ['PROJECT_ID', 'KEY_ID', 'KEY_SECRET'] as const;

@@ -25,6 +25,7 @@ export type MockServerEnv = {
   SINCHID_JWT_ISSUER?: string;
   SINCHID_JWT_AUDIENCE?: string;
   SINCHID_JWT_JWKS_URI?: string;
+  GOOGLE_APPLICATION_CREDENTIALS?: string;
 };
 
 export const mockEnv: MockServerEnv = {};
