@@ -45,19 +45,16 @@ resources:
 # Do NOT populate PROJECT_ID / KEY_ID / KEY_SECRET here. This chart always sets authMode, so
 # the server runs multi-tenant and never reads them — they would be inert, but they would
 # still be live Sinch credentials sitting in the namespace with nothing to read them.
-# Leaving existingSecret empty means the chart mounts no legacy application-credential secret.
+# Leaving existingSecret empty means the chart mounts no secret at all.
 existingSecret: ""
 secretKeys: []
 
-# Optional file-based Google ADC used to access Secret Manager. Leave existingSecret
-# empty when the platform supplies an approved ambient workload identity. Otherwise,
-# deployment infrastructure provisions this Kubernetes Secret and the chart mounts its
-# credential file only for sinchid-agent releases. Customer credentials are never listed
-# in Helm: each installation has its own Google Secret Manager secret.
+# Google service-account key used to access Secret Manager. Deployment infrastructure
+# provisions this Kubernetes Secret with one `sa-key.json` data entry. It is required
+# for sinchid-agent and rejected for other releases. Customer credentials are never
+# listed in Helm: each installation has its own Google Secret Manager secret.
 googleServiceAccount:
   existingSecret: ""
-  key: "sa-key.json"
-  mountDirectory: "/var/run/secrets/google"
 
 # Conversation API region — one of: us | eu | br. REQUIRED; there is no default.
 # Set per site in k8s-manifests-mcp-messaging.

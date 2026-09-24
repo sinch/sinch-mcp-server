@@ -54,7 +54,11 @@ describe('agent-secret-manager', () => {
     ['malformed payload', { payload: { data: Buffer.from('not-base64!!') } }],
     [
       'credentials for another project',
-      { payload: { data: Buffer.from(encodeCredentials('other-project:key-id:key-secret')) } },
+      {
+        payload: {
+          data: Buffer.from(encodeCredentials('33333333-3333-4333-8333-333333333333:key-id:key-secret')),
+        },
+      },
     ],
   ])('fails closed for %s', async (_label, version) => {
     accessSecretVersion.mockResolvedValue([version]);

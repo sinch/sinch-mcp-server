@@ -7,21 +7,12 @@
 {{- fail "conversationRegion must be one of: us, eu, br." -}}
 {{- end -}}
 {{- if eq $authMode "sinchid-agent" -}}
-{{- if .Values.googleServiceAccount.existingSecret -}}
-{{- if not .Values.googleServiceAccount.key -}}
-{{- fail "googleServiceAccount.key is required when googleServiceAccount.existingSecret is configured." -}}
-{{- end -}}
-{{- if not (regexMatch "^[A-Za-z0-9._-]+$" .Values.googleServiceAccount.key) -}}
-{{- fail "googleServiceAccount.key must be a single valid Kubernetes Secret data key." -}}
-{{- end -}}
-{{- if not (hasPrefix "/" .Values.googleServiceAccount.mountDirectory) -}}
-{{- fail "googleServiceAccount.mountDirectory must be an absolute path when googleServiceAccount.existingSecret is configured." -}}
-{{- end -}}
+{{- if not .Values.googleServiceAccount.existingSecret -}}
+{{- fail "googleServiceAccount.existingSecret is required when authMode is sinchid-agent." -}}
 {{- end -}}
 {{- else if .Values.googleServiceAccount.existingSecret -}}
 {{- fail "googleServiceAccount may only be configured when authMode is sinchid-agent." -}}
 {{- end -}}
-{{- $googleCredentialsPath := printf "%s/%s" (trimSuffix "/" .Values.googleServiceAccount.mountDirectory) .Values.googleServiceAccount.key -}}
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -89,12 +80,10 @@ spec:
               value: {{ required "sinchidJwtAudience is required when authMode is sinchid-agent." .Values.sinchidJwtAudience | quote }}
             - name: SINCHID_JWT_JWKS_URI
               value: {{ required "sinchidJwtJwksUri is required when authMode is sinchid-agent." .Values.sinchidJwtJwksUri | quote }}
-            {{- if .Values.googleServiceAccount.existingSecret }}
-            # Optional file-based ADC. Leave unconfigured when the pod receives Google
-            # credentials from the platform's approved ambient workload identity.
+            # Google client libraries use the mounted service-account key as Application
+            # Default Credentials when fetching this installation's latest secret version.
             - name: GOOGLE_APPLICATION_CREDENTIALS
-              value: {{ $googleCredentialsPath | quote }}
-            {{- end }}
+              value: "/var/run/secrets/google/sa-key.json"
             {{- end }}
             {{- if .Values.toolTags }}
             - name: MCP_TAGS
@@ -130,9 +119,9 @@ spec:
           volumeMounts:
             - name: tmp
               mountPath: /tmp
-            {{- if and (eq $authMode "sinchid-agent") .Values.googleServiceAccount.existingSecret }}
+            {{- if eq $authMode "sinchid-agent" }}
             - name: google-service-account
-              mountPath: {{ .Values.googleServiceAccount.mountDirectory | quote }}
+              mountPath: "/var/run/secrets/google"
               readOnly: true
             {{- end }}
           {{- if .Values.lifecycle.preStop.sleepSeconds }}
@@ -166,14 +155,14 @@ spec:
       volumes:
         - name: tmp
           emptyDir: {}
-        {{- if and (eq $authMode "sinchid-agent") .Values.googleServiceAccount.existingSecret }}
+        {{- if eq $authMode "sinchid-agent" }}
         - name: google-service-account
           secret:
             secretName: {{ .Values.googleServiceAccount.existingSecret | quote }}
             defaultMode: 0440
             items:
-              - key: {{ .Values.googleServiceAccount.key | quote }}
-                path: {{ .Values.googleServiceAccount.key | quote }}
+              - key: "sa-key.json"
+                path: "sa-key.json"
         {{- end }}
       {{- with .Values.nodeSelector }}
       nodeSelector:

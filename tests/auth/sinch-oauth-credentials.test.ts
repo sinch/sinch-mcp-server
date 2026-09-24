@@ -310,24 +310,6 @@ describe('sinch-oauth-credentials', () => {
       expect(resolved.projectId).toBe('project-1');
     });
 
-    it('fails closed when the configured credential belongs to another project', () => {
-      setHttpCredentialSource('request-header');
-      setAuthMode('sinchid-agent');
-      const otherProjectCredentials = parseSinchCredentialsValue(
-        encodeCredentials('other-project:agent-key:agent-secret'),
-      );
-
-      const resolved = runWithHttpCredentialHeaders(
-        { [AGENT_ID_HEADER]: 'order-42' },
-        { projectId: 'project-1' },
-        () => resolveSinchOAuthCredentials(),
-        otherProjectCredentials,
-      );
-
-      expect(resolved).toBeInstanceOf(PromptResponse);
-      expect(promptText(resolved as PromptResponse)).toBe(MISSING_AGENT_CREDENTIALS_MESSAGE);
-    });
-
     it('still points client-credentials callers at the Authorization header', () => {
       setHttpCredentialSource('request-header');
       setAuthMode('client-credentials');

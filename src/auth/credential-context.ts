@@ -14,6 +14,7 @@ export const AGENT_ID_HEADER = 'x-agent-id';
 
 type RequestAuthContext = {
   credentials?: SinchOAuthCredentials;
+  // Already parsed and project-validated by the agent credential loader before entering context.
   agentCredentials?: SinchOAuthCredentials;
   agentId?: string;
   userClaims?: SinchUserClaims;
