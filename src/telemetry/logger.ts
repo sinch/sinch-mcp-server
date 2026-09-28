@@ -1,8 +1,18 @@
 import { context, trace } from '@opentelemetry/api';
 import pino from 'pino';
-import { env } from '../env';
 
-const baseLogger = pino({ level: env.LOG_LEVEL ?? 'info' }, pino.destination(2));
+const LOG_LEVELS = new Set(['fatal', 'error', 'warn', 'info', 'debug', 'trace', 'silent']);
+
+let baseLogger: pino.Logger | undefined;
+
+const getBaseLogger = (): pino.Logger => {
+  if (!baseLogger) {
+    const configuredLevel = process.env.LOG_LEVEL;
+    const level = configuredLevel && LOG_LEVELS.has(configuredLevel) ? configuredLevel : 'info';
+    baseLogger = pino({ level }, pino.destination(2));
+  }
+  return baseLogger;
+};
 
 const traceFields = (): Record<string, string> => {
   const span = trace.getSpan(context.active());
@@ -14,6 +24,7 @@ const traceFields = (): Record<string, string> => {
 };
 
 const log = (level: 'info' | 'warn' | 'error' | 'debug') => (obj: object | string, msg?: string) => {
+  const baseLogger = getBaseLogger();
   if (typeof obj === 'string') {
     baseLogger[level]({ ...traceFields() }, obj);
     return;
