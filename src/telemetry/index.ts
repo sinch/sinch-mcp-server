@@ -18,11 +18,20 @@ export const initTelemetry = (): NodeSDK | undefined => {
   }
 
   const serviceName = env.OTEL_SERVICE_NAME ?? 'sinch-mcp-server';
+  const deploymentEnv = env.OTEL_ENV;
+
+  // If OTEL_ENV is not set and telemetry enabled, error
+  if (!deploymentEnv) {
+    throw new Error(
+      `OTEL_ENV is not set. Please set OTEL_ENV to 'production' or 'staging' in your environment variables.`,
+    );
+  }
 
   sdk = new NodeSDK({
     resource: resourceFromAttributes({
       [ATTR_SERVICE_NAME]: serviceName,
       'service.version': packageVersion,
+      'deployment.environment': deploymentEnv,
     }),
     traceExporter: new OTLPTraceExporter(),
     metricReader: new PeriodicExportingMetricReader({

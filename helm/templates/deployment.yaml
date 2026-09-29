@@ -107,6 +107,12 @@ spec:
                 secretKeyRef:
                   name: {{ .Values.redisConnectionSecret }}
                   key: password
+            - name: OTEL_EXPORTER_OTLP_ENDPOINT
+              value: {{ required "otelExporterOtlpEndpoint OpenTelemetry collector endpoint." .Values.otelExporterOtlpEndpoint | quote }}
+            {{- if .Values.otelExporterOtlpEndpoint }}
+            - name: OTEL_ENV
+              value: {{ required "otelEnv is required — the server needs an OpenTelemetry environment and refuses to start without it." .Values.otelEnv | quote }}
+            {{- end }}
             {{- if .Values.existingSecret }}
             {{- range .Values.secretKeys }}
             - name: {{ . }}

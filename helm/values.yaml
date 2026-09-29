@@ -84,6 +84,10 @@ sinchidJwtJwksUri: ""
 # Must contain the keys: endpoint, port, password.
 redisConnectionSecret: ""
 
+# OpenTelemetry collector endpoint and environment. REQUIRED — the server refuses to start without them if the telemetry is enabled.
+otelExporterOtlpEndpoint: ""
+otelEnv: ""
+
 # Allow-list of tool tags to register (MCP_TAGS). Only tools whose credentials can be
 # supplied per request belong on a multi-tenant deployment.
 # Empty string = no filter = all tools (correct for local/stdio use, wrong for remote).

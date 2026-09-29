@@ -76,6 +76,7 @@ Notes:
 - An **unrecognised** `MCP_AUTH_MODE` refuses to start. It does not degrade to single-tenant —
   that would drop inbound auth on an endpoint whose only protection is this middleware.
 - Multi-tenant requires `CONVERSATION_REGION`, which cannot be overridden per request.
+- `OTEL_ENV` is required when the telemetry is enabled (enabled = value assigned to `OTEL_EXPORTER_OTLP_ENDPOINT`). This will send the telemetry data to the grafana instance.
 - Encode `projectId:keyId:keySecret` with standard Base64 (no line breaks, not base64url) and
   send it on every request, including after `initialize`.
 - A request carrying the wrong token shape, or a `sinchid-agent` JWT that fails verification, is
