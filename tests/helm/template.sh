@@ -3,6 +3,11 @@
 # helm/templates/deployment.yaml. Needs only the helm CLI: `npm run test:helm`.
 set -euo pipefail
 
+if ! command -v helm >/dev/null 2>&1; then
+  echo "helm CLI not found on PATH — install it first (e.g. 'brew install helm'), then re-run." >&2
+  exit 2
+fi
+
 CHART="$(cd "$(dirname "$0")/../../helm" && pwd)"
 NAMESPACE=mcp-messaging
 # The minimum every render needs, unrelated to telemetry.
