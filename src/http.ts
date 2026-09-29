@@ -400,7 +400,8 @@ const closeServer = (server: Server): Promise<void> =>
 
 // Fail readiness first so the Service stops routing, then drain before close.
 // Pairs with the Deployment preStop sleep for endpoint controller lag.
-const shutdown = async (server: Server, signal: string): Promise<void> => {
+/** Exposed for unit tests. */
+export const shutdown = async (server: Server, signal: string): Promise<void> => {
   // Guards against a second signal (e.g. SIGTERM then SIGINT) re-running the drain
   // and closing an already-closed server.
   if (isShuttingDown) {
