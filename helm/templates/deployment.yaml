@@ -13,6 +13,13 @@
 {{- else if .Values.googleServiceAccount.existingSecret -}}
 {{- fail "googleServiceAccount may only be configured when authMode is sinchid-agent." -}}
 {{- end -}}
+{{- $otelEnv := "" -}}
+{{- if .Values.otelExporterOtlpEndpoint -}}
+{{- $otelEnv = required "otelEnv is required (production | staging) when otelExporterOtlpEndpoint is set." .Values.otelEnv -}}
+{{- if not (has $otelEnv (list "production" "staging")) -}}
+{{- fail "otelEnv must be one of: production, staging." -}}
+{{- end -}}
+{{- end -}}
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -107,6 +114,19 @@ spec:
                 secretKeyRef:
                   name: {{ .Values.redisConnectionSecret }}
                   key: password
+            {{- if .Values.otelExporterOtlpEndpoint }}
+            # Telemetry is on whenever an endpoint is set, and the server then refuses to start
+            # without OTEL_ENV. Failing at template time gives a clear error instead of a
+            # crash-looping pod.
+            - name: OTEL_EXPORTER_OTLP_ENDPOINT
+              value: {{ .Values.otelExporterOtlpEndpoint | quote }}
+            - name: OTEL_ENV
+              value: {{ $otelEnv | quote }}
+            # <release>.<namespace>, so the general and agent releases are separate services
+            # in Grafana rather than one merged sinch-mcp-server.
+            - name: OTEL_SERVICE_NAME
+              value: {{ printf "%s.%s" (include "sinch-mcp-server.fullname" .) .Release.Namespace | quote }}
+            {{- end }}
             {{- if .Values.existingSecret }}
             {{- range .Values.secretKeys }}
             - name: {{ . }}

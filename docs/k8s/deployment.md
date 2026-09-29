@@ -138,6 +138,28 @@ name a secret with `endpoint`/`port`/`password` keys — normally provisioned au
 (e.g. by Crossplane), not created by hand. See `k8s-manifests-mcp-messaging` for the actual
 `RedisCluster` resource per site.
 
+## Telemetry
+
+Only the HTTP server exports telemetry, and only when `OTEL_EXPORTER_OTLP_ENDPOINT` is set —
+which only this chart does. stdio never exports: it runs on the caller's machine, where the
+collector is unreachable. Traces and metrics go over OTLP gRPC to the collector Sinch runs in
+every cluster, which forwards them to Grafana (Tempo for traces, Prometheus for span metrics).
+They are flushed on shutdown, after the drain.
+
+| Chart value                | Env var                       | Value                                                         |
+| -------------------------- | ----------------------------- | ------------------------------------------------------------- |
+| `otelExporterOtlpEndpoint` | `OTEL_EXPORTER_OTLP_ENDPOINT` | `http://otel-collector.otel-collector.svc.cluster.local:4317` |
+| `otelEnv`                  | `OTEL_ENV`                    | `staging` on `*tst` sites, `production` on the others         |
+| _(derived)_                | `OTEL_SERVICE_NAME`           | `<release>.<namespace>`, e.g. `sinch-mcp-server-agent.mcp-messaging` |
+
+- The endpoint is the chart default, so overlays only set `otelEnv`. Setting the endpoint to `""`
+  turns telemetry off.
+- `OTEL_ENV` is required while telemetry is on — the server refuses to start without it, and the
+  chart fails at template time instead. It becomes the `deployment.environment.name` resource
+  attribute.
+- Use port `4317`: the exporters are gRPC. The namespace's default-deny NetworkPolicy allows
+  egress to the collector on this port.
+
 ## Local image smoke test
 
 `REDIS_HOST` is required in every mode — the server exits immediately on startup without it.

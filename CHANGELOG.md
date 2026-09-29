@@ -14,3 +14,7 @@ The native Streamable HTTP server is new in this release — `0.0.1-alpha.6` shi
 - Added Redis-backed MCP session storage shared across replicas. `REDIS_HOST` and `REDIS_PORT` are required by the HTTP server in every mode.
 - Added a Helm chart for deploying the HTTP server.
 - **stdio is unaffected by all of the above**: no Redis, no `MCP_AUTH_MODE`, credentials read from the environment exactly as before.
+- Telemetry is now exported by the HTTP server only. Previously the OpenTelemetry SDK was started by the stdio entrypoint alone, so the deployed HTTP server never exported anything. **Breaking for stdio:** it no longer exports telemetry, even with `OTEL_EXPORTER_OTLP_ENDPOINT` set (Sinch's collector is only reachable in-cluster).
+- Added `OTEL_ENV` (`production` | `staging`), exported as the `deployment.environment.name` resource attribute. The HTTP server refuses to start without it when `OTEL_EXPORTER_OTLP_ENDPOINT` is set.
+- The HTTP server flushes telemetry on shutdown.
+- The Helm chart turns telemetry on by default, pointing at Sinch's in-cluster collector, requires `otelEnv`, and sets `OTEL_SERVICE_NAME` to `<release>.<namespace>`.
