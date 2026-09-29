@@ -1,3 +1,5 @@
+// Must stay the first import: instrumentation only patches modules loaded after it.
+import './telemetry/register';
 import { randomUUID } from 'node:crypto';
 import type { Server } from 'node:http';
 import express, { type Request, type Response } from 'express';
@@ -35,6 +37,7 @@ import {
   SessionStoreUnavailableError,
   validateAndTouchSession,
 } from './session-store';
+import { shutdownTelemetry } from './telemetry';
 import { logger } from './telemetry/logger';
 import { extractHeaderValue } from './utils';
 
@@ -412,6 +415,8 @@ const shutdown = async (server: Server, signal: string): Promise<void> => {
   }
   try {
     await closeServer(server);
+    // Flush buffered spans and metrics; the batch processors drop them on a bare exit.
+    await shutdownTelemetry();
     process.exit(0);
   } catch (error) {
     console.error('Error during HTTP server shutdown:', error);

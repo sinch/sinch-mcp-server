@@ -76,7 +76,6 @@ Notes:
 - An **unrecognised** `MCP_AUTH_MODE` refuses to start. It does not degrade to single-tenant —
   that would drop inbound auth on an endpoint whose only protection is this middleware.
 - Multi-tenant requires `CONVERSATION_REGION`, which cannot be overridden per request.
-- `OTEL_ENV` is required when the telemetry is enabled (enabled = value assigned to `OTEL_EXPORTER_OTLP_ENDPOINT`). This will send the telemetry data to the grafana instance.
 - Encode `projectId:keyId:keySecret` with standard Base64 (no line breaks, not base64url) and
   send it on every request, including after `initialize`.
 - A request carrying the wrong token shape, or a `sinchid-agent` JWT that fails verification, is
@@ -138,6 +137,28 @@ Redis is separate: `redisConnectionSecret` (a Helm value, not part of the secret
 name a secret with `endpoint`/`port`/`password` keys — normally provisioned automatically
 (e.g. by Crossplane), not created by hand. See `k8s-manifests-mcp-messaging` for the actual
 `RedisCluster` resource per site.
+
+## Telemetry
+
+Only the HTTP server exports telemetry, and only when `OTEL_EXPORTER_OTLP_ENDPOINT` is set —
+which only this chart does. stdio never exports: it runs on the caller's machine, where the
+collector is unreachable. Traces and metrics go over OTLP gRPC to the collector Sinch runs in
+every cluster, which forwards them to Grafana (Tempo for traces, Prometheus for span metrics).
+They are flushed on shutdown, after the drain.
+
+| Chart value                | Env var                       | Value                                                         |
+| -------------------------- | ----------------------------- | ------------------------------------------------------------- |
+| `otelExporterOtlpEndpoint` | `OTEL_EXPORTER_OTLP_ENDPOINT` | `http://otel-collector.otel-collector.svc.cluster.local:4317` |
+| `otelEnv`                  | `OTEL_ENV`                    | `staging` on `*tst` sites, `production` on the others         |
+| _(derived)_                | `OTEL_SERVICE_NAME`           | `<release>.<namespace>`, e.g. `sinch-mcp-server-agent.mcp-messaging` |
+
+- The endpoint is the chart default, so overlays only set `otelEnv`. Setting the endpoint to `""`
+  turns telemetry off.
+- `OTEL_ENV` is required while telemetry is on — the server refuses to start without it, and the
+  chart fails at template time instead. It becomes the `deployment.environment.name` resource
+  attribute.
+- Use port `4317`: the exporters are gRPC. The namespace's default-deny NetworkPolicy allows
+  egress to the collector on this port.
 
 ## Local image smoke test
 

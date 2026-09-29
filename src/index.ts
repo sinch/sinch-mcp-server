@@ -2,7 +2,8 @@ import './env';
 
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import { instantiateMcpServer, getToolsFilter, registerCapabilities } from './server';
-import { shutdownTelemetry } from './telemetry';
+// No telemetry SDK here: stdio runs on the caller's machine, where Sinch's collector is
+// unreachable. Tool spans and metrics go to the no-op @opentelemetry/api providers.
 import { logger } from './telemetry/logger';
 
 export const main = async () => {
@@ -12,19 +13,14 @@ export const main = async () => {
   await server.connect(transport);
 };
 
-const shutdown = async (signal: string) => {
+const shutdown = (signal: string) => {
   logger.info(`Received ${signal}, shutting down`);
-  await shutdownTelemetry();
   process.exit(0);
 };
 
 if (require.main === module) {
-  process.on('SIGTERM', () => {
-    void shutdown('SIGTERM');
-  });
-  process.on('SIGINT', () => {
-    void shutdown('SIGINT');
-  });
+  process.on('SIGTERM', () => shutdown('SIGTERM'));
+  process.on('SIGINT', () => shutdown('SIGINT'));
 
   main().catch((error) => {
     logger.error({ err: error }, 'Fatal error in main()');

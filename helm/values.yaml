@@ -84,8 +84,13 @@ sinchidJwtJwksUri: ""
 # Must contain the keys: endpoint, port, password.
 redisConnectionSecret: ""
 
-# OpenTelemetry collector endpoint and environment. REQUIRED — the server refuses to start without them if the telemetry is enabled.
-otelExporterOtlpEndpoint: ""
+# OpenTelemetry (OTLP gRPC). Telemetry is on whenever otelExporterOtlpEndpoint is set; set it
+# to "" to turn telemetry off. The default is the collector Sinch runs in every cluster; the
+# namespace's default-deny NetworkPolicy allows egress to it on 4317. Kyverno's
+# add-otel-endpoint annotation only injects Spring variables, so the Node SDK needs this set.
+otelExporterOtlpEndpoint: "http://otel-collector.otel-collector.svc.cluster.local:4317"
+# Deployment environment (deployment.environment.name) — one of: production | staging.
+# REQUIRED while telemetry is on; there is no default. Set per site in k8s-manifests-mcp-messaging.
 otelEnv: ""
 
 # Allow-list of tool tags to register (MCP_TAGS). Only tools whose credentials can be
