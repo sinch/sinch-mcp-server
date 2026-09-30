@@ -1,7 +1,7 @@
 import { createEnv, type StandardSchemaV1 } from '@t3-oss/env-core';
 import { config } from 'dotenv';
 import { z } from 'zod';
-import { logger } from './telemetry/logger';
+import { logger, LOG_LEVELS } from './telemetry/logger';
 
 config();
 
@@ -23,7 +23,7 @@ export const env = createEnv({
     OTEL_EXPORTER_OTLP_ENDPOINT: z.string().optional(),
     OTEL_SERVICE_NAME: z.string().optional(),
     OTEL_PROPAGATORS: z.string().optional(),
-    LOG_LEVEL: z.enum(['fatal', 'error', 'warn', 'info', 'debug', 'trace', 'silent']).optional(),
+    LOG_LEVEL: z.enum(LOG_LEVELS).optional(),
     REDIS_HOST: z.string().optional(),
     REDIS_PORT: z.string().optional(),
     REDIS_PASSWORD: z.string().optional(),
