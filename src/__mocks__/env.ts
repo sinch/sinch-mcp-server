@@ -17,6 +17,7 @@ export type MockServerEnv = {
   OTEL_EXPORTER_OTLP_ENDPOINT?: string;
   OTEL_SERVICE_NAME?: string;
   OTEL_PROPAGATORS?: string;
+  OTEL_ENV?: 'production' | 'staging';
   LOG_LEVEL?: LogLevel;
   REDIS_HOST?: string;
   REDIS_PORT?: string;
