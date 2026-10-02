@@ -1,7 +1,8 @@
-import { shutdownTelemetry } from './telemetry';
+// Must stay the first import: instrumentation only patches modules loaded after it.
+import './telemetry/register';
 import { createHash, randomUUID } from 'node:crypto';
 import type { Server } from 'node:http';
-import express, { type Request, type Response } from 'express';
+import express, { type NextFunction, type Request, type Response } from 'express';
 import { trace } from '@opentelemetry/api';
 import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js';
 import { isInitializeRequest } from '@modelcontextprotocol/sdk/types.js';
@@ -13,14 +14,21 @@ import {
   setAuthMode,
   type McpAuthMode,
 } from './auth/auth-mode';
-import { getRequestAgentId, getRequestUserClaims, runWithHttpCredentialHeaders } from './auth/credential-context';
+import { loadAgentM2MCredentials } from './auth/agent-secret-manager';
+import {
+  AGENT_ID_HEADER,
+  getRequestAgentId,
+  getRequestUserClaims,
+  runWithHttpCredentialHeaders,
+} from './auth/credential-context';
 import { setHttpCredentialSource } from './auth/http-credential-mode';
 import {
+  parseSinchCredentialsAuthorizationHeader,
   presentServerCredentialEnvVars,
   SERVER_CREDENTIAL_ENV_VARS,
   sinchOAuthCredentialsFromEnv,
 } from './auth/sinch-oauth-credentials';
-import { extractBearerToken } from './auth/bearer-token';
+import { getVerifiedUserClaims } from './auth/verified-claims';
 import { env } from './env';
 import { buildJsonRpcErrorResponse } from './json-rpc';
 import { getToolsFilter, instantiateMcpServer, registerCapabilities } from './server';
@@ -31,9 +39,11 @@ import {
   SessionStoreUnavailableError,
   validateAndTouchSession,
 } from './session-store';
+import { shutdownTelemetry } from './telemetry';
+import { ATTR_SESSION_ID } from './telemetry/constants';
 import { logger, safeErrorFields } from './telemetry/logger';
 import { getServiceMetrics } from './telemetry/metrics';
-import { ATTR_SESSION_ID } from './telemetry/constants';
+import { extractHeaderValue } from './utils';
 
 dotenv.config();
 
@@ -80,6 +90,46 @@ const attachSessionCorrelation = (res: Response, sessionId: string): void => {
   trace.getActiveSpan()?.setAttribute(ATTR_SESSION_ID, correlationId);
 };
 
+/** Exposed for focused middleware unit tests. Mount only on the authenticated MCP path. */
+export const mcpRequestTelemetry = (req: Request, res: Response, next: NextFunction): void => {
+  const metrics = getServiceMetrics();
+  const startedAt = performance.now();
+  metrics.httpActiveRequests.add(1);
+  let settled = false;
+
+  const recordCompletion = (outcome: 'completed' | 'aborted'): void => {
+    if (settled) {
+      return;
+    }
+    settled = true;
+    const attributes =
+      outcome === 'completed'
+        ? { method: req.method, route: MCP_PATH, outcome, status_code: res.statusCode }
+        : { method: req.method, route: MCP_PATH, outcome };
+    metrics.httpActiveRequests.add(-1);
+    metrics.httpRequestsTotal.add(1, attributes);
+    metrics.httpDurationMs.record(performance.now() - startedAt, attributes);
+
+    if (outcome === 'aborted' || res.statusCode >= 400) {
+      metrics.httpErrorsTotal.add(1, attributes);
+    }
+
+    const logFields = {
+      ...attributes,
+      session_id: res.locals.sessionCorrelationId as string | undefined,
+    };
+    if (outcome === 'aborted') {
+      logger.warn(logFields, 'MCP request connection closed before response completed');
+    } else {
+      logger.info(logFields, 'MCP request completed');
+    }
+  };
+
+  res.once('finish', () => recordCompletion('completed'));
+  res.once('close', () => recordCompletion(res.writableFinished ? 'completed' : 'aborted'));
+  next();
+};
+
 const buildTransport = async (): Promise<StreamableHTTPServerTransport> => {
   const mcpServer = instantiateMcpServer();
   registerCapabilities(mcpServer, getToolsFilter(process.argv));
@@ -104,7 +154,7 @@ const logUserJwtAuditTrail = (): void => {
       scope: claims.scope,
       agent_id: getRequestAgentId(),
     },
-    'Agent user request (unverified JWT claims)',
+    'Agent user request (verified JWT claims)',
   );
 };
 
@@ -133,6 +183,24 @@ const requireConversationRegion = (): void => {
   );
 };
 
+/**
+ * sinchid-agent trusts the Authorization JWT only after verifying it against a JWKS, so it cannot
+ * run without knowing which issuer, audience, and JWKS endpoint to verify against. Refuse to
+ * start rather than falling back to trusting unverified claims.
+ */
+const requireSinchIdJwtConfig = (): void => {
+  const required = ['SINCHID_JWT_ISSUER', 'SINCHID_JWT_AUDIENCE', 'SINCHID_JWT_JWKS_URI'] as const;
+  const missing = required.filter((key) => !env[key]);
+  if (missing.length === 0) {
+    return;
+  }
+
+  throw new Error(
+    `MCP_AUTH_MODE=sinchid-agent requires ${missing.join(', ')} to verify inbound SinchID access ` +
+      'tokens: refusing to start rather than trusting unverified JWT claims.',
+  );
+};
+
 type DeploymentMode = { tenancy: 'single-tenant' } | { tenancy: 'multi-tenant'; authMode: McpAuthMode };
 
 /**
@@ -140,12 +208,24 @@ type DeploymentMode = { tenancy: 'single-tenant' } | { tenancy: 'multi-tenant'; 
  * A stolen session ID is therefore insufficient when it is replayed by another caller.
  */
 const getSessionOwnerId = (req: Request, mode: DeploymentMode): string => {
-  const identity =
-    mode.tenancy === 'single-tenant'
-      ? `single-tenant:${env.PROJECT_ID}`
-      : `${mode.authMode}:${extractBearerToken(req.headers.authorization) ?? ''}:${
-          mode.authMode === 'sinchid-agent' ? (getRequestAgentId() ?? req.headers['x-agent-id'] ?? '') : ''
-        }`;
+  let identity: string;
+  if (mode.tenancy === 'single-tenant') {
+    identity = `single-tenant:${env.PROJECT_ID}`;
+  } else if (mode.authMode === 'client-credentials') {
+    const credentials = parseSinchCredentialsAuthorizationHeader(req.headers.authorization);
+    if (!credentials) {
+      throw new Error('Authenticated client-credentials request has no parsed credentials');
+    }
+    identity = `${mode.authMode}:${credentials.cacheKey}`;
+  } else {
+    const claims = getVerifiedUserClaims(req);
+    const agentId = extractHeaderValue(req.headers[AGENT_ID_HEADER]);
+    if (!claims || !agentId) {
+      throw new Error('Authenticated sinchid-agent request has no verified identity');
+    }
+    // Verified claims and the installation ID survive access-token refreshes; the JWT itself does not.
+    identity = `${mode.authMode}:${agentId}:${claims.projectId}:${claims.globalUserId}`;
+  }
 
   return createHash('sha256').update(identity).digest('hex');
 };
@@ -212,9 +292,27 @@ export const createHttpApp = () => {
     );
   } else {
     requireConversationRegion();
+    if (mode.authMode === 'sinchid-agent') {
+      requireSinchIdJwtConfig();
+    }
     setHttpCredentialSource('request-header');
     setAuthMode(mode.authMode);
   }
+
+  const runWithRequestCredentialContext = async <T>(req: Request, fn: () => T): Promise<Awaited<T>> => {
+    const userClaims = getVerifiedUserClaims(req);
+    let agentCredentials;
+
+    if (mode.tenancy === 'multi-tenant' && mode.authMode === 'sinchid-agent') {
+      const agentId = extractHeaderValue(req.headers[AGENT_ID_HEADER]);
+      const projectId = userClaims?.projectId;
+      if (agentId && projectId) {
+        agentCredentials = await loadAgentM2MCredentials(agentId, projectId);
+      }
+    }
+
+    return await runWithHttpCredentialHeaders(req.headers, userClaims, fn, agentCredentials);
+  };
 
   const handleMcpRequest = async (req: Request, res: Response): Promise<void> => {
     const sessionId = getSessionId(req);
@@ -245,7 +343,7 @@ export const createHttpApp = () => {
       res.setHeader('mcp-session-id', newSessionId);
       const transport = await buildTransport();
       res.on('close', () => void transport.close());
-      await runWithHttpCredentialHeaders(req.headers, () => {
+      await runWithRequestCredentialContext(req, () => {
         logUserJwtAuditTrail();
         return transport.handleRequest(req, res, req.body);
       });
@@ -291,42 +389,13 @@ export const createHttpApp = () => {
 
     const transport = await buildTransport();
     res.on('close', () => void transport.close());
-    await runWithHttpCredentialHeaders(req.headers, () => {
+    await runWithRequestCredentialContext(req, () => {
       logUserJwtAuditTrail();
       return transport.handleRequest(req, res, req.body);
     });
   };
 
   const app = express();
-  app.use((req, res, next) => {
-    const metrics = getServiceMetrics();
-    const startedAt = performance.now();
-    metrics.httpActiveRequests.add(1);
-    let completed = false;
-    const recordCompletion = (): void => {
-      if (completed) {
-        return;
-      }
-      completed = true;
-      const attributes = { method: req.method, route: req.path, status_code: res.statusCode };
-      metrics.httpActiveRequests.add(-1);
-      metrics.httpRequestsTotal.add(1, attributes);
-      metrics.httpDurationMs.record(performance.now() - startedAt, attributes);
-      if (res.statusCode >= 400) {
-        metrics.httpErrorsTotal.add(1, attributes);
-      }
-      logger.info(
-        {
-          ...attributes,
-          session_id: res.locals.sessionCorrelationId as string | undefined,
-        },
-        'HTTP request completed',
-      );
-    };
-    res.once('finish', recordCompletion);
-    res.once('close', recordCompletion);
-    next();
-  });
   app.use(express.json({ limit: '4mb' }));
 
   // Unauthenticated probes for Kubernetes (must stay outside MCP auth middleware).
@@ -357,6 +426,10 @@ export const createHttpApp = () => {
   if (mode.tenancy === 'multi-tenant') {
     app.use(MCP_PATH, createAuthModeMiddleware(mode.authMode));
   }
+
+  // Record only authenticated MCP traffic. Probes, unrelated paths, and rejected auth attempts
+  // are covered by standard HTTP instrumentation without polluting MCP request logs/metrics.
+  app.use(MCP_PATH, mcpRequestTelemetry);
 
   const routeHandler = (req: Request, res: Response) => {
     void handleMcpRequest(req, res).catch((error) => {
@@ -416,7 +489,8 @@ const closeServer = (server: Server): Promise<void> =>
 
 // Fail readiness first so the Service stops routing, then drain before close.
 // Pairs with the Deployment preStop sleep for endpoint controller lag.
-const shutdown = async (server: Server, signal: string): Promise<void> => {
+/** Exposed for unit tests. */
+export const shutdown = async (server: Server, signal: string): Promise<void> => {
   // Guards against a second signal (e.g. SIGTERM then SIGINT) re-running the drain
   // and closing an already-closed server.
   if (isShuttingDown) {
@@ -431,6 +505,7 @@ const shutdown = async (server: Server, signal: string): Promise<void> => {
   }
   try {
     await closeServer(server);
+    // Flush buffered spans and metrics; the batch processors drop them on a bare exit.
     await shutdownTelemetry();
     process.exit(0);
   } catch (error) {

@@ -1,19 +1,24 @@
 import {
+  buildAgentM2MSecretId,
   parseSinchCredentialsAuthorizationHeader,
   parseSinchCredentialsValue,
   sinchOAuthCredentialsFromEnv,
 } from '../../src/auth/sinch-oauth-credentials';
 import {
+  MISSING_AGENT_CREDENTIALS_MESSAGE,
+  MISSING_AGENT_INSTALLATION_MESSAGE,
   MISSING_AUTHORIZATION_CREDENTIALS_MESSAGE,
   resolveSinchOAuthCredentials,
 } from '../../src/auth/resolve-sinch-oauth-credentials';
-import { runWithHttpCredentialHeaders } from '../../src/auth/credential-context';
+import { AGENT_ID_HEADER, runWithHttpCredentialHeaders } from '../../src/auth/credential-context';
 import { clearAuthModeForTests, setAuthMode } from '../../src/auth/auth-mode';
 import { clearHttpCredentialSourceForTests, setHttpCredentialSource } from '../../src/auth/http-credential-mode';
 import { PromptResponse } from '../../src/types';
 import { mockEnv, resetMockEnv } from '../helpers/mock-env';
 
 const encodeCredentials = (value: string): string => Buffer.from(value).toString('base64');
+const ORDER_ID = '11111111-1111-4111-8111-111111111111';
+const PROJECT_ID = '22222222-2222-4222-8222-222222222222';
 
 const expectPromptText = (result: unknown): string => {
   expect(result).toBeInstanceOf(PromptResponse);
@@ -87,6 +92,23 @@ describe('sinch-oauth-credentials', () => {
     });
   });
 
+  describe('buildAgentM2MSecretId', () => {
+    it('builds a canonical Secret Manager ID from UUID orderId and projectId', () => {
+      expect(buildAgentM2MSecretId(ORDER_ID.toUpperCase(), PROJECT_ID.toUpperCase())).toBe(
+        `sinch-agent-m2m_${ORDER_ID}_${PROJECT_ID}`,
+      );
+    });
+
+    it.each([
+      ['a non-UUID orderId', 'order-42', PROJECT_ID],
+      ['a non-UUID projectId', ORDER_ID, 'project-1'],
+      ['a UUID with a missing group', '11111111-1111-1111-111111111111', PROJECT_ID],
+      ['a UUID containing a non-hex character', ORDER_ID, '22222222-2222-4222-8222-22222222222g'],
+    ])('rejects %s', (_label, orderId, projectId) => {
+      expect(buildAgentM2MSecretId(orderId, projectId)).toBeUndefined();
+    });
+  });
+
   it('loads credentials from environment', () => {
     mockEnv.PROJECT_ID = 'p';
     mockEnv.KEY_ID = 'k';
@@ -108,7 +130,7 @@ describe('sinch-oauth-credentials', () => {
     it('uses the Authorization Bearer credentials in multi-tenant mode', () => {
       setHttpCredentialSource('request-header');
 
-      const resolved = runWithHttpCredentialHeaders({ authorization: `Bearer ${encoded}` }, () =>
+      const resolved = runWithHttpCredentialHeaders({ authorization: `Bearer ${encoded}` }, undefined, () =>
         resolveSinchOAuthCredentials(),
       );
 
@@ -122,7 +144,9 @@ describe('sinch-oauth-credentials', () => {
     it('does not read credentials from unrelated headers in multi-tenant mode', () => {
       setHttpCredentialSource('request-header');
 
-      const resolved = runWithHttpCredentialHeaders({ 'other-header': encoded }, () => resolveSinchOAuthCredentials());
+      const resolved = runWithHttpCredentialHeaders({ 'other-header': encoded }, undefined, () =>
+        resolveSinchOAuthCredentials(),
+      );
 
       expect(expectPromptText(resolved)).toBe(MISSING_AUTHORIZATION_CREDENTIALS_MESSAGE);
     });
@@ -135,6 +159,7 @@ describe('sinch-oauth-credentials', () => {
           authorization: `Bearer ${encoded}`,
           'other-header': encodeCredentials('other:lkey:lsecret'),
         },
+        undefined,
         () => resolveSinchOAuthCredentials(),
       );
 
@@ -147,7 +172,7 @@ describe('sinch-oauth-credentials', () => {
     it('returns a PromptResponse naming Authorization when the header is missing in multi-tenant mode', () => {
       setHttpCredentialSource('request-header');
 
-      const resolved = runWithHttpCredentialHeaders({}, () => resolveSinchOAuthCredentials());
+      const resolved = runWithHttpCredentialHeaders({}, undefined, () => resolveSinchOAuthCredentials());
 
       const text = expectPromptText(resolved);
       expect(text).toBe(MISSING_AUTHORIZATION_CREDENTIALS_MESSAGE);
@@ -164,7 +189,9 @@ describe('sinch-oauth-credentials', () => {
     ])('returns a PromptResponse naming Authorization for %s in multi-tenant mode', (_label, header) => {
       setHttpCredentialSource('request-header');
 
-      const resolved = runWithHttpCredentialHeaders({ authorization: header }, () => resolveSinchOAuthCredentials());
+      const resolved = runWithHttpCredentialHeaders({ authorization: header }, undefined, () =>
+        resolveSinchOAuthCredentials(),
+      );
 
       expect(expectPromptText(resolved)).toBe(MISSING_AUTHORIZATION_CREDENTIALS_MESSAGE);
     });
@@ -175,7 +202,7 @@ describe('sinch-oauth-credentials', () => {
       mockEnv.KEY_ID = 'env-key';
       mockEnv.KEY_SECRET = 'env-secret';
 
-      const resolved = runWithHttpCredentialHeaders({ authorization: `Bearer ${encoded}` }, () =>
+      const resolved = runWithHttpCredentialHeaders({ authorization: `Bearer ${encoded}` }, undefined, () =>
         resolveSinchOAuthCredentials(),
       );
 
@@ -194,25 +221,100 @@ describe('sinch-oauth-credentials', () => {
 
   describe('sinchid-agent mode', () => {
     const promptText = (response: PromptResponse): string => response.promptResponse.content[0].text;
+    const agentCredentials = parseSinchCredentialsValue(encodeCredentials('project-1:agent-key:agent-secret'));
+    if (!agentCredentials) {
+      throw new Error('expected valid agent credentials');
+    }
 
-    it('points the caller at the agent installation, not at a credential header', () => {
+    it('points the caller at the agent installation when neither orderId nor projectId is present', () => {
       setHttpCredentialSource('request-header');
       setAuthMode('sinchid-agent');
 
-      const resolved = runWithHttpCredentialHeaders({}, () => resolveSinchOAuthCredentials());
+      const resolved = runWithHttpCredentialHeaders({}, undefined, () => resolveSinchOAuthCredentials());
 
       expect(resolved).toBeInstanceOf(PromptResponse);
       const text = promptText(resolved as PromptResponse);
+      expect(text).toBe(MISSING_AGENT_INSTALLATION_MESSAGE);
       expect(text).toContain('agent installation');
       expect(text).toContain('x-agent-id');
       expect(text).not.toContain('Authorization');
+    });
+
+    it('points the caller at the agent installation when user claims are missing projectId', () => {
+      setHttpCredentialSource('request-header');
+      setAuthMode('sinchid-agent');
+
+      const resolved = runWithHttpCredentialHeaders(
+        { [AGENT_ID_HEADER]: 'order-42' },
+        { email: 'user@example.com' },
+        () => resolveSinchOAuthCredentials(),
+      );
+
+      expect(resolved).toBeInstanceOf(PromptResponse);
+      expect(promptText(resolved as PromptResponse)).toBe(MISSING_AGENT_INSTALLATION_MESSAGE);
+    });
+
+    it('points the caller at the agent installation when x-agent-id header is missing', () => {
+      setHttpCredentialSource('request-header');
+      setAuthMode('sinchid-agent');
+
+      const resolved = runWithHttpCredentialHeaders({}, { projectId: 'project-1' }, () =>
+        resolveSinchOAuthCredentials(),
+      );
+
+      expect(resolved).toBeInstanceOf(PromptResponse);
+      expect(promptText(resolved as PromptResponse)).toBe(MISSING_AGENT_INSTALLATION_MESSAGE);
+    });
+
+    it('fails closed when no credentials are configured for the installation', () => {
+      setHttpCredentialSource('request-header');
+      setAuthMode('sinchid-agent');
+
+      const resolved = runWithHttpCredentialHeaders({ [AGENT_ID_HEADER]: 'order-42' }, { projectId: 'project-1' }, () =>
+        resolveSinchOAuthCredentials(),
+      );
+
+      expect(resolved).toBeInstanceOf(PromptResponse);
+      expect(promptText(resolved as PromptResponse)).toBe(MISSING_AGENT_CREDENTIALS_MESSAGE);
+    });
+
+    it('does not fall back to single-tenant environment credentials', () => {
+      setHttpCredentialSource('request-header');
+      setAuthMode('sinchid-agent');
+      mockEnv.PROJECT_ID = 'project-1';
+      mockEnv.KEY_ID = 'env-key';
+      mockEnv.KEY_SECRET = 'env-secret';
+
+      const resolved = runWithHttpCredentialHeaders({ [AGENT_ID_HEADER]: 'order-42' }, { projectId: 'project-1' }, () =>
+        resolveSinchOAuthCredentials(),
+      );
+
+      expect(resolved).toBeInstanceOf(PromptResponse);
+      expect(promptText(resolved as PromptResponse)).toBe(MISSING_AGENT_CREDENTIALS_MESSAGE);
+    });
+
+    it('resolves credentials loaded for the orderId and verified projectId', () => {
+      setHttpCredentialSource('request-header');
+      setAuthMode('sinchid-agent');
+
+      const resolved = runWithHttpCredentialHeaders(
+        { [AGENT_ID_HEADER]: 'order-42' },
+        { projectId: 'project-1' },
+        () => resolveSinchOAuthCredentials(),
+        agentCredentials,
+      );
+
+      if (resolved instanceof PromptResponse) {
+        throw new Error('expected credentials');
+      }
+      expect(resolved.projectId).toBe('project-1');
     });
 
     it('still points client-credentials callers at the Authorization header', () => {
       setHttpCredentialSource('request-header');
       setAuthMode('client-credentials');
 
-      const resolved = runWithHttpCredentialHeaders({}, () => resolveSinchOAuthCredentials());
+      const resolved = runWithHttpCredentialHeaders({}, undefined, () => resolveSinchOAuthCredentials());
 
       expect(resolved).toBeInstanceOf(PromptResponse);
       expect(promptText(resolved as PromptResponse)).toBe(MISSING_AUTHORIZATION_CREDENTIALS_MESSAGE);

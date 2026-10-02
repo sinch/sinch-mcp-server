@@ -46,11 +46,11 @@
 
 `MCP_AUTH_MODE` selects the tenancy, and it is read **first**:
 
-| `MCP_AUTH_MODE`     | Tenancy       | `PROJECT_ID`/`KEY_ID`/`KEY_SECRET` | Tools run as              |
-| ------------------- | ------------- | ---------------------------------- | ------------------------- |
-| set to a known mode | Multi-tenant  | **never read**                     | whatever the caller sends |
-| set to anything else| —             | —                                  | refuses to start          |
-| unset               | Single-tenant | **required**, all three            | the env credentials       |
+| `MCP_AUTH_MODE`      | Tenancy       | `PROJECT_ID`/`KEY_ID`/`KEY_SECRET` | Tools run as              |
+| -------------------- | ------------- | ---------------------------------- | ------------------------- |
+| set to a known mode  | Multi-tenant  | **never read**                     | whatever the caller sends |
+| set to anything else | —             | —                                  | refuses to start          |
+| unset                | Single-tenant | **required**, all three            | the env credentials       |
 
 That ordering is the point: the decision rests on one variable the chart always sets, never on
 the absence of something. A credential left in the environment — a stale Secret key, a local
@@ -60,10 +60,10 @@ for anything else.
 
 When `MCP_AUTH_MODE` is set, it also pins the one inbound shape `/mcp` accepts:
 
-| `MCP_AUTH_MODE`      | `Authorization` header value                                    | Tools run as           |
-| -------------------- | --------------------------------------------------------------- |------------------------|
-| `client-credentials` | `Bearer <base64(projectId:keyId:keySecret)>` — the caller's own | the credentials sent   |
-| `sinchid-agent`      | `Bearer <SinchID access token>`, plus `x-agent-id`              | the user's credentials |
+| `MCP_AUTH_MODE`      | `Authorization` header value                                    | Tools run as          |
+| -------------------- | --------------------------------------------------------------- | --------------------- |
+| `client-credentials` | `Bearer <base64(projectId:keyId:keySecret)>` — the caller's own | the credentials sent  |
+| `sinchid-agent`      | `Bearer <SinchID access token>`, plus `x-agent-id`              | Google Secret Manager |
 
 Notes:
 
@@ -78,17 +78,57 @@ Notes:
 - Multi-tenant requires `CONVERSATION_REGION`, which cannot be overridden per request.
 - Encode `projectId:keyId:keySecret` with standard Base64 (no line breaks, not base64url) and
   send it on every request, including after `initialize`.
-- A request carrying the wrong token shape is rejected with `401` plus a `WWW-Authenticate`
-  challenge. Where a tool is reached without usable credentials it answers with a prompt response:
+- A request carrying the wrong token shape, or a `sinchid-agent` JWT that fails verification, is
+  rejected with `401` plus a `WWW-Authenticate` challenge. Where a tool is reached without usable
+  credentials it answers with a prompt response:
   `Missing or invalid Authorization header (expected "Bearer <Base64 of projectId:keyId:keySecret>").`
 - Make sure `Authorization` is passed through to the pod untouched.
+- **`sinchid-agent` verifies the `Authorization` JWT** (signature against a JWKS, algorithm pinned
+  to `RS256`, issuer, audience, expiry) before trusting any claim from it or letting the request
+  through. This requires `SINCHID_JWT_ISSUER`, `SINCHID_JWT_AUDIENCE`, `SINCHID_JWT_JWKS_URI` —
+  the server refuses to start without them. The caller's Sinch project ID is derived directly
+  from the verified token's `https://sinch.com/project_id` claim, and the installation identifier is
+  provided via the `x-agent-id` header.
+- On `sinch-mcp-server-agent` (the only release running `sinchid-agent`), each onboarded
+  installation needs a Google Secret Manager secret named
+  `sinch-agent-m2m_<orderId>_<projectId>`. Both identifiers are canonical UUIDs. Its latest
+  payload uses the same Base64 blob format as `client-credentials`. The server fetches it on each
+  MCP request, validates that its embedded project matches the verified JWT project, and never
+  injects customer credentials into the pod environment. Missing, inaccessible, empty, malformed,
+  or mismatched secrets fail closed.
 
-## Secret skeleton (create in namespace before first deploy)
+### Agent credential deployment decision
 
-Do not put `PROJECT_ID`/`KEY_ID`/`KEY_SECRET` in this secret. The chart always sets
-`MCP_AUTH_MODE`, so they would be inert rather than dangerous — but they would still be live
-Sinch credentials sitting in a namespace with nothing to read them, which is worth avoiding on
-its own.
+Google authentication for the MCP workload is separate from customer credential resolution.
+Secret Manager is the only customer-credential source in `sinchid-agent`; the Google
+credential below only authorizes the workload to read it and is never an environment fallback.
+
+Only the agent release mounts a Google service-account JSON key. Deployment infrastructure must:
+
+1. Grant that account only `roles/secretmanager.secretAccessor` on the installation secrets.
+2. Store the JSON key as `sa-key.json` in an encrypted Kubernetes Secret (never in this repository
+   or Helm values).
+3. Set `googleServiceAccount.existingSecret` to that Kubernetes Secret name.
+
+The chart mounts that single file read-only at `/var/run/secrets/google/sa-key.json` and sets
+`GOOGLE_APPLICATION_CREDENTIALS` to the same path. This configuration is required for
+`authMode=sinchid-agent` and rejected for other releases.
+
+Helm configures only the Secret Manager reader identity; it does not contain a list of customer
+credentials. Onboarding automation creates, versions, disables, and deletes one Google Secret
+Manager secret per installation/project pair. Users sharing that pair use the same M2M
+credentials, while a separate installation or project gets a separate secret.
+
+Example Secret creation (deployment automation should provide the real key file):
+
+```bash
+kubectl -n mcp-messaging create secret generic sinch-mcp-agent-google-sa \
+  --from-file=sa-key.json=/secure/path/sa-key.json
+```
+
+Do not add customer `PROJECT_ID`/`KEY_ID`/`KEY_SECRET` values to this Kubernetes Secret. Customer
+credentials belong only in Google Secret Manager. Adding or rotating the latest Secret Manager
+version takes effect on the next request without a pod rollout.
 
 `CONVERSATION_REGION` and `MCP_AUTH_MODE` are chart values (`conversationRegion`, `authMode`),
 not secret keys.
@@ -97,6 +137,28 @@ Redis is separate: `redisConnectionSecret` (a Helm value, not part of the secret
 name a secret with `endpoint`/`port`/`password` keys — normally provisioned automatically
 (e.g. by Crossplane), not created by hand. See `k8s-manifests-mcp-messaging` for the actual
 `RedisCluster` resource per site.
+
+## Telemetry
+
+Only the HTTP server exports telemetry, and only when `OTEL_EXPORTER_OTLP_ENDPOINT` is set —
+which only this chart does. stdio never exports: it runs on the caller's machine, where the
+collector is unreachable. Traces and metrics go over OTLP gRPC to the collector Sinch runs in
+every cluster, which forwards them to Grafana (Tempo for traces, Prometheus for span metrics).
+They are flushed on shutdown, after the drain.
+
+| Chart value                | Env var                       | Value                                                         |
+| -------------------------- | ----------------------------- | ------------------------------------------------------------- |
+| `otelExporterOtlpEndpoint` | `OTEL_EXPORTER_OTLP_ENDPOINT` | `http://otel-collector.otel-collector.svc.cluster.local:4317` |
+| `otelEnv`                  | `OTEL_ENV`                    | `staging` on `*tst` sites, `production` on the others         |
+| _(derived)_                | `OTEL_SERVICE_NAME`           | `<release>.<namespace>`, e.g. `sinch-mcp-server-agent.mcp-messaging` |
+
+- The endpoint is the chart default, so overlays only set `otelEnv`. Setting the endpoint to `""`
+  turns telemetry off.
+- `OTEL_ENV` is required while telemetry is on — the server refuses to start without it, and the
+  chart fails at template time instead. It becomes the `deployment.environment.name` resource
+  attribute.
+- Use port `4317`: the exporters are gRPC. The namespace's default-deny NetworkPolicy allows
+  egress to the collector on this port.
 
 ## Local image smoke test
 

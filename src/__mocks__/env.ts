@@ -15,6 +15,7 @@ export type MockServerEnv = {
   OTEL_EXPORTER_OTLP_ENDPOINT?: string;
   OTEL_SERVICE_NAME?: string;
   OTEL_PROPAGATORS?: string;
+  OTEL_ENV?: 'production' | 'staging';
   LOG_LEVEL?: 'fatal' | 'error' | 'warn' | 'info' | 'debug' | 'trace' | 'silent';
   REDIS_HOST?: string;
   REDIS_PORT?: string;
@@ -22,6 +23,10 @@ export type MockServerEnv = {
   MCP_SESSION_TTL_SECONDS?: string;
   MCP_TAGS?: string;
   MCP_AUTH_MODE?: 'client-credentials' | 'sinchid-agent';
+  SINCHID_JWT_ISSUER?: string;
+  SINCHID_JWT_AUDIENCE?: string;
+  SINCHID_JWT_JWKS_URI?: string;
+  GOOGLE_APPLICATION_CREDENTIALS?: string;
 };
 
 export const mockEnv: MockServerEnv = {};
