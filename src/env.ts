@@ -1,6 +1,7 @@
 import { createEnv, type StandardSchemaV1 } from '@t3-oss/env-core';
 import { config } from 'dotenv';
 import { z } from 'zod';
+import { logger, normalizeLogLevel } from './telemetry/logger';
 
 config();
 
@@ -23,7 +24,7 @@ export const env = createEnv({
     OTEL_SERVICE_NAME: z.string().optional(),
     OTEL_PROPAGATORS: z.string().optional(),
     OTEL_ENV: z.enum(['production', 'staging']).optional(),
-    LOG_LEVEL: z.enum(['fatal', 'error', 'warn', 'info', 'debug', 'trace', 'silent']).optional(),
+    LOG_LEVEL: z.string().transform(normalizeLogLevel).optional(),
     REDIS_HOST: z.string().optional(),
     REDIS_PORT: z.string().optional(),
     REDIS_PASSWORD: z.string().optional(),
@@ -67,7 +68,7 @@ export const env = createEnv({
   },
   emptyStringAsUndefined: true,
   onValidationError: (issues: readonly StandardSchemaV1.Issue[]) => {
-    console.error('Invalid environment variables:', issues);
+    logger.error({ issues }, 'Invalid environment variables');
     throw new Error('Invalid environment variables');
   },
 });
