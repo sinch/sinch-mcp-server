@@ -12,8 +12,11 @@ import {
   SessionStoreUnavailableError,
   validateAndTouchSession,
 } from '../src/session-store';
+import { getServiceMetrics } from '../src/telemetry/metrics';
 
 describe('session-store', () => {
+  const ownerId = 'owner-1';
+
   beforeEach(() => {
     mockEnv.REDIS_HOST = '127.0.0.1';
     mockEnv.REDIS_PORT = '6379';
@@ -28,21 +31,28 @@ describe('session-store', () => {
 
   it('validates a session created moments earlier', async () => {
     const sessionId = randomUUID();
-    await createSession(sessionId);
+    await createSession(sessionId, ownerId);
 
-    await expect(validateAndTouchSession(sessionId)).resolves.toBeTrue();
+    await expect(validateAndTouchSession(sessionId, ownerId)).resolves.toBeTrue();
   });
 
   it('reports an unknown session id as invalid', async () => {
-    await expect(validateAndTouchSession(randomUUID())).resolves.toBeFalse();
+    await expect(validateAndTouchSession(randomUUID(), ownerId)).resolves.toBeFalse();
+  });
+
+  it('rejects a session presented by a different owner', async () => {
+    const sessionId = randomUUID();
+    await createSession(sessionId, ownerId);
+
+    await expect(validateAndTouchSession(sessionId, 'owner-2')).resolves.toBeFalse();
   });
 
   it('invalidates a session once deleted', async () => {
     const sessionId = randomUUID();
-    await createSession(sessionId);
+    await createSession(sessionId, ownerId);
     await deleteSession(sessionId);
 
-    await expect(validateAndTouchSession(sessionId)).resolves.toBeFalse();
+    await expect(validateAndTouchSession(sessionId, ownerId)).resolves.toBeFalse();
   });
 
   it('reports the store reachable when Redis responds to PING', async () => {
@@ -58,24 +68,35 @@ describe('session-store', () => {
 
   it('throws SessionStoreUnavailableError after exhausting retries on persistent failure', async () => {
     const client = getSessionStoreClientForTests();
-    jest.spyOn(client, 'expire').mockRejectedValue(new Error('connection refused'));
+    jest.spyOn(client, 'eval').mockRejectedValue(new Error('connection refused'));
 
-    await expect(validateAndTouchSession(randomUUID())).rejects.toThrow(SessionStoreUnavailableError);
+    await expect(validateAndTouchSession(randomUUID(), ownerId)).rejects.toThrow(SessionStoreUnavailableError);
   });
 
   it('succeeds once a transient failure clears within the retry budget', async () => {
     const sessionId = randomUUID();
-    await createSession(sessionId);
+    await createSession(sessionId, ownerId);
 
+    const commandDurationSpy = jest.spyOn(getServiceMetrics().redisCommandDurationMs, 'record');
+    const operationDurationSpy = jest.spyOn(getServiceMetrics().redisDurationMs, 'record');
     const client = getSessionStoreClientForTests();
-    const realExpire = client.expire.bind(client);
+    const realEval = client.eval.bind(client);
     jest
-      .spyOn(client, 'expire')
+      .spyOn(client, 'eval')
       .mockRejectedValueOnce(new Error('timeout'))
       .mockRejectedValueOnce(new Error('timeout'))
-      .mockImplementationOnce(realExpire);
+      .mockImplementationOnce(realEval);
 
-    await expect(validateAndTouchSession(sessionId)).resolves.toBeTrue();
+    await expect(validateAndTouchSession(sessionId, ownerId)).resolves.toBeTrue();
+    expect(
+      commandDurationSpy.mock.calls.filter(
+        ([, attributes]) => attributes?.operation === 'validate_and_touch' && attributes.attempt !== undefined,
+      ),
+    ).toHaveLength(3);
+    expect(operationDurationSpy).toHaveBeenCalledWith(
+      expect.any(Number),
+      expect.objectContaining({ operation: 'validate_and_touch', status: 'success', attempts: 3 }),
+    );
   });
 
   it('enables TLS automatically when REDIS_PASSWORD is set (AWS ElastiCache requires it)', () => {

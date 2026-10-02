@@ -1,8 +1,9 @@
 // Must stay the first import: instrumentation only patches modules loaded after it.
 import './telemetry/register';
-import { randomUUID } from 'node:crypto';
+import { createHash, randomUUID } from 'node:crypto';
 import type { Server } from 'node:http';
-import express, { type Request, type Response } from 'express';
+import express, { type NextFunction, type Request, type Response } from 'express';
+import { trace } from '@opentelemetry/api';
 import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js';
 import { isInitializeRequest } from '@modelcontextprotocol/sdk/types.js';
 import dotenv from 'dotenv';
@@ -22,6 +23,7 @@ import {
 } from './auth/credential-context';
 import { setHttpCredentialSource } from './auth/http-credential-mode';
 import {
+  parseSinchCredentialsAuthorizationHeader,
   presentServerCredentialEnvVars,
   SERVER_CREDENTIAL_ENV_VARS,
   sinchOAuthCredentialsFromEnv,
@@ -38,7 +40,9 @@ import {
   validateAndTouchSession,
 } from './session-store';
 import { shutdownTelemetry } from './telemetry';
-import { logger } from './telemetry/logger';
+import { ATTR_SESSION_ID } from './telemetry/constants';
+import { logger, safeErrorFields } from './telemetry/logger';
+import { getServiceMetrics } from './telemetry/metrics';
 import { extractHeaderValue } from './utils';
 
 dotenv.config();
@@ -75,6 +79,55 @@ const getSessionId = (req: Request): string | undefined => {
     return header;
   }
   return undefined;
+};
+
+const sessionCorrelationId = (sessionId: string): string =>
+  createHash('sha256').update(sessionId).digest('hex').slice(0, 16);
+
+const attachSessionCorrelation = (res: Response, sessionId: string): void => {
+  const correlationId = sessionCorrelationId(sessionId);
+  res.locals.sessionCorrelationId = correlationId;
+  trace.getActiveSpan()?.setAttribute(ATTR_SESSION_ID, correlationId);
+};
+
+/** Exposed for focused middleware unit tests. Mount only on the authenticated MCP path. */
+export const mcpRequestTelemetry = (req: Request, res: Response, next: NextFunction): void => {
+  const metrics = getServiceMetrics();
+  const startedAt = performance.now();
+  metrics.httpActiveRequests.add(1);
+  let settled = false;
+
+  const recordCompletion = (outcome: 'completed' | 'aborted'): void => {
+    if (settled) {
+      return;
+    }
+    settled = true;
+    const attributes =
+      outcome === 'completed'
+        ? { method: req.method, route: MCP_PATH, outcome, status_code: res.statusCode }
+        : { method: req.method, route: MCP_PATH, outcome };
+    metrics.httpActiveRequests.add(-1);
+    metrics.httpRequestsTotal.add(1, attributes);
+    metrics.httpDurationMs.record(performance.now() - startedAt, attributes);
+
+    if (outcome === 'aborted' || res.statusCode >= 400) {
+      metrics.httpErrorsTotal.add(1, attributes);
+    }
+
+    const logFields = {
+      ...attributes,
+      session_id: res.locals.sessionCorrelationId as string | undefined,
+    };
+    if (outcome === 'aborted') {
+      logger.warn(logFields, 'MCP request connection closed before response completed');
+    } else {
+      logger.info(logFields, 'MCP request completed');
+    }
+  };
+
+  res.once('finish', () => recordCompletion('completed'));
+  res.once('close', () => recordCompletion(res.writableFinished ? 'completed' : 'aborted'));
+  next();
 };
 
 const buildTransport = async (): Promise<StreamableHTTPServerTransport> => {
@@ -149,6 +202,33 @@ const requireSinchIdJwtConfig = (): void => {
 };
 
 type DeploymentMode = { tenancy: 'single-tenant' } | { tenancy: 'multi-tenant'; authMode: McpAuthMode };
+
+/**
+ * Bind a session to the caller without persisting the bearer token or credentials in Redis.
+ * A stolen session ID is therefore insufficient when it is replayed by another caller.
+ */
+const getSessionOwnerId = (req: Request, mode: DeploymentMode): string => {
+  let identity: string;
+  if (mode.tenancy === 'single-tenant') {
+    identity = `single-tenant:${env.PROJECT_ID}`;
+  } else if (mode.authMode === 'client-credentials') {
+    const credentials = parseSinchCredentialsAuthorizationHeader(req.headers.authorization);
+    if (!credentials) {
+      throw new Error('Authenticated client-credentials request has no parsed credentials');
+    }
+    identity = `${mode.authMode}:${credentials.cacheKey}`;
+  } else {
+    const claims = getVerifiedUserClaims(req);
+    const agentId = extractHeaderValue(req.headers[AGENT_ID_HEADER]);
+    if (!claims || !agentId) {
+      throw new Error('Authenticated sinchid-agent request has no verified identity');
+    }
+    // Verified claims and the installation ID survive access-token refreshes; the JWT itself does not.
+    identity = `${mode.authMode}:${agentId}:${claims.projectId}:${claims.globalUserId}`;
+  }
+
+  return createHash('sha256').update(identity).digest('hex');
+};
 
 /**
  * MCP_AUTH_MODE is the tenancy selector, and it is checked first:
@@ -237,6 +317,7 @@ export const createHttpApp = () => {
   const handleMcpRequest = async (req: Request, res: Response): Promise<void> => {
     const sessionId = getSessionId(req);
     const isInitRequest = isInitializationBody(req.body);
+    const sessionOwnerId = getSessionOwnerId(req, mode);
 
     if (isInitRequest) {
       if (sessionId) {
@@ -247,8 +328,10 @@ export const createHttpApp = () => {
       }
 
       const newSessionId = randomUUID();
+      attachSessionCorrelation(res, newSessionId);
       try {
-        await createSession(newSessionId);
+        await createSession(newSessionId, sessionOwnerId);
+        getServiceMetrics().sessionsCreatedTotal.add(1);
       } catch (error) {
         if (error instanceof SessionStoreUnavailableError) {
           respondSessionStoreUnavailable(res, req.body);
@@ -272,9 +355,10 @@ export const createHttpApp = () => {
       return;
     }
 
+    attachSessionCorrelation(res, sessionId);
     let sessionValid: boolean;
     try {
-      sessionValid = await validateAndTouchSession(sessionId);
+      sessionValid = await validateAndTouchSession(sessionId, sessionOwnerId);
     } catch (error) {
       if (error instanceof SessionStoreUnavailableError) {
         respondSessionStoreUnavailable(res, req.body);
@@ -299,6 +383,7 @@ export const createHttpApp = () => {
         throw error;
       }
       res.status(200).end();
+      getServiceMetrics().sessionsDeletedTotal.add(1);
       return;
     }
 
@@ -342,9 +427,13 @@ export const createHttpApp = () => {
     app.use(MCP_PATH, createAuthModeMiddleware(mode.authMode));
   }
 
+  // Record only authenticated MCP traffic. Probes, unrelated paths, and rejected auth attempts
+  // are covered by standard HTTP instrumentation without polluting MCP request logs/metrics.
+  app.use(MCP_PATH, mcpRequestTelemetry);
+
   const routeHandler = (req: Request, res: Response) => {
     void handleMcpRequest(req, res).catch((error) => {
-      console.error(`Error handling MCP ${req.method} request:`, error);
+      logger.error({ ...safeErrorFields(error), method: req.method }, 'Error handling MCP request');
       if (!res.headersSent) {
         res.status(500).json(buildJsonRpcErrorResponse(-32603, 'Internal server error', req.body));
       }
@@ -420,7 +509,7 @@ export const shutdown = async (server: Server, signal: string): Promise<void> =>
     await shutdownTelemetry();
     process.exit(0);
   } catch (error) {
-    console.error('Error during HTTP server shutdown:', error);
+    logger.error(safeErrorFields(error), 'Error during HTTP server shutdown');
     process.exit(1);
   }
 };
@@ -438,6 +527,10 @@ export const main = async (): Promise<void> => {
   const port = Number(process.env.PORT ?? DEFAULT_PORT);
   const app = createHttpApp();
   const server = app.listen(port);
+  server.on('connection', (socket) => {
+    getServiceMetrics().httpActiveConnections.add(1);
+    socket.once('close', () => getServiceMetrics().httpActiveConnections.add(-1));
+  });
 
   process.on('SIGTERM', () => void shutdown(server, 'SIGTERM'));
   process.on('SIGINT', () => void shutdown(server, 'SIGINT'));
@@ -451,7 +544,7 @@ export const main = async (): Promise<void> => {
 
 if (require.main === module) {
   main().catch((error) => {
-    console.error('Fatal error in HTTP main():', error);
+    logger.error(safeErrorFields(error), 'Fatal error in HTTP main()');
     process.exit(1);
   });
 }

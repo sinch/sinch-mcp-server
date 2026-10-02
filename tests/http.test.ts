@@ -135,6 +135,25 @@ describe('HTTP MCP session handling (Redis-backed)', () => {
     }
   });
 
+  it("does not let one caller use another caller's session", async () => {
+    const { baseUrl, close } = await listen(createHttpApp());
+    try {
+      const initResponse = await post(baseUrl, initializeBody);
+      const sessionId = initResponse.headers.get('mcp-session-id')!;
+      const otherCredentials = Buffer.from('project-2:key-2:secret-2').toString('base64');
+
+      const response = await post(baseUrl, toolsListBody, {
+        Authorization: `Bearer ${otherCredentials}`,
+        'Mcp-Session-Id': sessionId,
+      });
+
+      expect(response.status).toBe(404);
+      expect((await parseJsonRpcError(response)).error.code).toBe(-32001);
+    } finally {
+      await close();
+    }
+  });
+
   it('rejects an initialize request that already carries an Mcp-Session-Id header', async () => {
     const { baseUrl, close } = await listen(createHttpApp());
     try {
@@ -666,6 +685,91 @@ describe('auth mode enforcement', () => {
       );
     } finally {
       infoSpy.mockRestore();
+      await close();
+    }
+  });
+
+  test('sinchid-agent session survives an access-token refresh for the same verified user', async () => {
+    mockEnv.MCP_AUTH_MODE = 'sinchid-agent';
+    secretManagerAccess.mockResolvedValue([
+      {
+        payload: {
+          data: Buffer.from(Buffer.from(`${AGENT_PROJECT_ID}:key-1:secret-1`).toString('base64')),
+        },
+      },
+    ]);
+    const { baseUrl, close } = await listen(createHttpApp());
+    const claims = {
+      iss: ISSUER,
+      aud: AUDIENCE,
+      sub: 'user-1',
+      [SINCH_PROJECT_ID_CLAIM]: AGENT_PROJECT_ID,
+      [SINCH_ACCOUNT_ID_CLAIM]: 'account-1',
+      [SINCH_GLOBAL_USER_ID_CLAIM]: 'user-1',
+      scope: 'openid',
+    };
+
+    try {
+      const initialToken = jwksServer.sign({ ...claims, jti: 'token-1' });
+      const initResponse = await post(baseUrl, initializeBody, {
+        Authorization: `Bearer ${initialToken}`,
+        'x-agent-id': AGENT_ORDER_ID,
+      });
+      const sessionId = initResponse.headers.get('mcp-session-id');
+      expect(initResponse.status).toBe(200);
+      expect(sessionId).toBeTruthy();
+
+      const refreshedToken = jwksServer.sign({ ...claims, jti: 'token-2' });
+      const followUpResponse = await post(baseUrl, toolsListBody, {
+        Authorization: `Bearer ${refreshedToken}`,
+        'x-agent-id': AGENT_ORDER_ID,
+        'Mcp-Session-Id': sessionId!,
+      });
+
+      expect(followUpResponse.status).toBe(200);
+      expect(parseSseJsonRpc(await followUpResponse.text()).error).toBeUndefined();
+    } finally {
+      await close();
+    }
+  });
+
+  test("sinchid-agent does not accept another verified user's token for a session", async () => {
+    mockEnv.MCP_AUTH_MODE = 'sinchid-agent';
+    secretManagerAccess.mockResolvedValue([
+      {
+        payload: {
+          data: Buffer.from(Buffer.from(`${AGENT_PROJECT_ID}:key-1:secret-1`).toString('base64')),
+        },
+      },
+    ]);
+    const { baseUrl, close } = await listen(createHttpApp());
+    const tokenFor = (globalUserId: string) =>
+      jwksServer.sign({
+        iss: ISSUER,
+        aud: AUDIENCE,
+        sub: globalUserId,
+        [SINCH_PROJECT_ID_CLAIM]: AGENT_PROJECT_ID,
+        [SINCH_ACCOUNT_ID_CLAIM]: 'account-1',
+        [SINCH_GLOBAL_USER_ID_CLAIM]: globalUserId,
+        scope: 'openid',
+      });
+
+    try {
+      const initResponse = await post(baseUrl, initializeBody, {
+        Authorization: `Bearer ${tokenFor('user-1')}`,
+        'x-agent-id': AGENT_ORDER_ID,
+      });
+      const sessionId = initResponse.headers.get('mcp-session-id');
+
+      const followUpResponse = await post(baseUrl, toolsListBody, {
+        Authorization: `Bearer ${tokenFor('user-2')}`,
+        'x-agent-id': AGENT_ORDER_ID,
+        'Mcp-Session-Id': sessionId!,
+      });
+
+      expect(followUpResponse.status).toBe(404);
+      expect((await parseJsonRpcError(followUpResponse)).error.code).toBe(-32001);
+    } finally {
       await close();
     }
   });

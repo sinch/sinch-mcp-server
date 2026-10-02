@@ -56,6 +56,20 @@ expect_env() {
   fi
 }
 
+# expect_rendered_text <description> <expected substring> <release> [helm args...]
+expect_rendered_text() {
+  local description=$1 expected=$2 release=$3
+  shift 3
+  local output
+  if ! output=$(helm template "$release" "$CHART" "${BASE[@]}" "$@" 2>&1); then
+    fail "$description (render failed: $output)"
+  elif grep -qF -- "$expected" <<<"$output"; then
+    pass "$description"
+  else
+    fail "$description (missing: $expected)"
+  fi
+}
+
 COLLECTOR=http://otel-collector.otel-collector.svc.cluster.local:4317
 
 expect_error "defaults without otelEnv fail" \
@@ -77,6 +91,11 @@ for var in OTEL_EXPORTER_OTLP_ENDPOINT OTEL_ENV OTEL_SERVICE_NAME; do
   expect_env "an empty endpoint sets no $var" \
     sinch-mcp-server "$var" "" --set-string otelExporterOtlpEndpoint=
 done
+
+expect_rendered_text "hard pod anti-affinity is enabled by default" \
+  "requiredDuringSchedulingIgnoredDuringExecution:" sinch-mcp-server --set otelEnv=staging
+expect_rendered_text "pod anti-affinity uses the node failure domain" \
+  "topologyKey: kubernetes.io/hostname" sinch-mcp-server --set otelEnv=staging
 
 if ((failures > 0)); then
   echo "$failures helm template check(s) failed"

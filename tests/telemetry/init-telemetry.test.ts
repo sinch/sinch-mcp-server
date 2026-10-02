@@ -12,7 +12,14 @@ type NodeSDKMock = { NodeSDK: jest.Mock };
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 const { NodeSDK } = require('@opentelemetry/sdk-node') as NodeSDKMock;
 // eslint-disable-next-line @typescript-eslint/no-require-imports
-const { initTelemetry } = require('../../src/telemetry') as { initTelemetry: () => unknown };
+const { buildSanitizedHttpUrl, initTelemetry } = require('../../src/telemetry') as {
+  buildSanitizedHttpUrl: (request: {
+    getHeader: (name: string) => unknown;
+    path: string;
+    protocol: string;
+  }) => { origin: string; path: string; sanitizedUrl: string } | undefined;
+  initTelemetry: () => unknown;
+};
 
 const enableTelemetry = (env: typeof mockEnv = mockEnv): void => {
   env.OTEL_EXPORTER_OTLP_ENDPOINT = 'http://collector:4317';
@@ -67,6 +74,19 @@ test('initTelemetry exports OTEL_ENV as deployment.environment.name', () => {
     'deployment.environment.name': 'staging',
   });
   expect(resource.attributes).not.toHaveProperty('deployment.environment');
+});
+
+test.each([
+  ['http:', 'http://api.example.test/v1/resource'],
+  ['https:', 'https://api.example.test/v1/resource'],
+])('sanitized HTTP URLs preserve the request protocol %s', (protocol, expected) => {
+  expect(
+    buildSanitizedHttpUrl({
+      getHeader: () => 'api.example.test',
+      path: '/v1/resource?api_key=secret',
+      protocol,
+    }),
+  ).toEqual({ origin: `${protocol}//api.example.test`, path: '/v1/resource', sanitizedUrl: expected });
 });
 
 test('importing the telemetry module does not start the SDK', () => {
