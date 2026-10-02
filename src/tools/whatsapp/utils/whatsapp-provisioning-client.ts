@@ -2,6 +2,7 @@ import { BaseProvisioningClient } from '../../../provisioning-client';
 import {
   CreateWhatsAppTemplateRequest,
   UpdateWhatsAppTemplateRequest,
+  WhatsAppAccountResponse,
   WhatsAppTemplateListResponse,
   WhatsAppTemplateResponse,
 } from '../types/whatsapp-api';
@@ -30,6 +31,10 @@ export class WhatsAppProvisioningClient extends BaseProvisioningClient {
     resolution?: string,
   ): WhatsAppApiError {
     return new WhatsAppApiError(status, statusText, errorCode, resolution);
+  }
+
+  getAccount(): Promise<WhatsAppAccountResponse> {
+    return this.request<WhatsAppAccountResponse>('GET', '');
   }
 
   listTemplates(): Promise<WhatsAppTemplateListResponse> {

@@ -2,9 +2,9 @@ name: Report clones count
 
 on:
   schedule:
-    # Every Monday at 08:00 UTC; the job itself only proceeds on even ISO weeks,
-    # so the report is effectively bi-weekly. The GitHub traffic API returns the
-    # last 14 days of data, which matches this cadence exactly.
+    # Every Monday at 08:00 UTC; the job itself only proceeds every other Monday,
+    # starting 2026-09-14. The GitHub traffic API returns the last 14 days of
+    # data, which matches this cadence exactly.
     - cron: "0 8 * * 1"
   workflow_dispatch:
 
@@ -23,16 +23,33 @@ jobs:
         id: schedule-gate
         env:
           EVENT_NAME: ${{ github.event_name }}
+          FIRST_REPORT_DATE: "2026-09-14"
         run: |
           set -euo pipefail
 
-          # Manual runs always proceed; scheduled runs only on even ISO weeks.
-          week=$((10#$(date -u +%V)))
-          if [ "${EVENT_NAME}" = "schedule" ] && [ $((week % 2)) -ne 0 ]; then
-            echo "Odd ISO week (${week}), skipping this run."
-            echo "proceed=false" >> "$GITHUB_OUTPUT"
-          else
+          # Manual runs always proceed; scheduled runs proceed every other
+          # Monday from FIRST_REPORT_DATE.
+          if [ "${EVENT_NAME}" != "schedule" ]; then
             echo "proceed=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          today_seconds=$(date -u +%s)
+          first_report_seconds=$(date -u -d "${FIRST_REPORT_DATE}" +%s)
+          days_since_first=$(( (today_seconds - first_report_seconds) / 86400 ))
+
+          if [ "${days_since_first}" -lt 0 ]; then
+            echo "Before first report date (${FIRST_REPORT_DATE}), skipping this run."
+            echo "proceed=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          weeks_since_first=$((days_since_first / 7))
+          if [ $((weeks_since_first % 2)) -eq 0 ]; then
+            echo "proceed=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "Not a reporting Monday (${weeks_since_first} weeks since ${FIRST_REPORT_DATE}), skipping this run."
+            echo "proceed=false" >> "$GITHUB_OUTPUT"
           fi
 
       - name: Fetch clones traffic data
@@ -61,63 +78,77 @@ jobs:
 
           jq . clones.json
 
-      - name: Post report to Slack
+      - name: Upload CSV report to Slack
         if: steps.schedule-gate.outputs.proceed == 'true'
         env:
-          # Incoming webhook URL for the #mcp-clones-count channel.
-          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_CLONES_WEBHOOK_URL }}
+          # Bot token needs files:write permission. Channel ID should point to
+          # the clones report channel, for example #mcp-clones-count.
+          SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
+          SLACK_CHANNEL_ID: ${{ secrets.SLACK_CLONES_CHANNEL_ID }}
           REPO: ${{ github.repository }}
         run: |
           set -euo pipefail
 
-          if [ -z "${SLACK_WEBHOOK_URL}" ]; then
-            echo "Missing SLACK_CLONES_WEBHOOK_URL secret" >&2
+          if [ -z "${SLACK_BOT_TOKEN}" ]; then
+            echo "Missing SLACK_BOT_TOKEN secret" >&2
             exit 1
           fi
 
-          jq -n \
-            --arg repo "${REPO}" \
-            --slurpfile data clones.json \
-            '
-            $data[0] as $d |
-            ($d.clones | if length > 0 then (first.timestamp | split("T")[0]) else "n/a" end) as $from |
-            ($d.clones | if length > 0 then (last.timestamp | split("T")[0]) else "n/a" end) as $to |
-            ($d.clones | map("\(.timestamp | split("T")[0]): \(.count) clones (\(.uniques) unique)") | join("\n")) as $daily |
-            {
-              text: "Clones report for \($repo)",
-              blocks: [
-                {
-                  type: "header",
-                  text: { type: "plain_text", text: "Clones report: \($repo)" }
-                },
-                {
-                  type: "section",
-                  text: {
-                    type: "mrkdwn",
-                    text: "*Period:* \($from) to \($to)\n*Total clones:* \($d.count)\n*Unique cloners:* \($d.uniques)"
-                  }
-                },
-                {
-                  type: "section",
-                  text: {
-                    type: "mrkdwn",
-                    text: "*Daily breakdown:*\n\(if $daily == "" then "No clone data for this period." else $daily end)"
-                  }
-                },
-                {
-                  type: "context",
-                  elements: [
-                    {
-                      type: "mrkdwn",
-                      text: "Source: <https://github.com/\($repo)/graphs/traffic|GitHub traffic graph> (14-day window)"
-                    }
-                  ]
-                }
-              ]
-            }
-            ' > slack-payload.json
+          if [ -z "${SLACK_CHANNEL_ID}" ]; then
+            echo "Missing SLACK_CLONES_CHANNEL_ID secret" >&2
+            exit 1
+          fi
 
-          curl -fsS -X POST \
-            -H "Content-Type: application/json" \
-            --data @slack-payload.json \
-            "${SLACK_WEBHOOK_URL}"
+          jq -r '
+            def category:
+              split("T")[0] | split("-") | "\(.[1])/\(.[2])";
+            "Category,Total",
+            (.clones[]? | "\(.timestamp | category),\(.count)")
+          ' clones.json > clones.csv
+
+          date_range=$(jq -r '
+            (.clones // [] | map(.timestamp | split("T")[0]) | sort) as $dates |
+            if ($dates | length) > 0 then
+              "\($dates[0]) to \($dates[-1])"
+            else
+              "no-data"
+            end
+          ' clones.json)
+          filename="Clones in last 14 days - ${date_range}.csv"
+          file_size=$(wc -c < clones.csv | tr -d ' ')
+
+          upload_response=$(curl -fsS -X POST "https://slack.com/api/files.getUploadURLExternal" \
+            -H "Authorization: Bearer ${SLACK_BOT_TOKEN}" \
+            -H "Content-Type: application/x-www-form-urlencoded" \
+            --data-urlencode "filename=${filename}" \
+            --data-urlencode "length=${file_size}")
+
+          if ! echo "${upload_response}" | jq -e '.ok == true' >/dev/null; then
+            echo "Failed to get Slack upload URL:" >&2
+            echo "${upload_response}" >&2
+            exit 1
+          fi
+
+          upload_url=$(echo "${upload_response}" | jq -r '.upload_url')
+          file_id=$(echo "${upload_response}" | jq -r '.file_id')
+
+          curl -fsS -X POST "${upload_url}" \
+            -H "Content-Type: text/csv" \
+            --data-binary @clones.csv \
+            >/dev/null
+
+          files_payload=$(jq -cn --arg id "${file_id}" --arg title "${filename}" \
+            '[{id: $id, title: $title}]')
+
+          complete_response=$(curl -fsS -X POST "https://slack.com/api/files.completeUploadExternal" \
+            -H "Authorization: Bearer ${SLACK_BOT_TOKEN}" \
+            -H "Content-Type: application/x-www-form-urlencoded" \
+            --data-urlencode "channel_id=${SLACK_CHANNEL_ID}" \
+            --data-urlencode "initial_comment=Clones in last 14 days (${date_range}) for ${REPO}" \
+            --data-urlencode "files=${files_payload}")
+
+          if ! echo "${complete_response}" | jq -e '.ok == true' >/dev/null; then
+            echo "Failed to complete Slack upload:" >&2
+            echo "${complete_response}" >&2
+            exit 1
+          fi

@@ -1,3 +1,25 @@
+{{- $authMode := required "authMode is required (client-credentials | sinchid-agent)." .Values.authMode -}}
+{{- if not (has $authMode (list "client-credentials" "sinchid-agent")) -}}
+{{- fail "authMode must be one of: client-credentials, sinchid-agent." -}}
+{{- end -}}
+{{- $conversationRegion := required "conversationRegion is required (us | eu | br)." .Values.conversationRegion -}}
+{{- if not (has $conversationRegion (list "us" "eu" "br")) -}}
+{{- fail "conversationRegion must be one of: us, eu, br." -}}
+{{- end -}}
+{{- if eq $authMode "sinchid-agent" -}}
+{{- if not .Values.googleServiceAccount.existingSecret -}}
+{{- fail "googleServiceAccount.existingSecret is required when authMode is sinchid-agent." -}}
+{{- end -}}
+{{- else if .Values.googleServiceAccount.existingSecret -}}
+{{- fail "googleServiceAccount may only be configured when authMode is sinchid-agent." -}}
+{{- end -}}
+{{- $otelEnv := "" -}}
+{{- if .Values.otelExporterOtlpEndpoint -}}
+{{- $otelEnv = required "otelEnv is required (production | staging) when otelExporterOtlpEndpoint is set." .Values.otelEnv -}}
+{{- if not (has $otelEnv (list "production" "staging")) -}}
+{{- fail "otelEnv must be one of: production, staging." -}}
+{{- end -}}
+{{- end -}}
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -45,14 +67,65 @@ spec:
             - name: {{ .name }}
               value: {{ .value | quote }}
             {{- end }}
-            # Required, not optional: this chart only ever deploys the remote
-            # multi-tenant server, which refuses to start without a region. Failing at
-            # template time gives a clear error instead of a crash-looping pod.
+            # Required, not optional: this chart only ever deploys the remote multi-tenant
+            # server, which refuses to start without a region. Failing at template time gives
+            # a clear error instead of a crash-looping pod.
             - name: CONVERSATION_REGION
-              value: {{ required "conversationRegion is required (us | eu | br). Without it the server would route customer data to another region." .Values.conversationRegion | quote }}
+              value: {{ $conversationRegion | quote }}
+            # Required, not optional: the server refuses to start without it, and a
+            # deployment without a pinned auth mode would accept every shape on an
+            # edge-unauthenticated endpoint.
+            - name: MCP_AUTH_MODE
+              value: {{ $authMode | quote }}
+            {{- if eq $authMode "sinchid-agent" }}
+            # Required, not optional, on this auth mode: the server verifies the inbound SinchID
+            # token against this JWKS (signature, issuer, audience, expiry) before trusting any
+            # claim from it, and refuses to start without all three.
+            - name: SINCHID_JWT_ISSUER
+              value: {{ required "sinchidJwtIssuer is required when authMode is sinchid-agent." .Values.sinchidJwtIssuer | quote }}
+            - name: SINCHID_JWT_AUDIENCE
+              value: {{ required "sinchidJwtAudience is required when authMode is sinchid-agent." .Values.sinchidJwtAudience | quote }}
+            - name: SINCHID_JWT_JWKS_URI
+              value: {{ required "sinchidJwtJwksUri is required when authMode is sinchid-agent." .Values.sinchidJwtJwksUri | quote }}
+            # Google client libraries use the mounted service-account key as Application
+            # Default Credentials when fetching this installation's latest secret version.
+            - name: GOOGLE_APPLICATION_CREDENTIALS
+              value: "/var/run/secrets/google/sa-key.json"
+            {{- end }}
             {{- if .Values.toolTags }}
             - name: MCP_TAGS
               value: {{ .Values.toolTags | quote }}
+            {{- end }}
+            # Required, not optional: the server refuses to start without Redis for shared
+            # session storage. Keys must match the connection secret exactly (e.g. a
+            # Crossplane-provisioned ElastiCache connection secret): endpoint, port, password.
+            - name: REDIS_HOST
+              valueFrom:
+                secretKeyRef:
+                  name: {{ required "redisConnectionSecret is required — the server needs Redis for shared session storage and refuses to start without it." .Values.redisConnectionSecret }}
+                  key: endpoint
+            - name: REDIS_PORT
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.redisConnectionSecret }}
+                  key: port
+            - name: REDIS_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.redisConnectionSecret }}
+                  key: password
+            {{- if .Values.otelExporterOtlpEndpoint }}
+            # Telemetry is on whenever an endpoint is set, and the server then refuses to start
+            # without OTEL_ENV. Failing at template time gives a clear error instead of a
+            # crash-looping pod.
+            - name: OTEL_EXPORTER_OTLP_ENDPOINT
+              value: {{ .Values.otelExporterOtlpEndpoint | quote }}
+            - name: OTEL_ENV
+              value: {{ $otelEnv | quote }}
+            # <release>.<namespace>, so the general and agent releases are separate services
+            # in Grafana rather than one merged sinch-mcp-server.
+            - name: OTEL_SERVICE_NAME
+              value: {{ printf "%s.%s" (include "sinch-mcp-server.fullname" .) .Release.Namespace | quote }}
             {{- end }}
             {{- if .Values.existingSecret }}
             {{- range .Values.secretKeys }}
@@ -66,6 +139,11 @@ spec:
           volumeMounts:
             - name: tmp
               mountPath: /tmp
+            {{- if eq $authMode "sinchid-agent" }}
+            - name: google-service-account
+              mountPath: "/var/run/secrets/google"
+              readOnly: true
+            {{- end }}
           {{- if .Values.lifecycle.preStop.sleepSeconds }}
           lifecycle:
             preStop:
@@ -97,6 +175,15 @@ spec:
       volumes:
         - name: tmp
           emptyDir: {}
+        {{- if eq $authMode "sinchid-agent" }}
+        - name: google-service-account
+          secret:
+            secretName: {{ .Values.googleServiceAccount.existingSecret | quote }}
+            defaultMode: 0440
+            items:
+              - key: "sa-key.json"
+                path: "sa-key.json"
+        {{- end }}
       {{- with .Values.nodeSelector }}
       nodeSelector:
         {{- toYaml . | nindent 8 }}

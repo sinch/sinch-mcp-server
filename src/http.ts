@@ -1,17 +1,45 @@
+// Must stay the first import: instrumentation only patches modules loaded after it.
+import './telemetry/register';
 import { randomUUID } from 'node:crypto';
 import type { Server } from 'node:http';
 import express, { type Request, type Response } from 'express';
 import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js';
 import { isInitializeRequest } from '@modelcontextprotocol/sdk/types.js';
 import dotenv from 'dotenv';
-import { getRequestAgentId, getRequestUserClaims, runWithHttpCredentialHeaders } from './auth/credential-context';
+import {
+  createAuthModeMiddleware,
+  isMcpAuthMode,
+  MCP_AUTH_MODES,
+  setAuthMode,
+  type McpAuthMode,
+} from './auth/auth-mode';
+import { loadAgentM2MCredentials } from './auth/agent-secret-manager';
+import {
+  AGENT_ID_HEADER,
+  getRequestAgentId,
+  getRequestUserClaims,
+  runWithHttpCredentialHeaders,
+} from './auth/credential-context';
 import { setHttpCredentialSource } from './auth/http-credential-mode';
-import { createMcpApiKeyMiddleware, loadMcpApiKeys } from './auth/mcp-api-key';
-import { getMaxMcpSessions, isMcpSessionCapacityReached } from './auth/http-session-limits';
+import {
+  presentServerCredentialEnvVars,
+  SERVER_CREDENTIAL_ENV_VARS,
+  sinchOAuthCredentialsFromEnv,
+} from './auth/sinch-oauth-credentials';
+import { getVerifiedUserClaims } from './auth/verified-claims';
 import { env } from './env';
 import { buildJsonRpcErrorResponse } from './json-rpc';
-import { instantiateMcpServer, getToolsFilter, registerCapabilities } from './server';
+import { getToolsFilter, instantiateMcpServer, registerCapabilities } from './server';
+import {
+  createSession,
+  deleteSession,
+  pingSessionStore,
+  SessionStoreUnavailableError,
+  validateAndTouchSession,
+} from './session-store';
+import { shutdownTelemetry } from './telemetry';
 import { logger } from './telemetry/logger';
+import { extractHeaderValue } from './utils';
 
 dotenv.config();
 
@@ -21,31 +49,14 @@ const HEALTH_READY_PATH = '/health/ready';
 const HEALTH_LIVE_PATHS = [HEALTH_LIVE_PATH, `${MCP_PATH}${HEALTH_LIVE_PATH}`];
 const HEALTH_READY_PATHS = [HEALTH_READY_PATH, `${MCP_PATH}${HEALTH_READY_PATH}`];
 const DEFAULT_PORT = 8000;
+const SESSION_STORE_UNAVAILABLE_CODE = -32003;
 
 const startedAtMs = Date.now();
 let isShuttingDown = false;
 
-type SessionEntry = {
-  transport: StreamableHTTPServerTransport;
-};
-
-const sessions = new Map<string, SessionEntry>();
-
 /** Exposed for unit tests. */
 export const setShuttingDownForTests = (value: boolean): void => {
   isShuttingDown = value;
-};
-
-/** Exposed for unit tests — inserts a placeholder session entry. */
-export const seedSessionForTests = (sessionId = 'test-session'): void => {
-  sessions.set(sessionId, {
-    transport: {} as StreamableHTTPServerTransport,
-  });
-};
-
-/** Exposed for unit tests. */
-export const clearSessionsForTests = (): void => {
-  sessions.clear();
 };
 
 const isInitializationBody = (body: unknown): boolean => {
@@ -68,18 +79,14 @@ const getSessionId = (req: Request): string | undefined => {
   return undefined;
 };
 
-const removeSession = async (sessionId: string): Promise<void> => {
-  const entry = sessions.get(sessionId);
-  if (!entry) {
-    return;
-  }
+const buildTransport = async (): Promise<StreamableHTTPServerTransport> => {
+  const mcpServer = instantiateMcpServer();
+  registerCapabilities(mcpServer, getToolsFilter(process.argv));
 
-  sessions.delete(sessionId);
-  try {
-    await entry.transport.close();
-  } catch (error) {
-    console.error(`Error closing transport for session ${sessionId}:`, error);
-  }
+  const transport = new StreamableHTTPServerTransport({ sessionIdGenerator: undefined });
+  await mcpServer.connect(transport);
+
+  return transport;
 };
 
 const logUserJwtAuditTrail = (): void => {
@@ -96,93 +103,212 @@ const logUserJwtAuditTrail = (): void => {
       scope: claims.scope,
       agent_id: getRequestAgentId(),
     },
-    'Agent user request (unverified JWT claims)',
+    'Agent user request (verified JWT claims)',
   );
 };
 
-const createSession = async (): Promise<SessionEntry> => {
-  const mcpServer = instantiateMcpServer();
-  registerCapabilities(mcpServer, getToolsFilter(process.argv));
+const respondSessionStoreUnavailable = (res: Response, body: unknown): void => {
+  res
+    .setHeader('Retry-After', '2')
+    .status(503)
+    .json(
+      buildJsonRpcErrorResponse(SESSION_STORE_UNAVAILABLE_CODE, 'Service Unavailable: session store unreachable', body),
+    );
+};
 
-  let sessionId = '';
+/**
+ * Each multi-tenant deployment is pinned to one Conversation API region. Defaulting silently
+ * could route traffic to the wrong region, so refuse to start instead. Single-tenant keeps the
+ * historical behaviour: optional, and overridable per request.
+ */
+const requireConversationRegion = (): void => {
+  if (env.CONVERSATION_REGION) {
+    return;
+  }
 
-  const transport = new StreamableHTTPServerTransport({
-    sessionIdGenerator: () => randomUUID(),
-    onsessioninitialized: (id) => {
-      sessionId = id;
-      sessions.set(id, { transport });
-    },
-    onsessionclosed: async (id) => {
-      await removeSession(id);
-    },
-  });
+  throw new Error(
+    'In multi-tenant mode, the CONVERSATION_REGION environment variable is required: ' +
+      'refusing to start rather than defaulting to a region.',
+  );
+};
 
-  transport.onclose = async () => {
-    if (sessionId) {
-      await removeSession(sessionId);
+/**
+ * sinchid-agent trusts the Authorization JWT only after verifying it against a JWKS, so it cannot
+ * run without knowing which issuer, audience, and JWKS endpoint to verify against. Refuse to
+ * start rather than falling back to trusting unverified claims.
+ */
+const requireSinchIdJwtConfig = (): void => {
+  const required = ['SINCHID_JWT_ISSUER', 'SINCHID_JWT_AUDIENCE', 'SINCHID_JWT_JWKS_URI'] as const;
+  const missing = required.filter((key) => !env[key]);
+  if (missing.length === 0) {
+    return;
+  }
+
+  throw new Error(
+    `MCP_AUTH_MODE=sinchid-agent requires ${missing.join(', ')} to verify inbound SinchID access ` +
+      'tokens: refusing to start rather than trusting unverified JWT claims.',
+  );
+};
+
+type DeploymentMode = { tenancy: 'single-tenant' } | { tenancy: 'multi-tenant'; authMode: McpAuthMode };
+
+/**
+ * MCP_AUTH_MODE is the tenancy selector, and it is checked first:
+ *
+ *   set to a known mode   multi-tenant. Callers bring their own credentials and the mode pins
+ *                         which inbound shape is accepted. PROJECT_ID / KEY_ID / KEY_SECRET are
+ *                         NEVER read — a credential left in the environment cannot pull a
+ *                         deployed server back onto one shared account.
+ *   set to anything else  refuse to start. A typo must not silently degrade to single-tenant,
+ *                         which would drop inbound auth entirely.
+ *   unset                 single-tenant, which then requires the full credential triple.
+ *
+ * Reading the mode first is what makes multi-tenant safe to deploy: the decision depends on one
+ * variable the chart always sets, never on the absence of something.
+ */
+const resolveDeploymentMode = (): DeploymentMode => {
+  // Typed as unknown on purpose: the zod schema in env.ts already rejects an unknown value, but
+  // this must still fail loudly if that guard is ever loosened.
+  const configuredAuthMode: unknown = env.MCP_AUTH_MODE;
+
+  if (configuredAuthMode !== undefined) {
+    if (!isMcpAuthMode(configuredAuthMode)) {
+      throw new Error(
+        `MCP_AUTH_MODE=${String(configuredAuthMode)} is not a recognised mode ` +
+          `(one of: ${MCP_AUTH_MODES.join(', ')}): refusing to start rather than falling back ` +
+          'to single-tenant, which performs no inbound authentication.',
+      );
     }
-  };
 
-  await mcpServer.connect(transport);
+    return { tenancy: 'multi-tenant', authMode: configuredAuthMode };
+  }
 
-  return { transport };
+  const present = presentServerCredentialEnvVars();
+  if (present.length < SERVER_CREDENTIAL_ENV_VARS.length) {
+    const missing = SERVER_CREDENTIAL_ENV_VARS.filter((key) => !present.includes(key));
+    throw new Error(
+      `MCP_AUTH_MODE is not set, so this is a single-tenant deployment, which requires ` +
+        `${SERVER_CREDENTIAL_ENV_VARS.join(', ')} — ${missing.join(', ')} missing. ` +
+        `Set them to run single-tenant, or set MCP_AUTH_MODE (one of: ${MCP_AUTH_MODES.join(', ')}) ` +
+        'to run multi-tenant.',
+    );
+  }
+
+  return { tenancy: 'single-tenant' };
 };
 
 export const createHttpApp = () => {
-  const mcpApiKeys = loadMcpApiKeys();
-  const isSingleTenant = mcpApiKeys.length > 0;
+  const mode = resolveDeploymentMode();
 
-  if (isSingleTenant) {
+  if (mode.tenancy === 'single-tenant') {
     setHttpCredentialSource('env');
+    // No auth mode and no auth middleware: MCP_AUTH_MODE being unset IS the configuration, and
+    // there is no per-caller credential to validate. Anyone who can reach this port transacts
+    // on the configured account, so it must not be exposed beyond localhost.
+    setAuthMode(undefined);
+    logger.warn(
+      { project_id: sinchOAuthCredentialsFromEnv()?.projectId },
+      'Starting SINGLE-TENANT: PROJECT_ID, KEY_ID and KEY_SECRET are set, so every request ' +
+        'transacts on that account and /mcp performs no inbound authentication. Intended for ' +
+        'local use only — do not expose this port.',
+    );
   } else {
-    // Multi-tenant: each deployment is pinned to one Conversation API region. Defaulting to a
-    // region silently could route traffic to the wrong region, so refuse to start instead.
-    if (!env.CONVERSATION_REGION) {
-      throw new Error(
-        'The server is starting in multi-tenant mode because neither MCP_API_KEY nor MCP_API_KEYS is set. ' +
-          'In multi-tenant mode, the CONVERSATION_REGION environment variable is required: ' +
-          'refusing to start rather than defaulting to a region. ' +
-          'Either set CONVERSATION_REGION, or set MCP_API_KEY to run in single-tenant mode.',
-      );
+    requireConversationRegion();
+    if (mode.authMode === 'sinchid-agent') {
+      requireSinchIdJwtConfig();
     }
     setHttpCredentialSource('request-header');
+    setAuthMode(mode.authMode);
   }
+
+  const runWithRequestCredentialContext = async <T>(req: Request, fn: () => T): Promise<Awaited<T>> => {
+    const userClaims = getVerifiedUserClaims(req);
+    let agentCredentials;
+
+    if (mode.tenancy === 'multi-tenant' && mode.authMode === 'sinchid-agent') {
+      const agentId = extractHeaderValue(req.headers[AGENT_ID_HEADER]);
+      const projectId = userClaims?.projectId;
+      if (agentId && projectId) {
+        agentCredentials = await loadAgentM2MCredentials(agentId, projectId);
+      }
+    }
+
+    return await runWithHttpCredentialHeaders(req.headers, userClaims, fn, agentCredentials);
+  };
 
   const handleMcpRequest = async (req: Request, res: Response): Promise<void> => {
     const sessionId = getSessionId(req);
+    const isInitRequest = isInitializationBody(req.body);
 
-    if (sessionId) {
-      const entry = sessions.get(sessionId);
-      if (!entry) {
-        res.status(404).json(buildJsonRpcErrorResponse(-32001, 'Session not found', req.body));
+    if (isInitRequest) {
+      if (sessionId) {
+        res
+          .status(400)
+          .json(buildJsonRpcErrorResponse(-32600, 'Invalid Request: server already initialized', req.body));
         return;
       }
 
-      await runWithHttpCredentialHeaders(req.headers, () => {
+      const newSessionId = randomUUID();
+      try {
+        await createSession(newSessionId);
+      } catch (error) {
+        if (error instanceof SessionStoreUnavailableError) {
+          respondSessionStoreUnavailable(res, req.body);
+          return;
+        }
+        throw error;
+      }
+
+      res.setHeader('mcp-session-id', newSessionId);
+      const transport = await buildTransport();
+      res.on('close', () => void transport.close());
+      await runWithRequestCredentialContext(req, () => {
         logUserJwtAuditTrail();
-        return entry.transport.handleRequest(req, res, req.body);
+        return transport.handleRequest(req, res, req.body);
       });
       return;
     }
 
-    if (!isInitializationBody(req.body)) {
+    if (!sessionId) {
       res.status(400).json(buildJsonRpcErrorResponse(-32000, 'Bad Request: No valid session ID provided', req.body));
       return;
     }
 
-    if (isMcpSessionCapacityReached(sessions.size)) {
-      res
-        .status(503)
-        .json(
-          buildJsonRpcErrorResponse(-32000, 'Service Unavailable: maximum number of MCP sessions reached', req.body),
-        );
+    let sessionValid: boolean;
+    try {
+      sessionValid = await validateAndTouchSession(sessionId);
+    } catch (error) {
+      if (error instanceof SessionStoreUnavailableError) {
+        respondSessionStoreUnavailable(res, req.body);
+        return;
+      }
+      throw error;
+    }
+
+    if (!sessionValid) {
+      res.status(404).json(buildJsonRpcErrorResponse(-32001, 'Session not found', req.body));
       return;
     }
 
-    const entry = await createSession();
-    await runWithHttpCredentialHeaders(req.headers, () => {
+    if (req.method === 'DELETE') {
+      try {
+        await deleteSession(sessionId);
+      } catch (error) {
+        if (error instanceof SessionStoreUnavailableError) {
+          respondSessionStoreUnavailable(res, req.body);
+          return;
+        }
+        throw error;
+      }
+      res.status(200).end();
+      return;
+    }
+
+    const transport = await buildTransport();
+    res.on('close', () => void transport.close());
+    await runWithRequestCredentialContext(req, () => {
       logUserJwtAuditTrail();
-      return entry.transport.handleRequest(req, res, req.body);
+      return transport.handleRequest(req, res, req.body);
     });
   };
 
@@ -198,30 +324,24 @@ export const createHttpApp = () => {
   });
 
   app.get(HEALTH_READY_PATHS, (_req, res) => {
-    if (isShuttingDown) {
-      res.status(503).json({ status: 'not_ready', reason: 'shutting_down' });
-      return;
-    }
+    void (async () => {
+      if (isShuttingDown) {
+        res.status(503).json({ status: 'not_ready', reason: 'shutting_down' });
+        return;
+      }
 
-    if (isMcpSessionCapacityReached(sessions.size)) {
-      res.status(503).json({
-        status: 'not_ready',
-        reason: 'session_capacity_reached',
-        activeSessions: sessions.size,
-        maxSessions: getMaxMcpSessions(),
-      });
-      return;
-    }
+      if (!(await pingSessionStore())) {
+        res.status(503).json({ status: 'not_ready', reason: 'session_store_unreachable' });
+        return;
+      }
 
-    res.status(200).json({
-      status: 'ready',
-      activeSessions: sessions.size,
-      maxSessions: getMaxMcpSessions(),
-    });
+      res.status(200).json({ status: 'ready' });
+    })();
   });
 
-  if (isSingleTenant) {
-    app.use(MCP_PATH, createMcpApiKeyMiddleware(mcpApiKeys));
+  // Single-tenant registers no auth middleware at all — see resolveDeploymentMode.
+  if (mode.tenancy === 'multi-tenant') {
+    app.use(MCP_PATH, createAuthModeMiddleware(mode.authMode));
   }
 
   const routeHandler = (req: Request, res: Response) => {
@@ -234,8 +354,21 @@ export const createHttpApp = () => {
   };
 
   app.post(MCP_PATH, routeHandler);
-  app.get(MCP_PATH, routeHandler);
   app.delete(MCP_PATH, routeHandler);
+
+  // GET/SSE unsupported: per-request transports can't receive a later push, so the stream is dead weight.
+  app.get(MCP_PATH, (_req, res) => {
+    res.setHeader('Allow', 'POST, DELETE');
+    res
+      .status(405)
+      .json(
+        buildJsonRpcErrorResponse(
+          -32000,
+          'Method Not Allowed: server-initiated notifications are not supported; use POST for all MCP requests',
+          null,
+        ),
+      );
+  });
 
   return app;
 };
@@ -247,6 +380,9 @@ export const getShutdownDrainMs = (): number => {
 };
 
 const sleep = (ms: number): Promise<void> => new Promise((resolve) => setTimeout(resolve, ms));
+
+/** Logs only host:port — never the password. */
+const describeRedisTarget = (): string => `${env.REDIS_HOST}:${env.REDIS_PORT}`;
 
 /** Exposed for unit tests. */
 export const waitForListening = (server: Server): Promise<void> =>
@@ -264,13 +400,10 @@ const closeServer = (server: Server): Promise<void> =>
     server.close((error) => (error ? reject(error) : resolve()));
   });
 
-// server.close() only stops accepting new connections; open SSE streams from active
-// MCP sessions keep sockets alive and would block close() indefinitely, so drop them first.
-const closeAllSessions = (): Promise<void[]> => Promise.all(Array.from(sessions.keys()).map(removeSession));
-
 // Fail readiness first so the Service stops routing, then drain before close.
 // Pairs with the Deployment preStop sleep for endpoint controller lag.
-const shutdown = async (server: Server, signal: string): Promise<void> => {
+/** Exposed for unit tests. */
+export const shutdown = async (server: Server, signal: string): Promise<void> => {
   // Guards against a second signal (e.g. SIGTERM then SIGINT) re-running the drain
   // and closing an already-closed server.
   if (isShuttingDown) {
@@ -284,8 +417,9 @@ const shutdown = async (server: Server, signal: string): Promise<void> => {
     await sleep(drainMs);
   }
   try {
-    await closeAllSessions();
     await closeServer(server);
+    // Flush buffered spans and metrics; the batch processors drop them on a bare exit.
+    await shutdownTelemetry();
     process.exit(0);
   } catch (error) {
     console.error('Error during HTTP server shutdown:', error);
@@ -294,6 +428,15 @@ const shutdown = async (server: Server, signal: string): Promise<void> => {
 };
 
 export const main = async (): Promise<void> => {
+  const missingRedisVars = (['REDIS_HOST', 'REDIS_PORT'] as const).filter((key) => !env[key]);
+  if (missingRedisVars.length > 0) {
+    console.error(
+      `Fatal: ${missingRedisVars.join(', ')} not set. The HTTP server requires Redis for shared session storage.`,
+    );
+    process.exit(1);
+    return;
+  }
+
   const port = Number(process.env.PORT ?? DEFAULT_PORT);
   const app = createHttpApp();
   const server = app.listen(port);
@@ -303,7 +446,9 @@ export const main = async (): Promise<void> => {
 
   await waitForListening(server);
 
-  console.error(`Sinch MCP HTTP server listening on port ${port} (${MCP_PATH}, max sessions: ${getMaxMcpSessions()})`);
+  console.error(
+    `Sinch MCP HTTP server listening on port ${port} (${MCP_PATH}), session store: ${describeRedisTarget()}`,
+  );
 };
 
 if (require.main === module) {

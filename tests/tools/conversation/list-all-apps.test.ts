@@ -1,5 +1,8 @@
 import { listAllAppsHandler } from '../../../src/tools/conversation/list-all-apps';
-import { getConversationService } from '../../../src/tools/conversation/utils/conversation-service-helper';
+import {
+  getConversationService,
+  resolveConversationRegionsToList,
+} from '../../../src/tools/conversation/utils/conversation-service-helper';
 
 jest.mock(
   '@sinch/sdk-core/package.json',
@@ -11,6 +14,7 @@ jest.mock(
 
 jest.mock('../../../src/tools/conversation/utils/conversation-service-helper', () => ({
   getConversationService: jest.fn(),
+  resolveConversationRegionsToList: jest.fn(),
   setConversationRegion: jest.fn((region: string, service: any) => {
     service.setRegion(region);
   }),
@@ -69,6 +73,7 @@ const mockConversationService = {
 beforeEach(() => {
   jest.clearAllMocks();
   currentRegion = 'us';
+  (resolveConversationRegionsToList as jest.Mock).mockReturnValue(['us', 'eu', 'br']);
 });
 
 test('listAllAppsHandler returns formatted app list for all regions', async () => {
@@ -102,6 +107,62 @@ test('listAllAppsHandler returns formatted app list for all regions', async () =
   });
 
   expect(result.content[0].text).toBe(expectedResponse);
+});
+
+test('listAllAppsHandler queries only the pinned region in multi-tenant mode', async () => {
+  // Given
+  (resolveConversationRegionsToList as jest.Mock).mockReturnValue(['eu']);
+  mockListApps.mockResolvedValue({
+    apps: [
+      {
+        id: '01M0VRYHZTYXZ2X8YDKCNEMEFN',
+        display_name: 'mcp-staging-smoke-test',
+        channel_credentials: [{ channel: 'WHATSAPP', callback_secret: 'pa$$word', state: { status: 'ACTIVE' } }],
+      },
+    ],
+  });
+
+  // When
+  const result = await listAllAppsHandler();
+
+  // Then
+  expect(setRegionMock).toHaveBeenCalledTimes(1);
+  expect(setRegionMock).toHaveBeenCalledWith('eu');
+  expect(mockListApps).toHaveBeenCalledTimes(1);
+
+  const expectedResponse = JSON.stringify({
+    success: true,
+    apps: [
+      {
+        id: '01M0VRYHZTYXZ2X8YDKCNEMEFN',
+        display_name: 'mcp-staging-smoke-test',
+        channel_credentials: [{ channel: 'WHATSAPP' }],
+        region: 'eu',
+      },
+    ],
+    total_count: 1,
+  });
+
+  expect(result.content[0].text).toBe(expectedResponse);
+});
+
+test('listAllAppsHandler returns an error response when the region cannot be resolved', async () => {
+  // Given
+  (resolveConversationRegionsToList as jest.Mock).mockImplementation(() => {
+    throw new Error('CONVERSATION_REGION must be set in multi-tenant mode; no default region is applied.');
+  });
+
+  // When
+  const result = await listAllAppsHandler();
+
+  // Then
+  expect(mockListApps).not.toHaveBeenCalled();
+  expect(result.content[0].text).toBe(
+    JSON.stringify({
+      success: false,
+      error: 'CONVERSATION_REGION must be set in multi-tenant mode; no default region is applied.',
+    }),
+  );
 });
 
 test('listAllAppsHandler returns error response on failure', async () => {

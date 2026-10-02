@@ -1,8 +1,12 @@
 import { createHash } from 'node:crypto';
 import { env } from '../env';
-import { extractHeaderValue } from '../utils';
+import { extractBearerToken } from './bearer-token';
 
-export const SINCH_CREDENTIALS_HEADER = 'x-sinch-credentials';
+// Standard Base64 alphabet only (no line breaks, no base64url). Node's decoder is lenient
+// and silently drops invalid characters, so validate the shape explicitly: a token that
+// is not Base64 (e.g. a JWT or an opaque API key) must never be mistaken for credentials.
+const BASE64_PATTERN = /^[A-Za-z0-9+/]+={0,2}$/;
+const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 export type SinchOAuthCredentials = {
   projectId: string;
@@ -17,16 +21,11 @@ export const buildCredentialCacheKey = (projectId: string, keyId: string, keySec
 
 export const parseSinchCredentialsValue = (encodedValue: string): SinchOAuthCredentials | undefined => {
   const trimmed = encodedValue.trim();
-  if (!trimmed) {
+  if (!trimmed || !BASE64_PATTERN.test(trimmed)) {
     return undefined;
   }
 
-  let decoded: string;
-  try {
-    decoded = Buffer.from(trimmed, 'base64').toString('utf8');
-  } catch {
-    return undefined;
-  }
+  const decoded = Buffer.from(trimmed, 'base64').toString('utf8');
 
   const separatorIndex = decoded.indexOf(':');
   if (separatorIndex < 0) {
@@ -57,15 +56,41 @@ export const parseSinchCredentialsValue = (encodedValue: string): SinchOAuthCred
   };
 };
 
-export const parseSinchCredentialsHeader = (
-  headerValue: string | string[] | undefined,
+/**
+ * Parses Sinch credentials from an `Authorization: Bearer <Base64 of projectId:keyId:keySecret>`
+ * header. Returns undefined when the header is missing, uses another scheme, or the token
+ * is not a well-formed encoded credential triple (e.g. a user JWT or an MCP API key).
+ */
+export const parseSinchCredentialsAuthorizationHeader = (
+  authorizationHeader: string | string[] | undefined,
 ): SinchOAuthCredentials | undefined => {
-  const value = extractHeaderValue(headerValue);
-  if (!value) {
+  const token = extractBearerToken(authorizationHeader);
+  if (!token) {
     return undefined;
   }
 
-  return parseSinchCredentialsValue(value);
+  return parseSinchCredentialsValue(token);
+};
+
+/**
+ * Google Secret Manager secret ID holding the M2M credentials for one agent installation.
+ * The payload is the same Base64 projectId:keyId:keySecret blob used by client-credentials.
+ * Gemini order IDs and Sinch project IDs are UUIDs; lower-casing them makes the
+ * resulting secret ID canonical.
+ */
+export const buildAgentM2MSecretId = (orderId: string, projectId: string): string | undefined => {
+  if (!UUID_PATTERN.test(orderId) || !UUID_PATTERN.test(projectId)) {
+    return undefined;
+  }
+
+  return `sinch-agent-m2m_${orderId.toLowerCase()}_${projectId.toLowerCase()}`;
+};
+
+export const SERVER_CREDENTIAL_ENV_VARS = ['PROJECT_ID', 'KEY_ID', 'KEY_SECRET'] as const;
+
+/** Which of the three server-credential env vars are populated. All three or none is valid. */
+export const presentServerCredentialEnvVars = (): string[] => {
+  return SERVER_CREDENTIAL_ENV_VARS.filter((key) => Boolean(env[key]?.trim()));
 };
 
 export const sinchOAuthCredentialsFromEnv = (): SinchOAuthCredentials | undefined => {

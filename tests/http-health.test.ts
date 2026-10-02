@@ -1,7 +1,17 @@
 import http from 'http';
 import type { AddressInfo } from 'net';
-import { clearMaxMcpSessionsForTests, setMaxMcpSessionsForTests } from '../src/auth/http-session-limits';
-import { clearSessionsForTests, createHttpApp, seedSessionForTests, setShuttingDownForTests } from '../src/http';
+import { clearAuthModeForTests } from '../src/auth/auth-mode';
+import { clearHttpCredentialSourceForTests } from '../src/auth/http-credential-mode';
+import { mockEnv, resetMockEnv } from '../src/__mocks__/env';
+import { createHttpApp, setShuttingDownForTests } from '../src/http';
+import { pingSessionStore } from '../src/session-store';
+
+jest.mock('../src/session-store', () => ({
+  ...jest.requireActual('../src/session-store'),
+  pingSessionStore: jest.fn(),
+}));
+
+const mockedPingSessionStore = pingSessionStore as jest.MockedFunction<typeof pingSessionStore>;
 
 const listen = async (
   app: ReturnType<typeof createHttpApp>,
@@ -25,24 +35,19 @@ const listen = async (
 };
 
 describe.each(['', '/mcp'])('HTTP health endpoints under "%s"', (prefix) => {
-  const originalApiKey = process.env.MCP_API_KEY;
-
   beforeEach(() => {
-    process.env.MCP_API_KEY = 'test-health-key';
+    mockEnv.CONVERSATION_REGION = 'eu';
+    mockEnv.MCP_AUTH_MODE = 'client-credentials';
     setShuttingDownForTests(false);
-    clearMaxMcpSessionsForTests();
-    clearSessionsForTests();
+    mockedPingSessionStore.mockResolvedValue(true);
   });
 
   afterEach(() => {
     setShuttingDownForTests(false);
-    clearMaxMcpSessionsForTests();
-    clearSessionsForTests();
-    if (originalApiKey === undefined) {
-      delete process.env.MCP_API_KEY;
-    } else {
-      process.env.MCP_API_KEY = originalApiKey;
-    }
+    mockedPingSessionStore.mockReset();
+    resetMockEnv();
+    clearHttpCredentialSourceForTests();
+    clearAuthModeForTests();
   });
 
   it('returns 200 on /health/live without authentication', async () => {
@@ -59,20 +64,14 @@ describe.each(['', '/mcp'])('HTTP health endpoints under "%s"', (prefix) => {
     }
   });
 
-  it('returns 200 on /health/ready when accepting traffic', async () => {
+  it('returns 200 on /health/ready when accepting traffic and the session store is reachable', async () => {
     const { baseUrl, close } = await listen(createHttpApp());
     try {
       const response = await fetch(`${baseUrl}${prefix}/health/ready`);
-      const body = (await response.json()) as {
-        status: string;
-        activeSessions: number;
-        maxSessions: number;
-      };
+      const body = (await response.json()) as { status: string };
 
       expect(response.status).toBe(200);
       expect(body.status).toBe('ready');
-      expect(body.activeSessions).toBe(0);
-      expect(typeof body.maxSessions).toBe('number');
     } finally {
       await close();
     }
@@ -92,17 +91,15 @@ describe.each(['', '/mcp'])('HTTP health endpoints under "%s"', (prefix) => {
     }
   });
 
-  it('returns 503 on /health/ready when session capacity is reached', async () => {
-    setMaxMcpSessionsForTests(1);
-    seedSessionForTests();
+  it('returns 503 on /health/ready when the session store is unreachable', async () => {
+    mockedPingSessionStore.mockResolvedValue(false);
     const { baseUrl, close } = await listen(createHttpApp());
     try {
       const response = await fetch(`${baseUrl}${prefix}/health/ready`);
       const body = (await response.json()) as { status: string; reason: string };
 
       expect(response.status).toBe(503);
-      expect(body.status).toBe('not_ready');
-      expect(body.reason).toBe('session_capacity_reached');
+      expect(body).toEqual({ status: 'not_ready', reason: 'session_store_unreachable' });
     } finally {
       await close();
     }
