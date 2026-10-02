@@ -26,6 +26,7 @@ const redactSensitiveText = (message: string): string => {
       (_match, prefix: string, scheme: string | undefined) => `${prefix}${scheme ? `${scheme} ` : ''}[Redacted]`,
     )
     .replace(/\b(Bearer|Basic)\s+\S+/gi, '$1 [Redacted]')
+    .replace(/(\/\/)[^\s/@]+:[^\s/@]+@/g, '$1[Redacted]@')
     .replace(/([a-z][a-z0-9+.-]*:\/\/[^\s?]+)\?[^\s)"']+/gi, '$1?[Redacted]')
     .replace(
       /((?:password|key[_-]?secret|api[_-]?key|access[_-]?token|refresh[_-]?token)\s*[:=]\s*)[^,\s}"']+/gi,
@@ -50,22 +51,29 @@ type SerializedError = {
   message?: string;
   code?: string | number;
   status_code?: number;
+  cause?: SerializedError;
 };
 
-export const serializeError = (error: unknown): SerializedError => {
+export const serializeError = (error: unknown, depth = 0): SerializedError => {
   if (!(error instanceof Error)) {
     return { type: 'UnknownError' };
   }
 
-  const extended = error as Error & { code?: unknown; status?: unknown; statusCode?: unknown };
+  const extended = error as Error & {
+    code?: unknown;
+    status?: unknown;
+    statusCode?: unknown;
+    response?: { status?: unknown };
+  };
   const code = typeof extended.code === 'string' || typeof extended.code === 'number' ? extended.code : undefined;
-  const rawStatus = extended.statusCode ?? extended.status;
+  const rawStatus = extended.statusCode ?? extended.status ?? extended.response?.status;
   const statusCode = typeof rawStatus === 'number' ? rawStatus : undefined;
   return {
     type: error.name,
     message: redactSensitiveText(error.message),
     ...(code !== undefined && { code }),
     ...(statusCode !== undefined && { status_code: statusCode }),
+    ...(depth === 0 && error.cause !== undefined && { cause: serializeError(error.cause, 1) }),
   };
 };
 
@@ -108,12 +116,25 @@ export const logger = {
 
 export const safeErrorFields = (
   error: unknown,
-): { error_type: string; error_message?: string; error_code?: string | number; status_code?: number } => {
+): {
+  error_type: string;
+  error_message?: string;
+  error_code?: string | number;
+  status_code?: number;
+  error_cause_type?: string;
+  error_cause_message?: string;
+  error_cause_code?: string | number;
+} => {
   const serialized = serializeError(error);
   return {
     error_type: serialized.type,
     ...(serialized.message !== undefined && { error_message: serialized.message }),
     ...(serialized.code !== undefined && { error_code: serialized.code }),
     ...(serialized.status_code !== undefined && { status_code: serialized.status_code }),
+    ...(serialized.cause && {
+      error_cause_type: serialized.cause.type,
+      ...(serialized.cause.message !== undefined && { error_cause_message: serialized.cause.message }),
+      ...(serialized.cause.code !== undefined && { error_cause_code: serialized.cause.code }),
+    }),
   };
 };
