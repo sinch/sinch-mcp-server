@@ -487,6 +487,8 @@ The server listens on `http://localhost:8000/mcp` by default (override with `POR
 
 Session identity is stored in Redis, not in process memory, so any pod behind a load balancer can validate any session — no sticky sessions required. Each request builds its own short-lived `McpServer` and `StreamableHTTPServerTransport`, closed once the response finishes; nothing is held in memory between requests. Redis is required — the server exits immediately on startup unless both `REDIS_HOST` and `REDIS_PORT` are set (`REDIS_PASSWORD` is optional; TLS turns on automatically once it's set, e.g. for AWS ElastiCache). If Redis is unreachable after a short retry, the server returns **503 Service Unavailable** with JSON-RPC error code `-32003`, distinct from `-32001 Session not found`.
 
+Multi-tenant deployments also cache Sinch M2M access tokens in Redis, keyed by a hash of the resolved credentials and expiring slightly before the upstream token. This allows pods and sessions to reuse tokens without storing the underlying credential secret in Redis. The in-process LRU retains only lightweight OAuth request plugins. Single-tenant and stdio keep using the SDK's native in-memory token plugin.
+
 Because there's no persistent per-session transport, the server doesn't support the standalone GET/SSE stream — `GET /mcp` returns **405**. Server-initiated notifications sent during a POST (e.g. tool progress) work as usual; a notification pushed independently of any request would have nowhere to go once transports are per-request.
 
 ### Step 4: Example MCP client configuration
