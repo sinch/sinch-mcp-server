@@ -90,9 +90,12 @@ test('registerTracedTool wraps handler with span attributes and records success 
       _registeredTools: Record<string, { callback: (...args: unknown[]) => unknown }>;
     }
   )._registeredTools['test-tool'];
+  const jsonParseSpy = jest.spyOn(JSON, 'parse');
   const result = await registeredTool.callback({}, {} as never);
 
   expect(result).toEqual({ content: [{ type: 'text', text: 'ok' }] });
+  expect(jsonParseSpy).not.toHaveBeenCalled();
+  jsonParseSpy.mockRestore();
   expect(otelMocks().mockStartActiveSpan).toHaveBeenCalledWith('mcp.tool/test-tool', expect.any(Function));
   expect(otelMocks().mockSetAttribute).toHaveBeenCalledWith(ATTR_TOOL_NAME, 'test-tool');
   expect(otelMocks().mockSetAttribute).toHaveBeenCalledWith(ATTR_AUTH_METHOD, 'oauth2_project_credentials');
@@ -135,7 +138,7 @@ test('registerTracedTool records error metrics when handler throws', async () =>
 test('registerTracedTool records a structured unsuccessful result as a failure', async () => {
   const server = new McpServer({ name: 'test', version: '1.0.0' });
   const handler = jest.fn().mockResolvedValue({
-    content: [{ type: 'text', text: JSON.stringify({ success: false, error: 'upstream rejected request' }) }],
+    content: [{ type: 'text', text: '{ "success" : false, "error": "upstream rejected request" }' }],
   });
 
   registerTracedTool(server, 'unsuccessful-tool', { description: 'Returns a failure' }, handler);

@@ -28,6 +28,11 @@ const isFailedToolResult = (result: unknown): boolean => {
     if (typeof text !== 'string') {
       return false;
     }
+    // Successful text is the hot path. Parse only a potential structured
+    // failure result, while permitting ordinary JSON whitespace.
+    if (!/"success"\s*:\s*false/.test(text)) {
+      return false;
+    }
     try {
       const parsed = JSON.parse(text) as { success?: unknown };
       return parsed.success === false;

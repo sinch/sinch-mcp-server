@@ -26,6 +26,26 @@ const sinchApiService = (origin: string): string | undefined => {
   }
 };
 
+type HttpClientRequestLike = {
+  getHeader?: (name: string) => unknown;
+  path?: string;
+  protocol?: string;
+};
+
+export const buildSanitizedHttpUrl = (
+  request: HttpClientRequestLike,
+): { origin: string; path: string; sanitizedUrl: string } | undefined => {
+  const host = request.getHeader?.('host');
+  const protocol = request.protocol;
+  if (!host || !protocol) {
+    return undefined;
+  }
+  const normalizedProtocol = protocol.endsWith(':') ? protocol : `${protocol}:`;
+  const origin = `${normalizedProtocol}//${String(host)}`;
+  const path = request.path?.split('?')[0] ?? '/';
+  return { origin, path, sanitizedUrl: `${origin}${path}` };
+};
+
 export const initTelemetry = (): NodeSDK | undefined => {
   if (!isTelemetryEnabled()) {
     return undefined;
@@ -46,18 +66,17 @@ export const initTelemetry = (): NodeSDK | undefined => {
   const httpSinchRequestStarts = new WeakMap<object, { startedAt: number; service: string }>();
   const httpInstrumentation = new HttpInstrumentation({
     requestHook: (span, request) => {
-      const getHeader = (request as { getHeader?: (name: string) => unknown }).getHeader;
-      if (!getHeader) {
+      const sanitized = buildSanitizedHttpUrl(request as HttpClientRequestLike);
+      if (!sanitized) {
         return;
       }
-      const host = getHeader.call(request, 'host');
-      const path = (request as { path?: string }).path?.split('?')[0] ?? '/';
-      const sanitizedUrl = `https://${String(host ?? '')}${path}`;
       // Query strings can carry credentials (for example GEOCODING_API_KEY).
-      span.setAttribute('url.full', sanitizedUrl);
-      span.setAttribute('http.url', sanitizedUrl);
+      span.setAttribute('url.full', sanitized.sanitizedUrl);
+      span.setAttribute('http.url', sanitized.sanitizedUrl);
+      span.setAttribute('http.target', sanitized.path);
+      span.setAttribute('url.path', sanitized.path);
       span.setAttribute('url.query', '');
-      const service = sinchApiService(`https://${String(host ?? '')}`);
+      const service = sinchApiService(sanitized.origin);
       if (!service) {
         return;
       }
@@ -86,6 +105,8 @@ export const initTelemetry = (): NodeSDK | undefined => {
         return {
           'url.full': `${request.origin}${path}`,
           'http.url': `${request.origin}${path}`,
+          'http.target': path,
+          'url.path': path,
           'url.query': '',
         };
       }
@@ -95,6 +116,8 @@ export const initTelemetry = (): NodeSDK | undefined => {
         [ATTR_SINCH_API_SERVICE]: service,
         'url.full': `${request.origin}${path}`,
         'http.url': `${request.origin}${path}`,
+        'http.target': path,
+        'url.path': path,
         'url.query': '',
       };
     },

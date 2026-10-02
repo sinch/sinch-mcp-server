@@ -5,6 +5,7 @@ import { clearHttpCredentialSourceForTests } from '../src/auth/http-credential-m
 import { mockEnv, resetMockEnv } from '../src/__mocks__/env';
 import { createHttpApp, setShuttingDownForTests } from '../src/http';
 import { pingSessionStore } from '../src/session-store';
+import { logger } from '../src/telemetry/logger';
 
 jest.mock('../src/session-store', () => ({
   ...jest.requireActual('../src/session-store'),
@@ -51,6 +52,7 @@ describe('HTTP health endpoints', () => {
   });
 
   it('returns 200 on /health/live without authentication', async () => {
+    const infoSpy = jest.spyOn(logger, 'info').mockImplementation(() => undefined);
     const { baseUrl, close } = await listen(createHttpApp());
     try {
       const response = await fetch(`${baseUrl}/health/live`);
@@ -59,7 +61,9 @@ describe('HTTP health endpoints', () => {
       expect(response.status).toBe(200);
       expect(body.status).toBe('ok');
       expect(typeof body.uptimeSeconds).toBe('number');
+      expect(infoSpy).not.toHaveBeenCalledWith(expect.anything(), 'MCP request completed');
     } finally {
+      infoSpy.mockRestore();
       await close();
     }
   });

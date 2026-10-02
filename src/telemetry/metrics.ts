@@ -6,10 +6,10 @@ import {
   METRIC_HTTP_ERRORS_TOTAL,
   METRIC_HTTP_REQUESTS_TOTAL,
   METRIC_REDIS_AVAILABLE,
+  METRIC_REDIS_COMMAND_DURATION_MS,
   METRIC_REDIS_DURATION_MS,
   METRIC_REDIS_FAILURES_TOTAL,
   METRIC_REDIS_OPERATIONS_TOTAL,
-  METRIC_SESSIONS_ACTIVE,
   METRIC_SESSIONS_CREATED_TOTAL,
   METRIC_SESSIONS_DELETED_TOTAL,
   METRIC_SINCH_API_DURATION_MS,
@@ -37,12 +37,12 @@ export interface ServiceMetrics {
   redisOperationsTotal: Counter;
   redisFailuresTotal: Counter;
   redisDurationMs: Histogram;
+  redisCommandDurationMs: Histogram;
 }
 
 let toolMetrics: ToolMetrics | undefined;
 let serviceMetrics: ServiceMetrics | undefined;
-let redisAvailable = 0;
-let activeSessions = 0;
+let redisAvailable: number | undefined;
 
 export const getToolMetrics = (): ToolMetrics => {
   if (!toolMetrics) {
@@ -73,12 +73,11 @@ export const getServiceMetrics = (): ServiceMetrics => {
     const availability = meter.createObservableGauge(METRIC_REDIS_AVAILABLE, {
       description: 'Whether the most recent Redis operation succeeded (1) or failed (0)',
     });
-    availability.addCallback((result) => result.observe(redisAvailable));
-    const sessionGauge = meter.createObservableGauge(METRIC_SESSIONS_ACTIVE, {
-      description: 'Current sessions in the dedicated Redis database, sampled by readiness checks',
+    availability.addCallback((result) => {
+      if (redisAvailable !== undefined) {
+        result.observe(redisAvailable);
+      }
     });
-    sessionGauge.addCallback((result) => result.observe(activeSessions));
-
     serviceMetrics = {
       httpRequestsTotal: meter.createCounter(METRIC_HTTP_REQUESTS_TOTAL),
       httpErrorsTotal: meter.createCounter(METRIC_HTTP_ERRORS_TOTAL),
@@ -89,7 +88,14 @@ export const getServiceMetrics = (): ServiceMetrics => {
       sessionsDeletedTotal: meter.createCounter(METRIC_SESSIONS_DELETED_TOTAL),
       redisOperationsTotal: meter.createCounter(METRIC_REDIS_OPERATIONS_TOTAL),
       redisFailuresTotal: meter.createCounter(METRIC_REDIS_FAILURES_TOTAL),
-      redisDurationMs: meter.createHistogram(METRIC_REDIS_DURATION_MS, { unit: 'ms' }),
+      redisDurationMs: meter.createHistogram(METRIC_REDIS_DURATION_MS, {
+        description: 'End-to-end logical Redis operation duration, including retries and backoff',
+        unit: 'ms',
+      }),
+      redisCommandDurationMs: meter.createHistogram(METRIC_REDIS_COMMAND_DURATION_MS, {
+        description: 'Duration of one Redis command attempt, excluding retry backoff',
+        unit: 'ms',
+      }),
     };
   }
   return serviceMetrics;
@@ -97,8 +103,4 @@ export const getServiceMetrics = (): ServiceMetrics => {
 
 export const setRedisAvailable = (available: boolean): void => {
   redisAvailable = available ? 1 : 0;
-};
-
-export const setActiveSessions = (count: number): void => {
-  activeSessions = count;
 };

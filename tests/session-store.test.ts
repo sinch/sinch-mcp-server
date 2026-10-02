@@ -12,6 +12,7 @@ import {
   SessionStoreUnavailableError,
   validateAndTouchSession,
 } from '../src/session-store';
+import { getServiceMetrics } from '../src/telemetry/metrics';
 
 describe('session-store', () => {
   const ownerId = 'owner-1';
@@ -67,7 +68,7 @@ describe('session-store', () => {
 
   it('throws SessionStoreUnavailableError after exhausting retries on persistent failure', async () => {
     const client = getSessionStoreClientForTests();
-    jest.spyOn(client, 'get').mockRejectedValue(new Error('connection refused'));
+    jest.spyOn(client, 'eval').mockRejectedValue(new Error('connection refused'));
 
     await expect(validateAndTouchSession(randomUUID(), ownerId)).rejects.toThrow(SessionStoreUnavailableError);
   });
@@ -76,15 +77,26 @@ describe('session-store', () => {
     const sessionId = randomUUID();
     await createSession(sessionId, ownerId);
 
+    const commandDurationSpy = jest.spyOn(getServiceMetrics().redisCommandDurationMs, 'record');
+    const operationDurationSpy = jest.spyOn(getServiceMetrics().redisDurationMs, 'record');
     const client = getSessionStoreClientForTests();
-    const realGet = client.get.bind(client);
+    const realEval = client.eval.bind(client);
     jest
-      .spyOn(client, 'get')
+      .spyOn(client, 'eval')
       .mockRejectedValueOnce(new Error('timeout'))
       .mockRejectedValueOnce(new Error('timeout'))
-      .mockImplementationOnce(realGet);
+      .mockImplementationOnce(realEval);
 
     await expect(validateAndTouchSession(sessionId, ownerId)).resolves.toBeTrue();
+    expect(
+      commandDurationSpy.mock.calls.filter(
+        ([, attributes]) => attributes?.operation === 'validate_and_touch' && attributes.attempt !== undefined,
+      ),
+    ).toHaveLength(3);
+    expect(operationDurationSpy).toHaveBeenCalledWith(
+      expect.any(Number),
+      expect.objectContaining({ operation: 'validate_and_touch', status: 'success', attempts: 3 }),
+    );
   });
 
   it('enables TLS automatically when REDIS_PASSWORD is set (AWS ElastiCache requires it)', () => {

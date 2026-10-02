@@ -146,9 +146,11 @@ terminationGracePeriodSeconds: 45
 
 nodeSelector: {}
 tolerations: []
-# Hard anti-affinity keeps two replicas off the same node. If fewer than two
-# eligible nodes exist, the extra replica remains Pending instead of creating
-# a false high-availability configuration on one failure domain.
+# Required (hard) anti-affinity is intentional: the availability requirement says one node
+# failure must not remove every replica. Preferred (soft) anti-affinity could place both replicas
+# on one node and violate that requirement. If fewer than two eligible nodes exist, the extra pod
+# stays Pending so the capacity problem is visible and the cluster autoscaler can add a node,
+# instead of silently presenting a false high-availability configuration.
 podAntiAffinity:
   enabled: true
   topologyKey: kubernetes.io/hostname

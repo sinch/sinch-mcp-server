@@ -1,7 +1,7 @@
 import Redis from 'ioredis';
 import { env } from './env';
 import { logger, safeErrorFields } from './telemetry/logger';
-import { getServiceMetrics, setActiveSessions, setRedisAvailable } from './telemetry/metrics';
+import { getServiceMetrics, setRedisAvailable } from './telemetry/metrics';
 
 const DEFAULT_SESSION_TTL_SECONDS = 1800;
 const REDIS_RETRY_ATTEMPTS = 3;
@@ -10,11 +10,14 @@ const REDIS_COMMAND_TIMEOUT_MS = 250;
 
 const sessionKey = (sessionId: string): string => `mcp:session:${sessionId}`;
 
-type StoredSession = {
-  sessionId: string;
-  ownerId: string;
-  createdAt: number;
-};
+const VALIDATE_AND_TOUCH_SCRIPT = `
+local owner = redis.call('GET', KEYS[1])
+if owner == ARGV[1] then
+  redis.call('EXPIRE', KEYS[1], ARGV[2])
+  return 1
+end
+return 0
+`;
 
 export class SessionStoreUnavailableError extends Error {
   constructor(cause: unknown) {
@@ -59,14 +62,29 @@ const withRetry = async <T>(operationName: string, operation: () => Promise<T>):
   const metrics = getServiceMetrics();
   const startedAt = performance.now();
   let lastError: unknown;
+  let attempts = 0;
+  let operationStatus = 'error';
   try {
     for (let attempt = 0; attempt < REDIS_RETRY_ATTEMPTS; attempt++) {
+      attempts = attempt + 1;
+      const commandStartedAt = performance.now();
       try {
         const result = await operation();
+        metrics.redisCommandDurationMs.record(performance.now() - commandStartedAt, {
+          operation: operationName,
+          status: 'success',
+          attempt: attempts,
+        });
         metrics.redisOperationsTotal.add(1, { operation: operationName, status: 'success' });
         setRedisAvailable(true);
+        operationStatus = 'success';
         return result;
       } catch (error) {
+        metrics.redisCommandDurationMs.record(performance.now() - commandStartedAt, {
+          operation: operationName,
+          status: 'error',
+          attempt: attempts,
+        });
         lastError = error;
         if (attempt < REDIS_RETRY_ATTEMPTS - 1) {
           await sleep(REDIS_RETRY_BASE_DELAY_MS * 2 ** attempt);
@@ -78,40 +96,23 @@ const withRetry = async <T>(operationName: string, operation: () => Promise<T>):
     setRedisAvailable(false);
     throw new SessionStoreUnavailableError(lastError);
   } finally {
-    metrics.redisDurationMs.record(performance.now() - startedAt, { operation: operationName });
+    metrics.redisDurationMs.record(performance.now() - startedAt, {
+      operation: operationName,
+      status: operationStatus,
+      attempts,
+    });
   }
 };
 
 export const createSession = async (sessionId: string, ownerId: string): Promise<void> => {
-  await withRetry('set', () =>
-    getClient().set(
-      sessionKey(sessionId),
-      JSON.stringify({ sessionId, ownerId, createdAt: Date.now() } satisfies StoredSession),
-      'EX',
-      getSessionTtlSeconds(),
-    ),
-  );
+  await withRetry('set', () => getClient().set(sessionKey(sessionId), ownerId, 'EX', getSessionTtlSeconds()));
 };
 
 export const validateAndTouchSession = async (sessionId: string, ownerId: string): Promise<boolean> => {
-  const storedValue = await withRetry('get', () => getClient().get(sessionKey(sessionId)));
-  if (!storedValue) {
-    return false;
-  }
-
-  let storedSession: StoredSession;
-  try {
-    storedSession = JSON.parse(storedValue) as StoredSession;
-  } catch {
-    return false;
-  }
-
-  if (storedSession.sessionId !== sessionId || storedSession.ownerId !== ownerId) {
-    return false;
-  }
-
-  const result = await withRetry('expire', () => getClient().expire(sessionKey(sessionId), getSessionTtlSeconds()));
-  return result === 1;
+  const result = await withRetry('validate_and_touch', () =>
+    getClient().eval(VALIDATE_AND_TOUCH_SCRIPT, 1, sessionKey(sessionId), ownerId, getSessionTtlSeconds()),
+  );
+  return Number(result) === 1;
 };
 
 export const deleteSession = async (sessionId: string): Promise<void> => {
@@ -121,13 +122,12 @@ export const deleteSession = async (sessionId: string): Promise<void> => {
 /** Single-attempt reachability check for readiness probes — no retry, fails fast. */
 export const pingSessionStore = async (): Promise<boolean> => {
   const startedAt = performance.now();
+  let status = 'error';
   try {
-    // This deployment uses a dedicated Redis database for sessions, so DBSIZE is
-    // an O(1) active-session sample and does not expose session IDs or credentials.
-    const [, activeSessionCount] = await Promise.all([getClient().ping(), getClient().dbsize()]);
-    setActiveSessions(activeSessionCount);
+    await getClient().ping();
     getServiceMetrics().redisOperationsTotal.add(1, { operation: 'ping', status: 'success' });
     setRedisAvailable(true);
+    status = 'success';
     return true;
   } catch {
     getServiceMetrics().redisOperationsTotal.add(1, { operation: 'ping', status: 'error' });
@@ -135,7 +135,9 @@ export const pingSessionStore = async (): Promise<boolean> => {
     setRedisAvailable(false);
     return false;
   } finally {
-    getServiceMetrics().redisDurationMs.record(performance.now() - startedAt, { operation: 'ping' });
+    const durationMs = performance.now() - startedAt;
+    getServiceMetrics().redisCommandDurationMs.record(durationMs, { operation: 'ping', status, attempt: 1 });
+    getServiceMetrics().redisDurationMs.record(durationMs, { operation: 'ping', status, attempts: 1 });
   }
 };
 
