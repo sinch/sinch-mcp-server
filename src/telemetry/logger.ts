@@ -6,14 +6,28 @@ export type LogLevel = (typeof LOG_LEVELS)[number];
 
 const LOG_LEVEL_SET: ReadonlySet<string> = new Set(LOG_LEVELS);
 
+export const normalizeLogLevel = (value: string): LogLevel => {
+  const normalizedValue = value.toLowerCase();
+  return LOG_LEVEL_SET.has(normalizedValue) ? (normalizedValue as LogLevel) : 'info';
+};
+
 let baseLogger: pino.Logger | undefined;
 
 const getBaseLogger = (): pino.Logger => {
   if (!baseLogger) {
     const configuredLevel = process.env.LOG_LEVEL;
-    // This must tolerate invalid raw input so env.ts can log its validation failure.
-    const level = configuredLevel && LOG_LEVEL_SET.has(configuredLevel) ? configuredLevel : 'info';
+    const level = configuredLevel ? normalizeLogLevel(configuredLevel) : 'info';
     baseLogger = pino({ level }, pino.destination(2));
+    if (configuredLevel && !LOG_LEVEL_SET.has(configuredLevel.toLowerCase())) {
+      baseLogger.warn(
+        {
+          configured_log_level: configuredLevel,
+          fallback_log_level: 'info',
+          valid_log_levels: LOG_LEVELS,
+        },
+        `LOG_LEVEL="${configuredLevel}" is not a valid level; using "info". Valid: ${LOG_LEVELS.join(', ')}`,
+      );
+    }
   }
   return baseLogger;
 };
