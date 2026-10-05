@@ -87,10 +87,10 @@ test('registerTracedTool wraps handler with span attributes and records success 
 
   const registeredTool = (
     server as unknown as {
-      _registeredTools: Record<string, { callback: (...args: unknown[]) => unknown }>;
+      _registeredTools: Record<string, { handler: (...args: unknown[]) => unknown }>;
     }
   )._registeredTools['test-tool'];
-  const result = await registeredTool.callback({}, {} as never);
+  const result = await registeredTool.handler({}, {} as never);
 
   expect(result).toEqual({ content: [{ type: 'text', text: 'ok' }] });
   expect(otelMocks().mockStartActiveSpan).toHaveBeenCalledWith('mcp.tool/test-tool', expect.any(Function));
@@ -114,11 +114,11 @@ test('registerTracedTool records error metrics when handler throws', async () =>
 
   const registeredTool = (
     server as unknown as {
-      _registeredTools: Record<string, { callback: (...args: unknown[]) => unknown }>;
+      _registeredTools: Record<string, { handler: (...args: unknown[]) => unknown }>;
     }
   )._registeredTools['failing-tool'];
 
-  await expect(registeredTool.callback({} as never, {} as never)).rejects.toThrow('boom');
+  await expect(registeredTool.handler({} as never, {} as never)).rejects.toThrow('boom');
 
   expect(otelMocks().mockSetStatus).toHaveBeenCalledWith({ code: SpanStatusCode.ERROR });
   expect(otelMocks().mockRecordException).toHaveBeenCalled();
