@@ -17,11 +17,6 @@ export const instantiateMcpServer = () => {
   return new McpServer({
     name: 'Sinch',
     version: mcpServerVersion,
-    capabilities: {
-      resources: {},
-      tools: {},
-      prompts: {},
-    },
   });
 };
 

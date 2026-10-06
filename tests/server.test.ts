@@ -89,7 +89,6 @@ describe('MCP Server capability registration', () => {
       const server = new McpServer({
         name: 'Test',
         version: 'test',
-        capabilities: { resources: {}, tools: {}, prompts: {} },
       });
       // When
       registerCapabilities(server, [testCase.tag]);
@@ -106,7 +105,6 @@ describe('MCP Server capability registration', () => {
     const server = new McpServer({
       name: 'Test',
       version: 'test',
-      capabilities: { resources: {}, tools: {}, prompts: {} },
     });
     // When
     registerCapabilities(server, []);
