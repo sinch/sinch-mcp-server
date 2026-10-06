@@ -46,6 +46,16 @@ describe('logger', () => {
     }
   });
 
+  it('defaults an undefined LOG_LEVEL to info in one place', () => {
+    const { logger, normalizeLogLevel } = loadLogger();
+
+    logger.info('Started');
+
+    expect(normalizeLogLevel(undefined)).toBe('info');
+    expect(mockPino).toHaveBeenCalledWith({ level: 'info' }, mockDestination);
+    expect(mockPinoLogger.warn).not.toHaveBeenCalled();
+  });
+
   it('falls back to info and warns when LOG_LEVEL is invalid', () => {
     process.env.LOG_LEVEL = 'verbose';
     const { logger, LOG_LEVELS } = loadLogger();

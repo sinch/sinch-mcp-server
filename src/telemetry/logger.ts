@@ -6,9 +6,9 @@ export type LogLevel = (typeof LOG_LEVELS)[number];
 
 const LOG_LEVEL_SET: ReadonlySet<string> = new Set(LOG_LEVELS);
 
-export const normalizeLogLevel = (value: string): LogLevel => {
-  const normalizedValue = value.toLowerCase();
-  return LOG_LEVEL_SET.has(normalizedValue) ? (normalizedValue as LogLevel) : 'info';
+export const normalizeLogLevel = (value: string | undefined): LogLevel => {
+  const normalizedValue = value?.toLowerCase();
+  return normalizedValue && LOG_LEVEL_SET.has(normalizedValue) ? (normalizedValue as LogLevel) : 'info';
 };
 
 let baseLogger: pino.Logger | undefined;
@@ -16,9 +16,9 @@ let baseLogger: pino.Logger | undefined;
 const getBaseLogger = (): pino.Logger => {
   if (!baseLogger) {
     const configuredLevel = process.env.LOG_LEVEL;
-    const level = configuredLevel ? normalizeLogLevel(configuredLevel) : 'info';
+    const level = normalizeLogLevel(configuredLevel);
     baseLogger = pino({ level }, pino.destination(2));
-    if (configuredLevel && !LOG_LEVEL_SET.has(configuredLevel.toLowerCase())) {
+    if (configuredLevel && configuredLevel.toLowerCase() !== level) {
       baseLogger.warn(
         {
           configured_log_level: configuredLevel,

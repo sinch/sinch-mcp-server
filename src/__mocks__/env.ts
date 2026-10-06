@@ -1,5 +1,3 @@
-import type { LogLevel } from '../telemetry/logger';
-
 export type MockServerEnv = {
   PROJECT_ID?: string;
   KEY_ID?: string;
@@ -18,7 +16,6 @@ export type MockServerEnv = {
   OTEL_SERVICE_NAME?: string;
   OTEL_PROPAGATORS?: string;
   OTEL_ENV?: 'production' | 'staging';
-  LOG_LEVEL?: LogLevel;
   REDIS_HOST?: string;
   REDIS_PORT?: string;
   REDIS_PASSWORD?: string;
