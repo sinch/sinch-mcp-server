@@ -310,12 +310,15 @@ describe('main() startup', () => {
     mockEnv.REDIS_PORT = '6379';
     const exitSpy = jest.fn() as unknown as typeof process.exit;
     process.exit = exitSpy;
-    const errorSpy = jest.spyOn(console, 'error').mockImplementation(() => undefined);
+    const errorSpy = jest.spyOn(logger, 'error').mockImplementation(() => undefined);
 
     await main();
 
     expect(exitSpy).toHaveBeenCalledWith(1);
-    expect(errorSpy).toHaveBeenCalledWith(expect.stringContaining('REDIS_HOST not set'));
+    expect(errorSpy).toHaveBeenCalledWith(
+      { missing_environment_variables: ['REDIS_HOST'] },
+      'HTTP server requires Redis for shared session storage',
+    );
 
     errorSpy.mockRestore();
   });
@@ -325,12 +328,15 @@ describe('main() startup', () => {
     mockEnv.REDIS_PORT = undefined;
     const exitSpy = jest.fn() as unknown as typeof process.exit;
     process.exit = exitSpy;
-    const errorSpy = jest.spyOn(console, 'error').mockImplementation(() => undefined);
+    const errorSpy = jest.spyOn(logger, 'error').mockImplementation(() => undefined);
 
     await main();
 
     expect(exitSpy).toHaveBeenCalledWith(1);
-    expect(errorSpy).toHaveBeenCalledWith(expect.stringContaining('REDIS_PORT not set'));
+    expect(errorSpy).toHaveBeenCalledWith(
+      { missing_environment_variables: ['REDIS_PORT'] },
+      'HTTP server requires Redis for shared session storage',
+    );
 
     errorSpy.mockRestore();
   });
@@ -340,12 +346,15 @@ describe('main() startup', () => {
     mockEnv.REDIS_PORT = undefined;
     const exitSpy = jest.fn() as unknown as typeof process.exit;
     process.exit = exitSpy;
-    const errorSpy = jest.spyOn(console, 'error').mockImplementation(() => undefined);
+    const errorSpy = jest.spyOn(logger, 'error').mockImplementation(() => undefined);
 
     await main();
 
     expect(exitSpy).toHaveBeenCalledWith(1);
-    expect(errorSpy).toHaveBeenCalledWith(expect.stringContaining('REDIS_HOST, REDIS_PORT not set'));
+    expect(errorSpy).toHaveBeenCalledWith(
+      { missing_environment_variables: ['REDIS_HOST', 'REDIS_PORT'] },
+      'HTTP server requires Redis for shared session storage',
+    );
 
     errorSpy.mockRestore();
   });

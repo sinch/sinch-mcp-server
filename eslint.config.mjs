@@ -49,5 +49,11 @@ export default [
       'new-cap': 'off',
       'prettier/prettier': 'warn',
     },
+  },
+  {
+    files: ['src/**/*.ts'],
+    rules: {
+      'no-console': 'error',
+    },
   }
 ];
