@@ -77,7 +77,7 @@ const RcsBrand = z
       .optional()
       .describe('Contact website list. Pass null to delete all existing values.'),
     color: z.string().optional().describe('Brand colour as a HEX code, e.g. "#FF5733".'),
-    description: z.string().max(100).optional().describe('Short brand description. Max 100 characters.'),
+    description: z.string().optional().describe('Brand description.'),
     bannerUrl: z
       .string()
       .optional()
@@ -88,14 +88,17 @@ const RcsBrand = z
   })
   .describe('Brand information shown to end users.');
 
-// The API also returns per-answer `metadata` objects (review state, reviewer
-// comments, timestamps). They are deliberately omitted here: this schema is the
-// PATCH *request* body, and metadata is read-only/server-managed — accepting it
-// on input would have no effect. Review state is surfaced separately via
-// get-rcs-sender.
+// Only the documented writable metadata (optInDescriptionMetadata.ignore) is
+// accepted; other per-answer metadata is read-only and surfaced via get-rcs-sender.
 const RcsQuestionnaireGeneralAnswers = z
   .object({
     optInDescription: z.string().nullable().optional().describe('How opt-in is obtained. Pass null to delete.'),
+    optInDescriptionMetadata: z
+      .object({
+        ignore: z.string().nullable().optional().describe('String to ignore on launch, e.g. a custom delimiter.'),
+      })
+      .optional()
+      .describe('Metadata for optInDescription.'),
     triggerDescription: z
       .string()
       .nullable()
@@ -126,6 +129,15 @@ const RcsQuestionnaireVerificationAnswers = z
     email: z.string().nullable().optional().describe('Email of verification contact. Pass null to delete.'),
     title: z.string().nullable().optional().describe('Title of verification contact. Pass null to delete.'),
     website: z.string().nullable().optional().describe('Website of verification contact. Pass null to delete.'),
+    partner: z
+      .object({
+        companyName: z.string().nullable().optional().describe('Company name of the brand partner.'),
+        contactName: z.string().nullable().optional().describe('Name of the brand partner contact.'),
+        contactEmailAddress: z.string().nullable().optional().describe('Email of the brand partner contact.'),
+      })
+      .nullable()
+      .optional()
+      .describe('Brand partner contact details. Reseller (ASP) accounts only; ignored otherwise. Pass null to delete.'),
     phone: z
       .string()
       .nullable()
@@ -146,6 +158,7 @@ const RcsQuestionnaireGbAnswers = z
     fullCompanyAddress: z.string().nullable().optional().describe('Full company address. Pass null to delete.'),
     messagesVolume: z.string().nullable().optional().describe('Estimated messages volume. Pass null to delete.'),
     messagesFrequency: z.string().nullable().optional().describe('Estimated messages frequency. Pass null to delete.'),
+    campaignLength: z.string().nullable().optional().describe('Length of campaign. Pass null to delete.'),
   })
   .describe('Answers to the UK-specific launch questionnaire.');
 
@@ -218,10 +231,9 @@ const RcsUsState = z.enum([
 // All fields are optional on create/update but required for launch.
 const RcsQuestionnaireUsAnswers = z
   .object({
-    ownershipType: z.enum(['PUBLIC', 'PRIVATE']).nullable().optional().describe('Ownership type of the company.'),
+    ownershipType: z.enum(['PUBLIC', 'PRIVATE']).optional().describe('Ownership type of the company.'),
     legalForm: z
       .enum(['CORPORATION', 'LIMITED_LIABILITY_COMPANY', 'PARTNERSHIP', 'S_CORPORATION'])
-      .nullable()
       .optional()
       .describe('Legal form of the company. PUBLIC ownership only allows CORPORATION.'),
     companyLegalName: z.string().nullable().optional().describe('Registered legal name of the company.'),
@@ -235,7 +247,6 @@ const RcsQuestionnaireUsAnswers = z
     brandIndustry: RcsBrandIndustry.nullable().optional().describe('Sector or industry of the business.'),
     taxIdCountry: z
       .string()
-      .nullable()
       .optional()
       .describe('Country of tax registration (ISO 3166 two-letter code). Controls taxId and addressState validation.'),
     taxId: z
@@ -256,10 +267,10 @@ const RcsQuestionnaireUsAnswers = z
       .describe('Primary stock symbol. PUBLIC ownership only; not allowed for PRIVATE.'),
     addressLine: z.string().nullable().optional().describe('Street address line.'),
     addressCity: z.string().nullable().optional(),
-    addressState: RcsUsState.nullable()
-      .optional()
-      .describe('US state abbreviation. Only when taxIdCountry is US; omit otherwise.'),
-    addressCountry: z.string().nullable().optional().describe('ISO 3166 two-letter country code.'),
+    addressState: RcsUsState.optional().describe(
+      'US state abbreviation. Only when taxIdCountry is US; omit otherwise.',
+    ),
+    addressCountry: z.string().optional().describe('ISO 3166 two-letter country code.'),
     addressPostalCode: z.string().nullable().optional(),
     fullCompanyAddress: z.string().nullable().optional(),
     websiteUrl: z.string().nullable().optional().describe('Primary website URL.'),
@@ -298,33 +309,6 @@ const RcsQuestionnaire = z
   })
   .describe("Launch questionnaire. Only provide the sections relevant to the sender's target countries.");
 
-const RcsSenderCountry = z.enum([
-  'AT',
-  'BE',
-  'BR',
-  'CA',
-  'CZ',
-  'DK',
-  'FI',
-  'FR',
-  'DE',
-  'GR',
-  'HU',
-  'IT',
-  'MX',
-  'NL',
-  'NO',
-  'PE',
-  'PL',
-  'PT',
-  'SG',
-  'SK',
-  'ES',
-  'SE',
-  'US',
-  'GB',
-]);
-
 export const RcsSenderDetails = z
   .object({
     brand: RcsBrand.optional(),
@@ -338,7 +322,7 @@ export const RcsSenderDetails = z
         'Phone numbers for testing. An agent can send 20 tester requests each day with a total maximum of 200 tester requests. Pass null to delete all.',
       ),
     countries: z
-      .array(RcsSenderCountry)
+      .array(z.string())
       .nullable()
       .optional()
       .describe(
@@ -350,6 +334,11 @@ export const RcsSenderDetails = z
   .describe(
     'Sender details. Accepted fields: brand, testNumbers, countries, questionnaire. Do not add any other top-level fields — they will be rejected by the API.',
   );
+
+export const RcsUsQuestionnaireVersion = z
+  .string()
+  .optional()
+  .describe('US questionnaire version to apply to this update, e.g. "v2". Omit to use the sender\'s current version.');
 
 export const RcsPageToken = z
   .string()

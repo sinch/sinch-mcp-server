@@ -43,8 +43,9 @@ export class RcsProvisioningClient extends BaseProvisioningClient {
     return this.request<RcsSender>('POST', '/senders', body);
   }
 
-  updateSender(senderId: string, body: UpdateSenderRequest): Promise<RcsSender> {
-    return this.request<RcsSender>('PATCH', `/senders/${encodeURIComponent(senderId)}`, body);
+  updateSender(senderId: string, body: UpdateSenderRequest, usQuestionnaireVersion?: string): Promise<RcsSender> {
+    const query = usQuestionnaireVersion ? `?usQuestionnaireVersion=${encodeURIComponent(usQuestionnaireVersion)}` : '';
+    return this.request<RcsSender>('PATCH', `/senders/${encodeURIComponent(senderId)}${query}`, body);
   }
 
   addTestNumbers(senderId: string, testNumbers: string[]): Promise<TestNumbersResponse> {

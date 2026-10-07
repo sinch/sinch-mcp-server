@@ -2,7 +2,7 @@ import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { z } from 'zod';
 import { IPromptResponse, PromptResponse, Tags } from '../../types';
 import { matchesAnyTag } from '../../utils';
-import { RcsSenderDetails, RcsSenderId } from './prompt-schemas';
+import { RcsSenderDetails, RcsSenderId, RcsUsQuestionnaireVersion } from './prompt-schemas';
 import { UpdateSenderRequest } from './types/rcs-api';
 import { formatRcsSender } from './utils/format-rcs-sender-response';
 import { runRcsHandler } from './utils/rcs-handler-helper';
@@ -11,6 +11,7 @@ import { getToolName, RcsToolKey, toolsConfig } from './utils/rcs-tools-helper';
 const UpdateRcsSenderSchema = {
   senderId: RcsSenderId,
   details: RcsSenderDetails,
+  usQuestionnaireVersion: RcsUsQuestionnaireVersion,
 };
 
 type UpdateRcsSender = z.infer<z.ZodObject<typeof UpdateRcsSenderSchema>>;
@@ -34,7 +35,11 @@ export const registerUpdateRcsSender = (server: McpServer, tags: Tags[]) => {
   );
 };
 
-export const updateRcsSenderHandler = async ({ senderId, details }: UpdateRcsSender): Promise<IPromptResponse> =>
+export const updateRcsSenderHandler = async ({
+  senderId,
+  details,
+  usQuestionnaireVersion,
+}: UpdateRcsSender): Promise<IPromptResponse> =>
   runRcsHandler(TOOL_NAME, async (client) => {
     if (details === undefined || Object.keys(details).length === 0) {
       return new PromptResponse(
@@ -47,7 +52,7 @@ export const updateRcsSenderHandler = async ({ senderId, details }: UpdateRcsSen
 
     const body: UpdateSenderRequest = { details };
 
-    const sender = await client.updateSender(senderId, body);
+    const sender = await client.updateSender(senderId, body, usQuestionnaireVersion);
 
     return new PromptResponse(
       JSON.stringify({
