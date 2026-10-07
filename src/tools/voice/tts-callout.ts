@@ -7,8 +7,6 @@ import { isPromptResponse, matchesAnyTag } from '../../utils';
 import { IPromptResponse, PromptResponse, Tags } from '../../types';
 import { getVoiceV2Client } from './utils/voice-v2-client';
 import { buildTtsCallRequest } from './utils/builders/tts-call-builder';
-import { validateActiveVoiceNumber } from './utils/validate-voice-number';
-import { resolveVoiceServiceId } from './utils/resolve-voice-service';
 
 const E164_PATTERN = /^\+[1-9]\d{1,14}$/;
 const DEFAULT_VOICE_NAME = 'Emma';
@@ -111,17 +109,15 @@ export const ttsCalloutHandler = async ({
   if (isPromptResponse(maybeClient)) {
     return maybeClient.promptResponse;
   }
-  const { voice, numbers, projectId } = maybeClient;
+  const { voice } = maybeClient;
 
   try {
-    await validateActiveVoiceNumber(numbers, projectId, origin);
-    const resolvedServiceId = await resolveVoiceServiceId(voice, serviceId);
     const response = await voice.calls.start(
       buildTtsCallRequest({
         from: origin,
         to: phoneNumber,
         message,
-        serviceId: resolvedServiceId,
+        serviceId,
         voiceName: voiceName ?? DEFAULT_VOICE_NAME,
         format: format ?? 'TEXT',
         dialTimeoutDurationSeconds: dialTimeoutSeconds ?? DEFAULT_DIAL_TIMEOUT_SECONDS,

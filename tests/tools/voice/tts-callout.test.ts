@@ -10,16 +10,12 @@ const SERVICE_ID = '6e124178-c29d-46a5-943c-5c2ae544aade';
 const ORIGIN = '+14045001000';
 const DESTINATION = '+14155550123';
 
-const getActiveNumber = jest.fn();
-const getService = jest.fn();
-const listServices = jest.fn();
 const startCall = jest.fn();
 const client = {
   projectId: PROJECT_ID,
-  numbers: { get: getActiveNumber },
+  numbers: {},
   voice: {
     calls: { start: startCall },
-    services: { get: getService, list: listServices },
   },
 } as unknown as VoiceV2Client;
 
@@ -30,21 +26,6 @@ beforeEach(() => {
   resetMockEnv();
   mockEnv.CALLING_LINE_IDENTIFICATION = ORIGIN;
   mockedGetVoiceV2Client.mockReturnValue(client);
-  getActiveNumber.mockResolvedValue({
-    phoneNumber: ORIGIN,
-    projectId: PROJECT_ID,
-    capability: ['VOICE'],
-  });
-  listServices.mockResolvedValue({
-    data: [
-      {
-        serviceId: SERVICE_ID,
-        projectId: PROJECT_ID,
-        name: 'Default',
-        isDefault: true,
-      },
-    ],
-  });
   startCall.mockResolvedValue({
     projectId: PROJECT_ID,
     serviceId: SERVICE_ID,
@@ -52,17 +33,14 @@ beforeEach(() => {
   });
 });
 
-test('ttsCalloutHandler validates the origin and creates a Voice API v2 TTS call', async () => {
+test('ttsCalloutHandler lets the API use the default service when none is selected', async () => {
   const result = await ttsCalloutHandler({
     phoneNumber: DESTINATION,
     message: 'Your appointment is tomorrow.',
   });
   const parsed = JSON.parse(result.content[0].text);
 
-  expect(getActiveNumber).toHaveBeenCalledWith({ phoneNumber: ORIGIN });
-  expect(listServices).toHaveBeenCalledWith({ isDefault: true, pageSize: 1 });
   expect(startCall).toHaveBeenCalledWith({
-    serviceId: SERVICE_ID,
     createCallRequestBody: expect.objectContaining({
       commands: expect.any(Array),
     }),
@@ -76,14 +54,7 @@ test('ttsCalloutHandler validates the origin and creates a Voice API v2 TTS call
   });
 });
 
-test('ttsCalloutHandler validates an explicitly selected service', async () => {
-  getService.mockResolvedValue({
-    serviceId: SERVICE_ID,
-    projectId: PROJECT_ID,
-    name: 'Selected',
-    isDefault: false,
-  });
-
+test('ttsCalloutHandler forwards an explicitly selected service without preflight requests', async () => {
   await ttsCalloutHandler({
     phoneNumber: DESTINATION,
     message: '<speak>Hello</speak>',
@@ -95,8 +66,6 @@ test('ttsCalloutHandler validates an explicitly selected service', async () => {
     maxCallDurationSeconds: 60,
   });
 
-  expect(getService).toHaveBeenCalledWith({ serviceId: SERVICE_ID });
-  expect(listServices).not.toHaveBeenCalled();
   expect(startCall).toHaveBeenCalledWith(
     expect.objectContaining({
       serviceId: SERVICE_ID,
@@ -107,12 +76,8 @@ test('ttsCalloutHandler validates an explicitly selected service', async () => {
   );
 });
 
-test('ttsCalloutHandler rejects an origin without Voice capability', async () => {
-  getActiveNumber.mockResolvedValue({
-    phoneNumber: ORIGIN,
-    projectId: PROJECT_ID,
-    capability: ['SMS'],
-  });
+test('ttsCalloutHandler returns call API errors as failures', async () => {
+  startCall.mockRejectedValue(new Error('The origin number is not configured for the selected service'));
 
   const result = await ttsCalloutHandler({
     phoneNumber: DESTINATION,
@@ -122,71 +87,8 @@ test('ttsCalloutHandler rejects an origin without Voice capability', async () =>
 
   expect(parsed).toEqual({
     success: false,
-    error: 'The origin phone number is not enabled for Voice.',
+    error: 'The origin number is not configured for the selected service',
   });
-  expect(startCall).not.toHaveBeenCalled();
-});
-
-test('ttsCalloutHandler rejects an origin from another project', async () => {
-  getActiveNumber.mockResolvedValue({
-    phoneNumber: ORIGIN,
-    projectId: 'another-project',
-    capability: ['VOICE'],
-  });
-
-  const result = await ttsCalloutHandler({
-    phoneNumber: DESTINATION,
-    message: 'Hello',
-  });
-  const parsed = JSON.parse(result.content[0].text);
-
-  expect(parsed).toEqual({
-    success: false,
-    error: 'The origin phone number does not belong to the authenticated project.',
-  });
-  expect(startCall).not.toHaveBeenCalled();
-});
-
-test('ttsCalloutHandler rejects an origin whose Voice provisioning is not ready', async () => {
-  getActiveNumber.mockResolvedValue({
-    phoneNumber: ORIGIN,
-    projectId: PROJECT_ID,
-    capability: ['VOICE'],
-    voiceConfiguration: {
-      type: 'RTC',
-      scheduledVoiceProvisioning: {
-        status: 'IN_PROGRESS',
-      },
-    },
-  });
-
-  const result = await ttsCalloutHandler({
-    phoneNumber: DESTINATION,
-    message: 'Hello',
-  });
-  const parsed = JSON.parse(result.content[0].text);
-
-  expect(parsed).toEqual({
-    success: false,
-    error: 'The origin phone number Voice provisioning is not ready: IN_PROGRESS.',
-  });
-  expect(startCall).not.toHaveBeenCalled();
-});
-
-test('ttsCalloutHandler fails when the project has no default Voice service', async () => {
-  listServices.mockResolvedValue({ data: [] });
-
-  const result = await ttsCalloutHandler({
-    phoneNumber: DESTINATION,
-    message: 'Hello',
-  });
-  const parsed = JSON.parse(result.content[0].text);
-
-  expect(parsed).toEqual({
-    success: false,
-    error: 'No default Voice service is configured for the authenticated project.',
-  });
-  expect(startCall).not.toHaveBeenCalled();
 });
 
 test('ttsCalloutHandler fails clearly when no origin is configured', async () => {
@@ -213,5 +115,5 @@ test('ttsCalloutHandler returns the credential guard response', async () => {
   });
 
   expect(result).toBe(guard.promptResponse);
-  expect(getActiveNumber).not.toHaveBeenCalled();
+  expect(startCall).not.toHaveBeenCalled();
 });

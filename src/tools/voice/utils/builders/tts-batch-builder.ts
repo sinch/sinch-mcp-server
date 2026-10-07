@@ -1,41 +1,44 @@
 import type { Voice } from '@sinch/voice';
+import type { TtsFormat } from './tts-call-builder';
 
-export type TtsFormat = 'TEXT' | 'SSML';
-
-export interface BuildTtsCallRequest {
+export interface BuildTtsBatchRequest {
   from: string;
-  to: string;
+  destinations: string[];
   message: string;
   voiceName: string;
   format: TtsFormat;
   serviceId?: string;
   dialTimeoutDurationSeconds: number;
   maxCallDurationSeconds: number;
+  maxCps?: number;
+  ttlSeconds?: number;
 }
 
-export const buildTtsCallRequest = ({
+export const buildTtsBatchRequest = ({
   from,
-  to,
+  destinations,
   message,
   voiceName,
   format,
   serviceId,
   dialTimeoutDurationSeconds,
   maxCallDurationSeconds,
-}: BuildTtsCallRequest): Voice.v2.CreateCallRequestData => ({
+  maxCps,
+  ttlSeconds,
+}: BuildTtsBatchRequest): Voice.v2.StartBatchRequestData => ({
   ...(serviceId !== undefined ? { serviceId } : {}),
-  createCallRequestBody: {
+  startBatchRequestBody: {
     commands: [
       {
         command: 'dial',
-        callName: 'tts-callout',
+        callName: 'tts-batch-call',
         from: {
           type: 'PHONE',
-          phone: { number: from },
+          phone: { number: '@from' },
         },
         to: {
           type: 'PHONE',
-          phone: { number: to },
+          phone: { number: '@to' },
         },
         dialTimeoutDurationSeconds,
         maxCallDurationSeconds,
@@ -43,7 +46,7 @@ export const buildTtsCallRequest = ({
           onAnswer: [
             {
               command: 'messages',
-              messagesName: 'tts-message',
+              messagesName: 'tts-batch-message',
               messages: [
                 {
                   type: 'SAY',
@@ -66,5 +69,14 @@ export const buildTtsCallRequest = ({
         },
       },
     ],
+    parameters: destinations.map((to) => ({ from, to })),
+    ...(maxCps !== undefined || ttlSeconds !== undefined
+      ? {
+          batchOptions: {
+            ...(maxCps !== undefined ? { maxCps } : {}),
+            ...(ttlSeconds !== undefined ? { ttlSeconds } : {}),
+          },
+        }
+      : {}),
   },
 });

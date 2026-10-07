@@ -59,6 +59,14 @@ Here is the list of tools available in the MCP server (all the phone numbers mus
 | **manage-conference-participant** | Mute, unmute, hold, or resume an individual participant in a conference call. <br> _Example prompt_: "Mute the caller with ID xyz789 in the conference."                                                 | voice               |
 | **close-conference**              | End a conference call by disconnecting all the participants using the ID of the conference. <br> _Example prompt_: "End the current conference call with ID abc123."                                     | voice               |
 | **get-call-information**          | Get information about a call using its ID. <br> _Example prompt_: "Get the details of call ID abc123."                                                                                                   | voice, notification |
+| **list-calls**                    | List and filter calls by service, endpoint, time range, type, result, or reason. <br> _Example prompt_: "List completed calls from today."                                                                | voice, notification |
+| **get-session-information**       | Get a voice session and all of its call legs using the session ID. <br> _Example prompt_: "Get details for session 01BX5ZZKBKACTAV9WEVGEMMVRB."                                                          | voice, notification |
+| **create-voice-service**          | Create a Voice service. <br> _Example prompt_: "Create a default Voice service named Customer Support."                                                                                                  | voice               |
+| **set-voice-service-webhook**     | Configure the primary webhook and fallback URLs for a Voice service. <br> _Example prompt_: "Configure the webhook and fallback for service 6e124178-c29d-46a5-943c-5c2ae544aade."                        | voice               |
+| **remove-voice-service-webhook**  | Remove webhook handling from a Voice service. <br> _Example prompt_: "Remove the webhook from service 6e124178-c29d-46a5-943c-5c2ae544aade."                                                             | voice               |
+| **assign-number-to-voice-service** | Assign an active Sinch number to a Voice service. <br> _Example prompt_: "Assign +14155550100 to Voice service 6e124178-c29d-46a5-943c-5c2ae544aade."                                                   | voice               |
+| **create-tts-call-batch**         | Start a batch of outbound calls that play the same text-to-speech message. <br> _Example prompt_: "Call these numbers in a batch and read this reminder."                                                | voice, notification |
+| **get-voice-batch-summary**       | Get batch execution totals and optionally the state of each session. <br> _Example prompt_: "Get the summary and session details for batch 01BX5ZZKBKACTAV9WEVGEMMVRB."                                | voice, notification |
 
 ### RCS Sender Tools
 
@@ -130,7 +138,7 @@ To use the APIs used by the MCP tools, you will need the following credentials:
 - Verification API credentials: navigate to the [Verification / Apps section](https://dashboard.sinch.com/verification/apps) of the Sinch Build dashboard and create a new app or select an existing one. You will need the following credentials:
   - (Required) `APPLICATION_KEY`
   - (Required) `APPLICATION_SECRET`
-- Voice API v2 tools (`tts-callout` and `get-call-information`) use `PROJECT_ID`, `KEY_ID`, and `KEY_SECRET` from the project credentials above.
+- Voice service, call, session, and batch tools use `PROJECT_ID`, `KEY_ID`, and `KEY_SECRET` from the project credentials above.
 - Legacy Voice API conference tools: navigate to the [Voice / Apps section](https://dashboard.sinch.com/voice/apps) of the Sinch Build dashboard and create a new app or select an existing one. You will need the following credentials:
   - (Required) `APPLICATION_KEY`
   - (Required) `APPLICATION_SECRET`
