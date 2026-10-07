@@ -105,7 +105,7 @@ Required sections for all senders:
 Country-specific sections:
 - **UK targets** (\`gb\`): brandIndustry, companyLegalName, companyRegistrationNumber, fullCompanyAddress, messagesVolume, messagesFrequency.
 - **France targets** (\`fr\`): fullCompanyAddress, SIREN number.
-- **US targets** (\`us\`): ~25 fields including EIN or tax ID, brandName, legalForm, full address, contact details, useCaseDescription, sampleMessages, callToActionDescription, callToActionScreenshotUrl, opt-in/opt-out flows, and Verizon-specific fields if applicable.
+- **US targets** (\`us\`): ownershipType, legalForm, EIN or tax ID, brandName, brandIndustry, company contact and address details, sampleMessages, messagesVolume, embeddedLink/embeddedPhone/ageGatedContent/directLending flags, and the opt-in confirmation, help and call-to-action messages. PUBLIC companies also need stockExchange and stockSymbol. The verification section also needs a phone number.
 
 ## Test numbers
 

@@ -18,29 +18,29 @@ export const RcsTestNumber = z.string().describe('Test phone number in E.164 for
 
 // Allowed sector/industry values for the US questionnaire's brandIndustry field.
 const RcsBrandIndustry = z.enum([
-  'Agriculture',
-  'Communication',
-  'Construction',
-  'Education',
-  'Energy',
-  'Entertainment',
-  'Financial',
-  'Gambling',
-  'Government',
-  'Healthcare',
-  'Hospitality',
-  'Human Resources',
-  'Insurance',
-  'Legal',
-  'Manufacturing',
-  'NGO',
-  'Political',
-  'Postal',
-  'Professional',
-  'Real Estate',
-  'Retail',
-  'Technology',
-  'Transportation',
+  'AGRICULTURE',
+  'COMMUNICATION',
+  'CONSTRUCTION',
+  'EDUCATION',
+  'ENERGY',
+  'ENTERTAINMENT',
+  'FINANCIAL',
+  'GAMBLING',
+  'GOVERNMENT',
+  'HEALTHCARE',
+  'HOSPITALITY',
+  'HUMAN_RESOURCES',
+  'INSURANCE',
+  'LEGAL',
+  'MANUFACTURING',
+  'NON_GOVERNMENTAL_ORGANIZATION',
+  'POLITICAL',
+  'POSTAL',
+  'PROFESSIONAL',
+  'REAL_ESTATE',
+  'RETAIL',
+  'TECHNOLOGY',
+  'TRANSPORTATION',
 ]);
 
 const RcsBrandEmail = z.object({
@@ -126,6 +126,11 @@ const RcsQuestionnaireVerificationAnswers = z
     email: z.string().nullable().optional().describe('Email of verification contact. Pass null to delete.'),
     title: z.string().nullable().optional().describe('Title of verification contact. Pass null to delete.'),
     website: z.string().nullable().optional().describe('Website of verification contact. Pass null to delete.'),
+    phone: z
+      .string()
+      .nullable()
+      .optional()
+      .describe('Phone of verification contact in E.164 format. Required for US launch. Pass null to delete.'),
   })
   .describe('Answers to the verification questionnaire.');
 
@@ -151,85 +156,129 @@ const RcsQuestionnaireFrAnswers = z
   })
   .describe('Answers to the France-specific launch questionnaire.');
 
-// US answers have many fields; most are optional strings or nulls.
+const RcsUsState = z.enum([
+  'AK',
+  'AL',
+  'AR',
+  'AS',
+  'AZ',
+  'CA',
+  'CO',
+  'CT',
+  'DC',
+  'DE',
+  'FL',
+  'GA',
+  'GU',
+  'HI',
+  'IA',
+  'ID',
+  'IL',
+  'IN',
+  'KS',
+  'KY',
+  'LA',
+  'MA',
+  'MD',
+  'ME',
+  'MI',
+  'MN',
+  'MO',
+  'MP',
+  'MS',
+  'MT',
+  'NC',
+  'ND',
+  'NE',
+  'NH',
+  'NJ',
+  'NM',
+  'NV',
+  'NY',
+  'OH',
+  'OK',
+  'OR',
+  'PA',
+  'PR',
+  'RI',
+  'SC',
+  'SD',
+  'TN',
+  'TX',
+  'UT',
+  'VA',
+  'VI',
+  'VT',
+  'WA',
+  'WI',
+  'WV',
+  'WY',
+]);
+
+// All fields are optional on create/update but required for launch.
 const RcsQuestionnaireUsAnswers = z
   .object({
-    companyLegalName: z.string().nullable().optional(),
-    taxIdCountry: z.string().nullable().optional().describe('Country of tax registration (ISO 3166 two-letter code).'),
-    ein: z
-      .string()
-      .nullable()
-      .optional()
-      .describe('US Employer Identification Number (format XX-XXXXXXX). US companies only.'),
-    taxId: z.string().nullable().optional().describe('National tax ID. Non-US companies only.'),
-    brandIndustry: RcsBrandIndustry.nullable().optional().describe('Sector or industry of the business.'),
-    brandName: z.string().nullable().optional().describe('Brand name / Doing Business As (DBA).'),
+    ownershipType: z.enum(['PUBLIC', 'PRIVATE']).nullable().optional().describe('Ownership type of the company.'),
     legalForm: z
+      .enum(['CORPORATION', 'LIMITED_LIABILITY_COMPANY', 'PARTNERSHIP', 'S_CORPORATION'])
+      .nullable()
+      .optional()
+      .describe('Legal form of the company. PUBLIC ownership only allows CORPORATION.'),
+    companyLegalName: z.string().nullable().optional().describe('Registered legal name of the company.'),
+    companyPhoneNumber: z.string().nullable().optional().describe('Registered phone number of the company.'),
+    companyEmailAddress: z.string().nullable().optional().describe('Email address of the company.'),
+    brandName: z
       .string()
       .nullable()
       .optional()
-      .describe(
-        'Legal form. Enum: Corporation, Limited Liability Corporation (LLC), Partnership, S Corporation, Sole Proprietorship.',
-      ),
-    additionalIdType: z.string().nullable().optional(),
-    additionalIdNumber: z.string().nullable().optional(),
-    stockExchange: z.string().nullable().optional().describe('Primary stock exchange abbreviation (public companies).'),
-    stockSymbol: z.string().nullable().optional().describe('Primary stock symbol (public companies).'),
-    addressLine1: z.string().nullable().optional(),
-    addressLine2: z.string().nullable().optional(),
+      .describe('Brand name / Doing Business As (DBA). Must be legally associated with companyLegalName.'),
+    brandIndustry: RcsBrandIndustry.nullable().optional().describe('Sector or industry of the business.'),
+    taxIdCountry: z
+      .string()
+      .nullable()
+      .optional()
+      .describe('Country of tax registration (ISO 3166 two-letter code). Controls taxId and addressState validation.'),
+    taxId: z
+      .string()
+      .nullable()
+      .optional()
+      .describe('Tax ID. For taxIdCountry US the format is XX-XXXXXXX; otherwise any string up to 25 characters.'),
+    ein: z.string().nullable().optional().describe('US Employer Identification Number (format XX-XXXXXXX).'),
+    stockExchange: z
+      .string()
+      .nullable()
+      .optional()
+      .describe('Primary stock exchange abbreviation. PUBLIC ownership only; not allowed for PRIVATE.'),
+    stockSymbol: z
+      .string()
+      .nullable()
+      .optional()
+      .describe('Primary stock symbol. PUBLIC ownership only; not allowed for PRIVATE.'),
+    addressLine: z.string().nullable().optional().describe('Street address line.'),
     addressCity: z.string().nullable().optional(),
-    addressState: z.string().nullable().optional().describe('US state abbreviation, e.g. "CA". US companies only.'),
+    addressState: RcsUsState.nullable()
+      .optional()
+      .describe('US state abbreviation. Only when taxIdCountry is US; omit otherwise.'),
     addressCountry: z.string().nullable().optional().describe('ISO 3166 two-letter country code.'),
     addressPostalCode: z.string().nullable().optional(),
-    phoneNumber: z.string().nullable().optional().describe('Primary business phone number.'),
-    websiteUrl: z.string().nullable().optional().describe('Primary website URL.'),
-    contactFirstName: z.string().nullable().optional(),
-    contactSurname: z.string().nullable().optional(),
-    contactPosition: z.string().nullable().optional().describe('Level of authority of the responsible contact.'),
-    contactEmail: z.string().nullable().optional(),
-    contactPhoneNumber: z.string().nullable().optional(),
-    smsCampaign: z.string().nullable().optional().describe('Short code, 10DLC, or TFN for SMS fallback campaign.'),
-    useCaseDescription: z.string().nullable().optional().describe('Description of the RCS use case.'),
-    callToActionDescription: z
-      .string()
-      .nullable()
-      .optional()
-      .describe('Call-to-action text with program description, fee disclaimer, message frequency, and links.'),
-    callToActionScreenshotUrl: z.string().nullable().optional().describe('URL to the call-to-action page screenshot.'),
-    sampleMessages: z.array(z.string()).nullable().optional().describe('Sample messages for each use case.'),
-    optInUserMessage: z
-      .string()
-      .nullable()
-      .optional()
-      .describe('First message a user sends to start the conversation.'),
-    optInConfirmationResponse: z.string().nullable().optional().describe('Brand response confirming user opt-in.'),
-    optInBrandMessage: z.string().nullable().optional().describe('First brand message sent after opt-in confirmation.'),
-    helpMessageResponse: z.string().nullable().optional().describe('Brand response when a user requests help.'),
-    stopMessageResponse: z.string().nullable().optional().describe('Brand response when a user opts out.'),
-    verizonSmsUpgradeShortCode: z.string().nullable().optional().describe('Verizon: short code for SMS upgrade.'),
-    verizonSmsUpgradeLongCode: z.string().nullable().optional().describe('Verizon: long code for SMS upgrade.'),
-    verizonSmsOptInDescription: z
-      .string()
-      .nullable()
-      .optional()
-      .describe('Verizon: opt-in process description for SMS/MMS campaign.'),
-    verizonRbmOptInDescription: z
-      .string()
-      .nullable()
-      .optional()
-      .describe('Verizon: opt-in process description for RCS Business Messaging.'),
-    verizonInitialMessageTypeModel: z
-      .string()
-      .nullable()
-      .optional()
-      .describe('Verizon: initial message type model for RCS campaign.'),
-    verizonMonthlyMessagesVolume: z
-      .string()
-      .nullable()
-      .optional()
-      .describe('Verizon: estimated monthly messages volume for RCS campaign.'),
     fullCompanyAddress: z.string().nullable().optional(),
-    messagesVolume: z.string().nullable().optional(),
+    websiteUrl: z.string().nullable().optional().describe('Primary website URL.'),
+    contactFirstName: z.string().nullable().optional().describe('First name of the responsible contact person.'),
+    contactSurname: z.string().nullable().optional().describe('Surname of the responsible contact person.'),
+    sampleMessages: z
+      .array(z.string())
+      .nullable()
+      .optional()
+      .describe('Sample messages for each use case or message type sent by the brand.'),
+    messagesVolume: z.number().nullable().optional().describe('Estimated messages volume.'),
+    embeddedLink: z.boolean().nullable().optional().describe('Whether URL links are embedded in messages.'),
+    embeddedPhone: z.boolean().nullable().optional().describe('Whether phone numbers are embedded in messages.'),
+    ageGatedContent: z.boolean().nullable().optional().describe('Whether the content is age-restricted.'),
+    directLending: z.boolean().nullable().optional().describe('Whether the campaign involves direct lending.'),
+    optInConfirmationMessage: z.string().nullable().optional().describe('Opt-in confirmation message sent to users.'),
+    helpMessage: z.string().nullable().optional().describe('Help message of the campaign.'),
+    callToActionMessage: z.string().nullable().optional().describe('Call to action message of the campaign.'),
+    smsCampaign: z.string().nullable().optional().describe('US SMS campaign used as fallback.'),
   })
   .describe('Answers to the US-specific launch questionnaire.');
 
