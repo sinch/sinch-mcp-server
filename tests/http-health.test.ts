@@ -34,7 +34,7 @@ const listen = async (
   };
 };
 
-describe('HTTP health endpoints', () => {
+describe.each(['', '/mcp'])('HTTP health endpoints under "%s"', (prefix) => {
   beforeEach(() => {
     mockEnv.CONVERSATION_REGION = 'eu';
     mockEnv.MCP_AUTH_MODE = 'client-credentials';
@@ -53,7 +53,7 @@ describe('HTTP health endpoints', () => {
   it('returns 200 on /health/live without authentication', async () => {
     const { baseUrl, close } = await listen(createHttpApp());
     try {
-      const response = await fetch(`${baseUrl}/health/live`);
+      const response = await fetch(`${baseUrl}${prefix}/health/live`);
       const body = (await response.json()) as { status: string; uptimeSeconds: number };
 
       expect(response.status).toBe(200);
@@ -67,7 +67,7 @@ describe('HTTP health endpoints', () => {
   it('returns 200 on /health/ready when accepting traffic and the session store is reachable', async () => {
     const { baseUrl, close } = await listen(createHttpApp());
     try {
-      const response = await fetch(`${baseUrl}/health/ready`);
+      const response = await fetch(`${baseUrl}${prefix}/health/ready`);
       const body = (await response.json()) as { status: string };
 
       expect(response.status).toBe(200);
@@ -81,7 +81,7 @@ describe('HTTP health endpoints', () => {
     setShuttingDownForTests(true);
     const { baseUrl, close } = await listen(createHttpApp());
     try {
-      const response = await fetch(`${baseUrl}/health/ready`);
+      const response = await fetch(`${baseUrl}${prefix}/health/ready`);
       const body = (await response.json()) as { status: string; reason: string };
 
       expect(response.status).toBe(503);
@@ -95,7 +95,7 @@ describe('HTTP health endpoints', () => {
     mockedPingSessionStore.mockResolvedValue(false);
     const { baseUrl, close } = await listen(createHttpApp());
     try {
-      const response = await fetch(`${baseUrl}/health/ready`);
+      const response = await fetch(`${baseUrl}${prefix}/health/ready`);
       const body = (await response.json()) as { status: string; reason: string };
 
       expect(response.status).toBe(503);
