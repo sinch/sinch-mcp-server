@@ -118,7 +118,7 @@ To use the APIs used by the MCP tools, you will need the following credentials:
 
 - WhatsApp Template API credentials: uses the same `PROJECT_ID`, `KEY_ID`, and `KEY_SECRET` as the Conversation API (see below).
 
-- Conversation / Numbers API credentials:
+- Conversation / Numbers / Voice API v2 credentials:
   - (Required) `PROJECT_ID`: Select the project you want to use from your [Sinch Build dashboard](https://dashboard.sinch.com/dashboard) (Located at the left of the top toolbar)
     ![Project ID selection](./docs/projectId-selection.png)
   - (Required) `KEY_ID`: Select or create a new access key in the [Access keys section](https://dashboard.sinch.com/settings/access-keys) of the Sinch Build dashboard.
@@ -130,10 +130,11 @@ To use the APIs used by the MCP tools, you will need the following credentials:
 - Verification API credentials: navigate to the [Verification / Apps section](https://dashboard.sinch.com/verification/apps) of the Sinch Build dashboard and create a new app or select an existing one. You will need the following credentials:
   - (Required) `APPLICATION_KEY`
   - (Required) `APPLICATION_SECRET`
-- Voice API credentials: navigate to the [Voice / Apps section](https://dashboard.sinch.com/voice/apps) of the Sinch Build dashboard and create a new app or select an existing one. You will need the following credentials:
+- Voice API v2 tools (`tts-callout` and `get-call-information`) use `PROJECT_ID`, `KEY_ID`, and `KEY_SECRET` from the project credentials above.
+- Legacy Voice API conference tools: navigate to the [Voice / Apps section](https://dashboard.sinch.com/voice/apps) of the Sinch Build dashboard and create a new app or select an existing one. You will need the following credentials:
   - (Required) `APPLICATION_KEY`
   - (Required) `APPLICATION_SECRET`
-  - You can also set the `CALLING_LINE_IDENTIFICATION` environment variable to the phone number that will be displayed to the user when they receive a call.
+  - Set `CALLING_LINE_IDENTIFICATION` to an active Sinch number with Voice capability. It is used as the default origin for `tts-callout`; callers may also provide the origin to the tool.
 - Mailgun API credentials: navigate to the [Mailgun / Domains section](https://app.mailgun.com/app/domains) of the Mailgun dashboard and create a new domain or select an existing one. You will need the following credentials:
   - (Required) `MAILGUN_API_KEY`
   - `MAILGUN_DOMAIN`
@@ -272,7 +273,7 @@ npm run build
 Copy the file `.template.env` and rename it `.env`. Then replace the placeholders with your own credentials and delete any key you don't need. Environment variables are parsed and typed at server startup via [T3 Env](https://env.t3.gg/); missing credentials only cause errors when you invoke a tool that requires them. The `.env` file should look like this ():
 
 ```dotenv
-# Conversation / Numbers tools related environment variables
+# Conversation / Numbers / Voice API v2 tools related environment variables
 PROJECT_ID=
 KEY_ID=
 KEY_SECRET=
@@ -285,10 +286,10 @@ DEFAULT_SMS_ORIGINATOR=
 ## Needed only if you want to send location messages: it converts an address to a latitude/longitude pair
 GEOCODING_API_KEY=
 
-# Verification / Voice tools related environment variables
+# Verification / legacy Voice conference tools related environment variables
 APPLICATION_KEY=
 APPLICATION_SECRET=
-## Needed only if you want to make calls: it is the number that will be displayed to the user when they receive a call
+## Default active Sinch Voice number used as the origin by tts-callout
 CALLING_LINE_IDENTIFICATION=
 
 # Mailgun tools related environment variables
