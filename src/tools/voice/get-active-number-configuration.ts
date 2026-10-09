@@ -29,7 +29,7 @@ export const registerGetActiveNumberConfiguration = (server: McpServer, tags: Ta
     TOOL_NAME,
     {
       description:
-        'Get one active Sinch number and its full configuration by exact E.164 phone number. Returns capabilities, current SMS and Voice configuration, and scheduled Voice provisioning status. Use scheduledVoiceProvisioning to determine whether a Voice service assignment is waiting, in progress, or failed; when assignment completes, the current appId appears in voiceConfiguration.',
+        'Get an active Sinch number by its exact E.164 phone number. Returns number metadata, capabilities, and current SMS and Voice configuration. Check `voiceConfiguration.scheduledVoiceProvisioning.status` for `WAITING`, `IN_PROGRESS`, or `FAILED`. After successful provisioning, `scheduledVoiceProvisioning` is absent and the assigned Voice service ID appears in `voiceConfiguration.appId`.',
       inputSchema: GetActiveNumberConfigurationSchema,
     },
     getActiveNumberConfigurationHandler,
