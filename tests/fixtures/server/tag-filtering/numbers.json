@@ -1,7 +1,6 @@
 {
   "tag": "numbers",
   "expectedTools": [
-    "get-active-number-configuration",
     "list-available-regions",
     "list-rented-numbers",
     "rent-sinch-virtual-numbers",

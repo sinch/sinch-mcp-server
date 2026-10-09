@@ -12,6 +12,7 @@
     "set-voice-service-webhook",
     "remove-voice-service-webhook",
     "assign-number-to-voice-service",
+    "get-active-number-configuration",
     "tts-batch-callout",
     "get-voice-batch-summary"
   ],

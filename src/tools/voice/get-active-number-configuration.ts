@@ -2,10 +2,10 @@ import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { z } from 'zod';
 import { registerTracedTool } from '../../telemetry/register-traced-tool';
 import { IPromptResponse, PromptResponse, Tags } from '../../types';
-import { isPromptResponse, matchesAnyTag } from '../../utils';
-import { E164_PATTERN } from '../voice/utils/phone-number';
-import { getNumbersService } from './utils/numbers-service-helper';
-import { getToolName, NumbersToolKey, toolsConfig } from './utils/numbers-tools-helper';
+import { matchesAnyTag } from '../../utils';
+import { E164_PATTERN } from './utils/phone-number';
+import { runVoiceV2Handler } from './utils/voice-v2-handler-helper';
+import { getToolName, VoiceToolKey, voiceToolsConfig } from './utils/voice-tools-helper';
 
 export const GetActiveNumberConfigurationSchema = {
   phoneNumber: z
@@ -16,11 +16,11 @@ export const GetActiveNumberConfigurationSchema = {
 
 type GetActiveNumberConfiguration = z.infer<z.ZodObject<typeof GetActiveNumberConfigurationSchema>>;
 
-const TOOL_KEY: NumbersToolKey = 'getActiveNumberConfiguration';
+const TOOL_KEY: VoiceToolKey = 'getActiveNumberConfiguration';
 const TOOL_NAME = getToolName(TOOL_KEY);
 
 export const registerGetActiveNumberConfiguration = (server: McpServer, tags: Tags[]) => {
-  if (!matchesAnyTag(tags, toolsConfig[TOOL_KEY].tags)) {
+  if (!matchesAnyTag(tags, voiceToolsConfig[TOOL_KEY].tags)) {
     return;
   }
 
@@ -38,14 +38,9 @@ export const registerGetActiveNumberConfiguration = (server: McpServer, tags: Ta
 
 export const getActiveNumberConfigurationHandler = async ({
   phoneNumber,
-}: GetActiveNumberConfiguration): Promise<IPromptResponse> => {
-  const maybeService = getNumbersService(TOOL_NAME);
-  if (isPromptResponse(maybeService)) {
-    return maybeService.promptResponse;
-  }
-
-  try {
-    const activeNumber = await maybeService.get({ phoneNumber });
+}: GetActiveNumberConfiguration): Promise<IPromptResponse> =>
+  runVoiceV2Handler(TOOL_NAME, async ({ numbers }) => {
+    const activeNumber = await numbers.get({ phoneNumber });
 
     return new PromptResponse(
       JSON.stringify({
@@ -53,14 +48,4 @@ export const getActiveNumberConfigurationHandler = async ({
         data: activeNumber,
       }),
     ).promptResponse;
-  } catch (error) {
-    return new PromptResponse(
-      JSON.stringify({
-        success: false,
-        error: `Failed to retrieve active number '${phoneNumber}': ${
-          error instanceof Error ? error.message : String(error)
-        }`,
-      }),
-    ).promptResponse;
-  }
-};
+  });

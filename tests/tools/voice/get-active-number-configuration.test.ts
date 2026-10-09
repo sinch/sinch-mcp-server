@@ -2,31 +2,28 @@ import { z } from 'zod';
 import {
   GetActiveNumberConfigurationSchema,
   getActiveNumberConfigurationHandler,
-} from '../../../src/tools/numbers/get-active-number-configuration';
-import * as numbersServiceHelper from '../../../src/tools/numbers/utils/numbers-service-helper';
+} from '../../../src/tools/voice/get-active-number-configuration';
+import { getVoiceV2Client, VoiceV2Client } from '../../../src/tools/voice/utils/voice-v2-client';
 import { PromptResponse } from '../../../src/types';
 
-jest.mock(
-  '@sinch/sdk-core/package.json',
-  () => ({
-    version: '1.0.0',
-  }),
-  { virtual: true },
-);
+jest.mock('../../../src/tools/voice/utils/voice-v2-client');
 
 const PHONE_NUMBER = '+14155550100';
 const SERVICE_ID = '6e124178-c29d-46a5-943c-5c2ae544aade';
 
 const get = jest.fn();
-const numbersService = {
-  get,
-};
+const client = {
+  numbers: {
+    get,
+  },
+  voice: {},
+} as unknown as VoiceV2Client;
+const mockedGetVoiceV2Client = jest.mocked(getVoiceV2Client);
 
 describe('getActiveNumberConfigurationHandler', () => {
   beforeEach(() => {
-    jest.restoreAllMocks();
-    jest.spyOn(numbersServiceHelper, 'getNumbersService').mockReturnValue(numbersService as never);
     jest.clearAllMocks();
+    mockedGetVoiceV2Client.mockReturnValue(client);
   });
 
   it('returns the full active number with its current Voice configuration', async () => {
@@ -89,31 +86,31 @@ describe('getActiveNumberConfigurationHandler', () => {
     },
   );
 
-  it('returns a not-found API error through the established failure response', async () => {
+  it('passes not-found API errors through the shared handler', async () => {
     get.mockRejectedValue(new Error('404 Not Found: active number does not exist'));
 
     const result = await getActiveNumberConfigurationHandler({ phoneNumber: PHONE_NUMBER });
 
     expect(JSON.parse(result.content[0].text)).toEqual({
       success: false,
-      error: `Failed to retrieve active number '${PHONE_NUMBER}': 404 Not Found: active number does not exist`,
+      error: '404 Not Found: active number does not exist',
     });
   });
 
-  it('returns other Numbers API errors through the established failure response', async () => {
+  it('passes other API errors through the shared handler', async () => {
     get.mockRejectedValue(new Error('503 Service Unavailable'));
 
     const result = await getActiveNumberConfigurationHandler({ phoneNumber: PHONE_NUMBER });
 
     expect(JSON.parse(result.content[0].text)).toEqual({
       success: false,
-      error: `Failed to retrieve active number '${PHONE_NUMBER}': 503 Service Unavailable`,
+      error: '503 Service Unavailable',
     });
   });
 
-  it('returns the credential guard response without calling the API', async () => {
+  it('returns the shared credential guard response without calling the API', async () => {
     const guard = new PromptResponse('Missing env vars: PROJECT_ID, KEY_ID, KEY_SECRET.');
-    jest.spyOn(numbersServiceHelper, 'getNumbersService').mockReturnValue(guard);
+    mockedGetVoiceV2Client.mockReturnValue(guard);
 
     const result = await getActiveNumberConfigurationHandler({ phoneNumber: PHONE_NUMBER });
 

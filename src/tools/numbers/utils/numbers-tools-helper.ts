@@ -5,10 +5,6 @@ const defineToolsConfig = <T extends Record<string, ToolsConfig>>(config: T) => 
 };
 
 export const toolsConfig = defineToolsConfig({
-  getActiveNumberConfiguration: {
-    name: 'get-active-number-configuration',
-    tags: ['all', 'numbers', 'configuration', 'get-active-number-configuration'],
-  },
   listAvailableRegions: {
     name: 'list-available-regions',
     tags: ['all', 'numbers', 'list-available-regions'],
