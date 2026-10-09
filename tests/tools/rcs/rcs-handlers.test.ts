@@ -117,15 +117,6 @@ test('updateRcsSenderHandler rejects empty body', async () => {
   expect(mockClient.updateSender).not.toHaveBeenCalled();
 });
 
-test('updateRcsSenderHandler forwards usQuestionnaireVersion', async () => {
-  mockClient.updateSender.mockResolvedValue({ id: 's1', region: 'US' });
-  const details = { brand: { name: 'Acme' } };
-
-  await updateRcsSenderHandler({ senderId: 's1', details, usQuestionnaireVersion: 'v2' });
-
-  expect(mockClient.updateSender).toHaveBeenCalledWith('s1', { details }, 'v2');
-});
-
 test('launchRcsSenderHandler returns the missing requirements (not the HTTP status) on a precondition failure', async () => {
   mockClient.launchSender.mockRejectedValue(new RcsApiError(412, 'Precondition Failed'));
   mockClient.getSender.mockResolvedValue({

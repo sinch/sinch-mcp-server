@@ -9,6 +9,9 @@ import {
   UpdateSenderRequest,
 } from '../types/rcs-api';
 
+// v1 is end-of-life, so US questionnaire updates always target v2.
+const US_QUESTIONNAIRE_VERSION = 'v2';
+
 export class RcsApiError extends Error {
   constructor(
     readonly status: number,
@@ -43,8 +46,9 @@ export class RcsProvisioningClient extends BaseProvisioningClient {
     return this.request<RcsSender>('POST', '/senders', body);
   }
 
-  updateSender(senderId: string, body: UpdateSenderRequest, usQuestionnaireVersion?: string): Promise<RcsSender> {
-    const query = usQuestionnaireVersion ? `?usQuestionnaireVersion=${encodeURIComponent(usQuestionnaireVersion)}` : '';
+  updateSender(senderId: string, body: UpdateSenderRequest): Promise<RcsSender> {
+    const query =
+      body.details.questionnaire?.us !== undefined ? `?usQuestionnaireVersion=${US_QUESTIONNAIRE_VERSION}` : '';
     return this.request<RcsSender>('PATCH', `/senders/${encodeURIComponent(senderId)}${query}`, body);
   }
 
