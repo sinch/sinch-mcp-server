@@ -235,6 +235,13 @@ const numbersCases: ToolTestCase[] = [
     expectedArguments: undefined,
   },
   {
+    prompt: 'Is active number +14155550123 assigned to my Voice service yet, or is provisioning still pending?',
+    expectedToolName: 'get-active-number-configuration',
+    expectedArguments: {
+      phoneNumber: '+14155550123',
+    },
+  },
+  {
     prompt: 'Release the rented phone number +14155550123 from my project.',
     expectedToolName: 'release-rented-number',
     expectedArguments: {

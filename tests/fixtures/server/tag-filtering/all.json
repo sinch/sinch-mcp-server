@@ -41,6 +41,7 @@
     "assign-number-to-voice-service",
     "tts-batch-callout",
     "get-voice-batch-summary",
+    "get-active-number-configuration",
     "list-available-regions",
     "list-rented-numbers",
     "rent-sinch-virtual-numbers",
@@ -63,7 +64,5 @@
     "delete-single-whatsapp-template-language",
     "delete-all-whatsapp-template-languages"
   ],
-  "expectedPrompts": [
-    "conversation-app-id"
-  ]
+  "expectedPrompts": ["conversation-app-id"]
 }
