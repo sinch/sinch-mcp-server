@@ -1,0 +1,3 @@
+export const DEFAULT_VOICE_NAME = 'Emma';
+export const DEFAULT_DIAL_TIMEOUT_SECONDS = 30;
+export const DEFAULT_MAX_CALL_DURATION_SECONDS = 300;

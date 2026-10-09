@@ -59,6 +59,14 @@ Here is the list of tools available in the MCP server (all the phone numbers mus
 | **manage-conference-participant** | Mute, unmute, hold, or resume an individual participant in a conference call. <br> _Example prompt_: "Mute the caller with ID xyz789 in the conference."                                                 | voice               |
 | **close-conference**              | End a conference call by disconnecting all the participants using the ID of the conference. <br> _Example prompt_: "End the current conference call with ID abc123."                                     | voice               |
 | **get-call-information**          | Get information about a call using its ID. <br> _Example prompt_: "Get the details of call ID abc123."                                                                                                   | voice, notification |
+| **list-calls**                    | List and filter calls by service, endpoint, time range, type, result, or reason. <br> _Example prompt_: "List completed calls from today."                                                                | voice, notification |
+| **get-session-information**       | Get a voice session and all of its call legs using the session ID. <br> _Example prompt_: "Get details for session 01BX5ZZKBKACTAV9WEVGEMMVRB."                                                          | voice, notification |
+| **create-voice-service**          | Create a Voice service. <br> _Example prompt_: "Create a default Voice service named Customer Support."                                                                                                  | voice               |
+| **set-voice-service-webhook**     | Configure the primary webhook and fallback URLs for a Voice service. <br> _Example prompt_: "Configure the webhook and fallback for service 6e124178-c29d-46a5-943c-5c2ae544aade."                        | voice               |
+| **remove-voice-service-webhook**  | Remove webhook handling from a Voice service. <br> _Example prompt_: "Remove the webhook from service 6e124178-c29d-46a5-943c-5c2ae544aade."                                                             | voice               |
+| **assign-number-to-voice-service** | Assign an active Sinch number to a Voice service. <br> _Example prompt_: "Assign +14155550100 to Voice service 6e124178-c29d-46a5-943c-5c2ae544aade."                                                   | voice               |
+| **tts-batch-callout**             | Start a batch of outbound calls that play the same text-to-speech message. <br> _Example prompt_: "Call these numbers in a batch and read this reminder."                                                | voice, notification |
+| **get-voice-batch-summary**       | Get batch execution totals and optionally the state of each session. <br> _Example prompt_: "Get the summary and session details for batch 01BX5ZZKBKACTAV9WEVGEMMVRB."                                | voice, notification |
 
 ### RCS Sender Tools
 
@@ -118,7 +126,7 @@ To use the APIs used by the MCP tools, you will need the following credentials:
 
 - WhatsApp Template API credentials: uses the same `PROJECT_ID`, `KEY_ID`, and `KEY_SECRET` as the Conversation API (see below).
 
-- Conversation / Numbers API credentials:
+- Conversation / Numbers / Voice v2 API credentials:
   - (Required) `PROJECT_ID`: Select the project you want to use from your [Sinch Build dashboard](https://dashboard.sinch.com/dashboard) (Located at the left of the top toolbar)
     ![Project ID selection](./docs/projectId-selection.png)
   - (Required) `KEY_ID`: Select or create a new access key in the [Access keys section](https://dashboard.sinch.com/settings/access-keys) of the Sinch Build dashboard.
@@ -130,10 +138,11 @@ To use the APIs used by the MCP tools, you will need the following credentials:
 - Verification API credentials: navigate to the [Verification / Apps section](https://dashboard.sinch.com/verification/apps) of the Sinch Build dashboard and create a new app or select an existing one. You will need the following credentials:
   - (Required) `APPLICATION_KEY`
   - (Required) `APPLICATION_SECRET`
-- Voice API credentials: navigate to the [Voice / Apps section](https://dashboard.sinch.com/voice/apps) of the Sinch Build dashboard and create a new app or select an existing one. You will need the following credentials:
+- Voice service, call, session, and batch tools use `PROJECT_ID`, `KEY_ID`, and `KEY_SECRET` from the project credentials above.
+- Legacy Voice API conference tools: navigate to the [Voice / Apps section](https://dashboard.sinch.com/voice/apps) of the Sinch Build dashboard and create a new app or select an existing one. You will need the following credentials:
   - (Required) `APPLICATION_KEY`
   - (Required) `APPLICATION_SECRET`
-  - You can also set the `CALLING_LINE_IDENTIFICATION` environment variable to the phone number that will be displayed to the user when they receive a call.
+  - Optionally set `CALLING_LINE_IDENTIFICATION` to an active Sinch number with Voice capability. It is used as the default origin for `tts-callout` and `tts-batch-callout`; callers may also provide the origin to either tool. If neither is set, calls are placed without caller ID.
 - Mailgun API credentials: navigate to the [Mailgun / Domains section](https://app.mailgun.com/app/domains) of the Mailgun dashboard and create a new domain or select an existing one. You will need the following credentials:
   - (Required) `MAILGUN_API_KEY`
   - `MAILGUN_DOMAIN`
@@ -272,7 +281,7 @@ npm run build
 Copy the file `.template.env` and rename it `.env`. Then replace the placeholders with your own credentials and delete any key you don't need. Environment variables are parsed and typed at server startup via [T3 Env](https://env.t3.gg/); missing credentials only cause errors when you invoke a tool that requires them. The `.env` file should look like this ():
 
 ```dotenv
-# Conversation / Numbers tools related environment variables
+# Conversation / Numbers / Voice v2 API tools related environment variables
 PROJECT_ID=
 KEY_ID=
 KEY_SECRET=
@@ -285,10 +294,10 @@ DEFAULT_SMS_ORIGINATOR=
 ## Needed only if you want to send location messages: it converts an address to a latitude/longitude pair
 GEOCODING_API_KEY=
 
-# Verification / Voice tools related environment variables
+# Verification / legacy Voice conference tools related environment variables
 APPLICATION_KEY=
 APPLICATION_SECRET=
-## Needed only if you want to make calls: it is the number that will be displayed to the user when they receive a call
+## Optional default active Sinch Voice number used by tts-callout and tts-batch-callout
 CALLING_LINE_IDENTIFICATION=
 
 # Mailgun tools related environment variables

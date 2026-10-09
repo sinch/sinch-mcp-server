@@ -3,11 +3,11 @@ import { registerTracedTool } from '../../telemetry/register-traced-tool';
 import { z } from 'zod';
 import { getToolName, VoiceToolKey, voiceToolsConfig } from './utils/voice-tools-helper';
 import { IPromptResponse, PromptResponse, Tags } from '../../types';
-import { getVoiceService } from './utils/voice-service-helper';
-import { isPromptResponse, matchesAnyTag } from '../../utils';
+import { matchesAnyTag } from '../../utils';
+import { runVoiceV2Handler } from './utils/voice-v2-handler-helper';
 
 const GetCallInformationSchema = {
-  callId: z.string().describe('The call ID to get information about'),
+  callId: z.string().trim().min(1).describe('The voice call ID (not a session ID)'),
 };
 
 type GetCallInformation = z.infer<z.ZodObject<typeof GetCallInformationSchema>>;
@@ -25,22 +25,16 @@ export const registerGetCallInformation = (server: McpServer, tags: Tags[]) => {
     TOOL_NAME,
     {
       description:
-        'Get status and details for an existing voice call by call ID. Use when the user asks about a specific call. Do not use this to place a new call (use tts-callout or conference-callout) or to send an SMS.',
+        'Get status and details for one voice call leg by call ID. A call ID is different from the session ID returned by tts-callout. Do not use this to place a call or send an SMS.',
       inputSchema: GetCallInformationSchema,
     },
     getCallInformationHandler,
   );
 };
 
-export const getCallInformationHandler = async ({ callId }: GetCallInformation): Promise<IPromptResponse> => {
-  const maybeService = getVoiceService(TOOL_NAME);
-  if (isPromptResponse(maybeService)) {
-    return maybeService.promptResponse;
-  }
-  const voiceService = maybeService;
-
-  try {
-    const response = await voiceService.calls.get({ callId });
+export const getCallInformationHandler = async ({ callId }: GetCallInformation): Promise<IPromptResponse> =>
+  runVoiceV2Handler(TOOL_NAME, async ({ voice }) => {
+    const response = await voice.calls.get({ callId });
 
     return new PromptResponse(
       JSON.stringify({
@@ -48,12 +42,4 @@ export const getCallInformationHandler = async ({ callId }: GetCallInformation):
         call_information: response,
       }),
     ).promptResponse;
-  } catch (error) {
-    return new PromptResponse(
-      JSON.stringify({
-        success: false,
-        error: error instanceof Error ? error.message : String(error),
-      }),
-    ).promptResponse;
-  }
-};
+  });

@@ -525,6 +525,72 @@ const voiceCases: ToolTestCase[] = [
       callId: 'call-xyz-789',
     },
   },
+  {
+    prompt: 'List completed phone calls for Voice service 6e124178-c29d-46a5-943c-5c2ae544aade.',
+    expectedToolName: 'list-calls',
+    expectedArguments: {
+      serviceId: '6e124178-c29d-46a5-943c-5c2ae544aade',
+      callType: 'PHONE',
+      callResult: 'COMPLETED',
+    },
+  },
+  {
+    prompt: 'Get information about voice session 01BX5ZZKBKACTAV9WEVGEMMVRB.',
+    expectedToolName: 'get-session-information',
+    expectedArguments: {
+      sessionId: '01BX5ZZKBKACTAV9WEVGEMMVRB',
+    },
+  },
+  {
+    prompt: 'Create a Voice service named Customer Support and make it the default.',
+    expectedToolName: 'create-voice-service',
+    expectedArguments: {
+      name: 'Customer Support',
+      isDefault: true,
+    },
+  },
+  {
+    prompt:
+      'Set https://example.com/voice as the webhook and https://example.com/voice-fallback as the fallback for Voice service 6e124178-c29d-46a5-943c-5c2ae544aade.',
+    expectedToolName: 'set-voice-service-webhook',
+    expectedArguments: {
+      serviceId: '6e124178-c29d-46a5-943c-5c2ae544aade',
+      url: 'https://example.com/voice',
+      fallbackUrl: 'https://example.com/voice-fallback',
+    },
+  },
+  {
+    prompt: 'Remove the webhook from Voice service 6e124178-c29d-46a5-943c-5c2ae544aade.',
+    expectedToolName: 'remove-voice-service-webhook',
+    expectedArguments: {
+      serviceId: '6e124178-c29d-46a5-943c-5c2ae544aade',
+    },
+  },
+  {
+    prompt: 'Assign active Sinch number +14155550100 to Voice service 6e124178-c29d-46a5-943c-5c2ae544aade.',
+    expectedToolName: 'assign-number-to-voice-service',
+    expectedArguments: {
+      phoneNumber: '+14155550100',
+      serviceId: '6e124178-c29d-46a5-943c-5c2ae544aade',
+    },
+  },
+  {
+    prompt: "From +14155550100, call +14155550101 and +14155550102 as a batch and say: 'Your appointment is tomorrow.'",
+    expectedToolName: 'tts-batch-callout',
+    expectedArguments: {
+      from: '+14155550100',
+      destinations: ['+14155550101', '+14155550102'],
+      message: 'Your appointment is tomorrow.',
+    },
+  },
+  {
+    prompt: 'Get the summary and session details for voice batch 01BX5ZZKBKACTAV9WEVGEMMVRB.',
+    expectedToolName: 'get-voice-batch-summary',
+    expectedArguments: {
+      batchId: '01BX5ZZKBKACTAV9WEVGEMMVRB',
+      includeSessionDetails: true,
+    },
+  },
 ];
 
 export const toolTestCases: ToolTestCase[] = [

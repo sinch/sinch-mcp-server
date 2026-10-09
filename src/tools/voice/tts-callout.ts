@@ -1,16 +1,26 @@
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { registerTracedTool } from '../../telemetry/register-traced-tool';
-import { Voice } from '@sinch/voice';
 import { z } from 'zod';
-import { getVoiceService } from './utils/voice-service-helper';
 import { env } from '../../env';
 import { getToolName, VoiceToolKey, voiceToolsConfig } from './utils/voice-tools-helper';
-import { isPromptResponse, matchesAnyTag } from '../../utils';
+import { matchesAnyTag } from '../../utils';
 import { IPromptResponse, PromptResponse, Tags } from '../../types';
+import { buildTtsCallRequest } from './utils/builders/tts-call-builder';
+import { E164_PATTERN } from './utils/phone-number';
+import {
+  DEFAULT_DIAL_TIMEOUT_SECONDS,
+  DEFAULT_MAX_CALL_DURATION_SECONDS,
+  DEFAULT_VOICE_NAME,
+} from './utils/tts-call-defaults';
+import { TtsCallOptionsSchema } from './utils/tts-call-schema';
+import { runVoiceV2Handler } from './utils/voice-v2-handler-helper';
 
 const TtsCalloutSchema = {
-  phoneNumber: z.string().describe('The phone number to call'),
-  message: z.string().describe('The message to read out loud'),
+  phoneNumber: z
+    .string()
+    .regex(E164_PATTERN)
+    .describe('The destination phone number in E.164 format, for example +14155550123'),
+  ...TtsCallOptionsSchema,
 };
 
 type TtsCallout = z.infer<z.ZodObject<typeof TtsCalloutSchema>>;
@@ -28,54 +38,55 @@ export const registerTtsCallout = (server: McpServer, tags: Tags[]) => {
     TOOL_NAME,
     {
       description:
-        'Place an outbound voice call that speaks a text-to-speech message when answered. Use when the user wants to *call* a phone number and say something aloud. Do NOT use send-text-message for this. Requires phoneNumber and message — ask if either is missing.',
+        'Place an outbound voice call that speaks a text-to-speech message when answered. Use when the user wants to call a phone number and say something aloud. Do NOT use send-text-message for this. Requires phoneNumber and message; the caller ID is optional.',
       inputSchema: TtsCalloutSchema,
     },
     ttsCalloutHandler,
   );
 };
 
-export const ttsCalloutHandler = async ({ phoneNumber, message }: TtsCallout): Promise<IPromptResponse> => {
-  const maybeService = getVoiceService(TOOL_NAME);
-  if (isPromptResponse(maybeService)) {
-    return maybeService.promptResponse;
-  }
-  const voiceService = maybeService;
-
-  const cli = env.CALLING_LINE_IDENTIFICATION;
-
-  const request: Voice.TtsCalloutRequestData = {
-    ttsCalloutRequestBody: {
-      method: 'ttsCallout',
-      ttsCallout: {
-        destination: {
-          type: 'number',
-          endpoint: phoneNumber,
-        },
-        text: message,
-      },
-    },
-  };
-  if (cli) {
-    request.ttsCalloutRequestBody.ttsCallout.cli = cli;
+export const ttsCalloutHandler = async ({
+  phoneNumber,
+  message,
+  from,
+  serviceId,
+  voiceName,
+  format,
+  dialTimeoutSeconds,
+  maxCallDurationSeconds,
+}: TtsCallout): Promise<IPromptResponse> => {
+  const origin = from ?? env.CALLING_LINE_IDENTIFICATION;
+  if (origin !== undefined && !E164_PATTERN.test(origin)) {
+    return new PromptResponse(
+      JSON.stringify({
+        success: false,
+        error: 'The origin phone number must use E.164 format, for example +14155550100.',
+      }),
+    ).promptResponse;
   }
 
-  try {
-    const response = await voiceService.callouts.tts(request);
+  return runVoiceV2Handler(TOOL_NAME, async ({ voice }) => {
+    const response = await voice.calls.start(
+      buildTtsCallRequest({
+        from: origin,
+        to: phoneNumber,
+        message,
+        serviceId,
+        voiceName: voiceName ?? DEFAULT_VOICE_NAME,
+        format: format ?? 'TEXT',
+        dialTimeoutDurationSeconds: dialTimeoutSeconds ?? DEFAULT_DIAL_TIMEOUT_SECONDS,
+        maxCallDurationSeconds: maxCallDurationSeconds ?? DEFAULT_MAX_CALL_DURATION_SECONDS,
+      }),
+    );
 
     return new PromptResponse(
       JSON.stringify({
         success: true,
-        call_id: response.callId,
+        session_id: response.sessionId,
+        service_id: response.serviceId,
+        origin,
         destination: phoneNumber,
       }),
     ).promptResponse;
-  } catch (error) {
-    return new PromptResponse(
-      JSON.stringify({
-        success: false,
-        error: error instanceof Error ? error.message : String(error),
-      }),
-    ).promptResponse;
-  }
+  });
 };
