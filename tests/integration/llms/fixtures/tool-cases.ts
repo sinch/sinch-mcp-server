@@ -575,6 +575,13 @@ const voiceCases: ToolTestCase[] = [
     },
   },
   {
+    prompt: 'Is active number +14155550123 assigned to my Voice service yet, or is provisioning still pending?',
+    expectedToolName: 'get-active-number-configuration',
+    expectedArguments: {
+      phoneNumber: '+14155550123',
+    },
+  },
+  {
     prompt: "From +14155550100, call +14155550101 and +14155550102 as a batch and say: 'Your appointment is tomorrow.'",
     expectedToolName: 'tts-batch-callout',
     expectedArguments: {

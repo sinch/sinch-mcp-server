@@ -31,7 +31,8 @@
     "create-voice-service",
     "set-voice-service-webhook",
     "remove-voice-service-webhook",
-    "assign-number-to-voice-service"
+    "assign-number-to-voice-service",
+    "get-active-number-configuration"
   ],
   "expectedPrompts": []
 }

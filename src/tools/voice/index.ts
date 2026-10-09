@@ -13,6 +13,7 @@ import { registerRemoveVoiceServiceWebhook } from './remove-voice-service-webhoo
 import { registerCreateTtsBatch } from './create-tts-batch';
 import { registerGetBatchSummary } from './get-batch-summary';
 import { registerAssignNumberToVoiceService } from './assign-number-to-voice-service';
+import { registerGetActiveNumberConfiguration } from './get-active-number-configuration';
 
 export const registerVoiceTools = (server: McpServer, tags: Tags[]) => {
   registerTtsCallout(server, tags);
@@ -23,6 +24,7 @@ export const registerVoiceTools = (server: McpServer, tags: Tags[]) => {
   registerSetVoiceServiceWebhook(server, tags);
   registerRemoveVoiceServiceWebhook(server, tags);
   registerAssignNumberToVoiceService(server, tags);
+  registerGetActiveNumberConfiguration(server, tags);
   registerCreateTtsBatch(server, tags);
   registerGetBatchSummary(server, tags);
   registerConferenceCallout(server, tags);
