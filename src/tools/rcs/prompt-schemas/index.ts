@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { RcsBrandIndustry, RcsCountryCode, RcsSenderCountry } from './enums';
 
 export const RcsRegion = z.enum(['BR', 'EU', 'US']);
 
@@ -16,41 +17,17 @@ export const RcsTestNumber = z.string().describe('Test phone number in E.164 for
 // rejects any field it does not recognise, so when extending this schema only
 // add fields that are documented in that request body.
 
-// Allowed sector/industry values for the US questionnaire's brandIndustry field.
-const RcsBrandIndustry = z.enum([
-  'AGRICULTURE',
-  'COMMUNICATION',
-  'CONSTRUCTION',
-  'EDUCATION',
-  'ENERGY',
-  'ENTERTAINMENT',
-  'FINANCIAL',
-  'GAMBLING',
-  'GOVERNMENT',
-  'HEALTHCARE',
-  'HOSPITALITY',
-  'HUMAN_RESOURCES',
-  'INSURANCE',
-  'LEGAL',
-  'MANUFACTURING',
-  'NON_GOVERNMENTAL_ORGANIZATION',
-  'POLITICAL',
-  'POSTAL',
-  'PROFESSIONAL',
-  'REAL_ESTATE',
-  'RETAIL',
-  'TECHNOLOGY',
-  'TRANSPORTATION',
-]);
-
 const RcsBrandEmail = z.object({
-  label: z.string().describe('Human-readable label for this email address.'),
+  label: z.string().max(25).describe('Human-readable label for this email address. Max 25 characters.'),
   address: z.string().describe('Email address.'),
 });
 
 const RcsBrandPhone = z.object({
-  label: z.string().describe('Human-readable label for this phone number.'),
-  number: z.string().describe('Phone number without country code and separators, or a valid E.164 number.'),
+  label: z.string().max(25).describe('Human-readable label for this phone number. Max 25 characters.'),
+  number: z
+    .string()
+    .regex(/^\+?[\d+\s]{6,15}$/)
+    .describe('Phone number without country code and separators, or a valid E.164 number. 6-15 characters.'),
 });
 
 const RcsBrandWebsite = z.object({
@@ -58,26 +35,41 @@ const RcsBrandWebsite = z.object({
   url: z.string().describe('Website URL.'),
 });
 
+const hasUniqueValues = <T>(items: T[], key: (item: T) => string) => new Set(items.map(key)).size === items.length;
+
 const RcsBrand = z
   .object({
-    name: z.string().optional().describe('Brand display name.'),
+    name: z.string().max(40).optional().describe('Brand display name. Max 40 characters.'),
     emails: z
       .array(RcsBrandEmail)
+      .min(1)
+      .max(3)
+      .refine((items) => hasUniqueValues(items, (item) => item.address), {
+        message: 'Email addresses must be unique.',
+      })
       .nullable()
       .optional()
-      .describe('Contact email list. Pass null to delete all existing values.'),
+      .describe('Contact email list, 1-3 items with unique addresses. Pass null to delete all existing values.'),
     phones: z
       .array(RcsBrandPhone)
+      .min(1)
+      .max(3)
+      .refine((items) => hasUniqueValues(items, (item) => item.number), {
+        message: 'Phone numbers must be unique.',
+      })
       .nullable()
       .optional()
-      .describe('Contact phone list. Pass null to delete all existing values.'),
+      .describe('Contact phone list, 1-3 items with unique numbers. Pass null to delete all existing values.'),
     websites: z
       .array(RcsBrandWebsite)
+      .min(1)
+      .max(3)
+      .refine((items) => hasUniqueValues(items, (item) => item.url), { message: 'Website URLs must be unique.' })
       .nullable()
       .optional()
-      .describe('Contact website list. Pass null to delete all existing values.'),
+      .describe('Contact website list, 1-3 items with unique URLs. Pass null to delete all existing values.'),
     color: z.string().optional().describe('Brand colour as a HEX code, e.g. "#FF5733".'),
-    description: z.string().optional().describe('Brand description.'),
+    description: z.string().max(100).optional().describe('Brand description. Max 100 characters.'),
     bannerUrl: z
       .string()
       .optional()
@@ -88,8 +80,8 @@ const RcsBrand = z
   })
   .describe('Brand information shown to end users.');
 
-// Only the documented writable metadata (optInDescriptionMetadata.ignore) is
-// accepted; other per-answer metadata is read-only and surfaced via get-rcs-sender.
+// Only optInDescriptionMetadata has a documented shape (`ignore`); the other
+// per-answer metadata objects are accepted as loose records.
 const RcsQuestionnaireGeneralAnswers = z
   .object({
     optInDescription: z.string().nullable().optional().describe('How opt-in is obtained. Pass null to delete.'),
@@ -222,11 +214,10 @@ const RcsQuestionnaireUsAnswers = z
       .describe(
         'Brand name / Doing Business As (DBA). Must be legally associated with companyLegalName. 1-100 characters.',
       ),
-    brandIndustry: RcsBrandIndustry.nullable().optional().describe('Sector or industry of the business.'),
-    taxIdCountry: z
-      .string()
-      .optional()
-      .describe('Country of tax registration (ISO 3166 two-letter code). Controls taxId and addressState validation.'),
+    brandIndustry: RcsBrandIndustry.optional().describe('Sector or industry of the business.'),
+    taxIdCountry: RcsCountryCode.optional().describe(
+      'Country of tax registration (e.g. GB for the United Kingdom). Controls taxId and addressState validation.',
+    ),
     taxId: z
       .string()
       .min(1)
@@ -257,7 +248,7 @@ const RcsQuestionnaireUsAnswers = z
       .string()
       .optional()
       .describe('Two-letter US state abbreviation, e.g. "CA". Only when taxIdCountry is US; omit otherwise.'),
-    addressCountry: z.string().optional().describe('ISO 3166 two-letter country code.'),
+    addressCountry: RcsCountryCode.optional().describe('Country (e.g. GB for the United Kingdom).'),
     addressPostalCode: z.string().min(1).max(10).nullable().optional().describe('Postal code. 1-10 characters.'),
     fullCompanyAddress: z.string().nullable().optional(),
     fullCompanyAddressMetadata: z
@@ -350,7 +341,7 @@ export const RcsSenderDetails = z
         'Phone numbers for testing. An agent can send 20 tester requests each day with a total maximum of 200 tester requests. Pass null to delete all.',
       ),
     countries: z
-      .array(z.string())
+      .array(RcsSenderCountry)
       .nullable()
       .optional()
       .describe(
