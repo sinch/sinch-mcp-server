@@ -2,6 +2,7 @@ import { z } from 'zod';
 import { createTtsBatchHandler, CreateTtsBatchSchema } from '../../../src/tools/voice/create-tts-batch';
 import { getVoiceV2Client, VoiceV2Client } from '../../../src/tools/voice/utils/voice-v2-client';
 import { PromptResponse } from '../../../src/types';
+import { mockEnv, resetMockEnv } from '../../helpers/mock-env';
 
 jest.mock('../../../src/tools/voice/utils/voice-v2-client');
 
@@ -23,6 +24,8 @@ const mockedGetVoiceV2Client = jest.mocked(getVoiceV2Client);
 
 beforeEach(() => {
   jest.clearAllMocks();
+  resetMockEnv();
+  mockEnv.CALLING_LINE_IDENTIFICATION = ORIGIN;
   mockedGetVoiceV2Client.mockReturnValue(client);
   startBatch.mockResolvedValue({
     projectId: PROJECT_ID,
@@ -33,7 +36,6 @@ beforeEach(() => {
 
 test('createTtsBatchHandler lets the API use the default service when none is selected', async () => {
   const result = await createTtsBatchHandler({
-    from: ORIGIN,
     destinations: DESTINATIONS,
     message: 'Your appointment is tomorrow.',
   });
@@ -96,6 +98,42 @@ test('createTtsBatchHandler returns batch API errors as failures', async () => {
     success: false,
     error: 'The origin number is not configured for the selected service',
   });
+});
+
+test('createTtsBatchHandler omits caller ID when no origin is provided or configured', async () => {
+  delete mockEnv.CALLING_LINE_IDENTIFICATION;
+
+  const result = await createTtsBatchHandler({
+    destinations: DESTINATIONS,
+    message: 'Hello',
+  });
+  const parsed = JSON.parse(result.content[0].text);
+
+  const requestBody = startBatch.mock.calls[0][0].startBatchRequestBody;
+  expect(requestBody.commands[0]).not.toHaveProperty('from');
+  expect(requestBody.parameters).toEqual([{ to: DESTINATIONS[0] }, { to: DESTINATIONS[1] }]);
+  expect(parsed).toEqual({
+    success: true,
+    batch_id: BATCH_ID,
+    service_id: SERVICE_ID,
+    recipient_count: 2,
+  });
+});
+
+test('createTtsBatchHandler rejects an invalid configured origin', async () => {
+  mockEnv.CALLING_LINE_IDENTIFICATION = 'invalid-number';
+
+  const result = await createTtsBatchHandler({
+    destinations: DESTINATIONS,
+    message: 'Hello',
+  });
+  const parsed = JSON.parse(result.content[0].text);
+
+  expect(parsed).toEqual({
+    success: false,
+    error: 'The origin phone number must use E.164 format, for example +14155550100.',
+  });
+  expect(mockedGetVoiceV2Client).not.toHaveBeenCalled();
 });
 
 test('createTtsBatchHandler returns the credential guard response', async () => {

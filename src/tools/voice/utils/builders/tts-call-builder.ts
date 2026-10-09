@@ -3,7 +3,7 @@ import type { Voice } from '@sinch/voice';
 export type TtsFormat = 'TEXT' | 'SSML';
 
 export interface BuildTtsCallRequest {
-  from: string;
+  from?: string;
   to: string;
   message: string;
   voiceName: string;
@@ -28,11 +28,14 @@ export const buildTtsCallRequest = ({
     commands: [
       {
         command: 'dial',
-        callName: 'tts-callout',
-        from: {
-          type: 'PHONE',
-          phone: { number: from },
-        },
+        ...(from !== undefined
+          ? {
+              from: {
+                type: 'PHONE' as const,
+                phone: { number: from },
+              },
+            }
+          : {}),
         to: {
           type: 'PHONE',
           phone: { number: to },

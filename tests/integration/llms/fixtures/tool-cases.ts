@@ -576,7 +576,7 @@ const voiceCases: ToolTestCase[] = [
   },
   {
     prompt: "From +14155550100, call +14155550101 and +14155550102 as a batch and say: 'Your appointment is tomorrow.'",
-    expectedToolName: 'create-tts-call-batch',
+    expectedToolName: 'tts-batch-callout',
     expectedArguments: {
       from: '+14155550100',
       destinations: ['+14155550101', '+14155550102'],

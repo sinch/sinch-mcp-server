@@ -2,8 +2,8 @@ import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { registerTracedTool } from '../../telemetry/register-traced-tool';
 import { z } from 'zod';
 import { IPromptResponse, PromptResponse, Tags } from '../../types';
-import { isPromptResponse, matchesAnyTag } from '../../utils';
-import { getVoiceV2Client } from './utils/voice-v2-client';
+import { matchesAnyTag } from '../../utils';
+import { runVoiceV2Handler } from './utils/voice-v2-handler-helper';
 import { getToolName, VoiceToolKey, voiceToolsConfig } from './utils/voice-tools-helper';
 
 const CALL_TYPES = ['PHONE', 'SIP', 'STREAM', 'VOICE_RELAY'] as const;
@@ -85,14 +85,9 @@ export const listCallsHandler = async ({
   callReason,
   page,
   pageSize,
-}: ListCalls): Promise<IPromptResponse> => {
-  const maybeClient = getVoiceV2Client();
-  if (isPromptResponse(maybeClient)) {
-    return maybeClient.promptResponse;
-  }
-
-  try {
-    const response = await maybeClient.voice.calls.list({
+}: ListCalls): Promise<IPromptResponse> =>
+  runVoiceV2Handler(TOOL_NAME, async ({ voice }) => {
+    const response = await voice.calls.list({
       serviceId,
       from,
       to,
@@ -116,16 +111,7 @@ export const listCallsHandler = async ({
           returned_count: response.data.length,
           has_next_page: response.hasNextPage,
           next_page: response.hasNextPage ? currentPage + 1 : null,
-          next_page_value: response.hasNextPage ? response.nextPageValue : null,
         },
       }),
     ).promptResponse;
-  } catch (error) {
-    return new PromptResponse(
-      JSON.stringify({
-        success: false,
-        error: error instanceof Error ? error.message : String(error),
-      }),
-    ).promptResponse;
-  }
-};
+  });

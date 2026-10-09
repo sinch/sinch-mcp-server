@@ -3,8 +3,8 @@ import { registerTracedTool } from '../../telemetry/register-traced-tool';
 import { z } from 'zod';
 import { getToolName, VoiceToolKey, voiceToolsConfig } from './utils/voice-tools-helper';
 import { IPromptResponse, PromptResponse, Tags } from '../../types';
-import { getVoiceV2Client } from './utils/voice-v2-client';
-import { isPromptResponse, matchesAnyTag } from '../../utils';
+import { matchesAnyTag } from '../../utils';
+import { runVoiceV2Handler } from './utils/voice-v2-handler-helper';
 
 const GetCallInformationSchema = {
   callId: z.string().trim().min(1).describe('The voice call ID (not a session ID)'),
@@ -32,14 +32,9 @@ export const registerGetCallInformation = (server: McpServer, tags: Tags[]) => {
   );
 };
 
-export const getCallInformationHandler = async ({ callId }: GetCallInformation): Promise<IPromptResponse> => {
-  const maybeClient = getVoiceV2Client();
-  if (isPromptResponse(maybeClient)) {
-    return maybeClient.promptResponse;
-  }
-
-  try {
-    const response = await maybeClient.voice.calls.get({ callId });
+export const getCallInformationHandler = async ({ callId }: GetCallInformation): Promise<IPromptResponse> =>
+  runVoiceV2Handler(TOOL_NAME, async ({ voice }) => {
+    const response = await voice.calls.get({ callId });
 
     return new PromptResponse(
       JSON.stringify({
@@ -47,12 +42,4 @@ export const getCallInformationHandler = async ({ callId }: GetCallInformation):
         call_information: response,
       }),
     ).promptResponse;
-  } catch (error) {
-    return new PromptResponse(
-      JSON.stringify({
-        success: false,
-        error: error instanceof Error ? error.message : String(error),
-      }),
-    ).promptResponse;
-  }
-};
+  });

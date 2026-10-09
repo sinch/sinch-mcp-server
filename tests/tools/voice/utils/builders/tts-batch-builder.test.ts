@@ -27,7 +27,6 @@ test('buildTtsBatchRequest uses documented placeholders and one parameter set pe
   expect(request.startBatchRequestBody?.commands).toEqual([
     {
       command: 'dial',
-      callName: 'tts-batch-call',
       from: {
         type: 'PHONE',
         phone: { number: '@from' },

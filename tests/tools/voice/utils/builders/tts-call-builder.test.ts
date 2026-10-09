@@ -18,7 +18,6 @@ test('buildTtsCallRequest builds the complete TTS call flow', () => {
       commands: [
         {
           command: 'dial',
-          callName: 'tts-callout',
           from: {
             type: 'PHONE',
             phone: { number: '+14045001000' },

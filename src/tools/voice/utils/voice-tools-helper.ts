@@ -46,8 +46,8 @@ export const voiceToolsConfig: Record<string, ToolsConfig> = {
     tags: ['all', 'voice', 'configuration', 'assign-number-to-voice-service'],
   },
   createTtsBatch: {
-    name: 'create-tts-call-batch',
-    tags: ['all', 'voice', 'notification', 'create-tts-call-batch'],
+    name: 'tts-batch-callout',
+    tags: ['all', 'voice', 'notification', 'tts-batch-callout'],
   },
   getBatchSummary: {
     name: 'get-voice-batch-summary',

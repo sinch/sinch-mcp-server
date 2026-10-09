@@ -8,7 +8,7 @@
     "get-call-information",
     "list-calls",
     "get-session-information",
-    "create-tts-call-batch",
+    "tts-batch-callout",
     "get-voice-batch-summary",
     "send-text-message",
     "send-location-message",

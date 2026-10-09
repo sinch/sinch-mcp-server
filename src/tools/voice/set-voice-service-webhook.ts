@@ -2,8 +2,8 @@ import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { z } from 'zod';
 import { registerTracedTool } from '../../telemetry/register-traced-tool';
 import { IPromptResponse, PromptResponse, Tags } from '../../types';
-import { isPromptResponse, matchesAnyTag } from '../../utils';
-import { getVoiceV2Client } from './utils/voice-v2-client';
+import { matchesAnyTag } from '../../utils';
+import { runVoiceV2Handler } from './utils/voice-v2-handler-helper';
 import { getToolName, VoiceToolKey, voiceToolsConfig } from './utils/voice-tools-helper';
 
 export const SetVoiceServiceWebhookSchema = {
@@ -46,14 +46,9 @@ export const setVoiceServiceWebhookHandler = async ({
   serviceId,
   url,
   fallbackUrl,
-}: SetVoiceServiceWebhook): Promise<IPromptResponse> => {
-  const maybeClient = getVoiceV2Client();
-  if (isPromptResponse(maybeClient)) {
-    return maybeClient.promptResponse;
-  }
-
-  try {
-    const service = await maybeClient.voice.services.update({
+}: SetVoiceServiceWebhook): Promise<IPromptResponse> =>
+  runVoiceV2Handler(TOOL_NAME, async ({ voice }) => {
+    const service = await voice.services.update({
       serviceId,
       updateServiceRequestBody: {
         callBehavior: {
@@ -72,12 +67,4 @@ export const setVoiceServiceWebhookHandler = async ({
         service,
       }),
     ).promptResponse;
-  } catch (error) {
-    return new PromptResponse(
-      JSON.stringify({
-        success: false,
-        error: error instanceof Error ? error.message : String(error),
-      }),
-    ).promptResponse;
-  }
-};
+  });

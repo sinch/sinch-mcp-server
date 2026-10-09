@@ -91,7 +91,7 @@ test('ttsCalloutHandler returns call API errors as failures', async () => {
   });
 });
 
-test('ttsCalloutHandler fails clearly when no origin is configured', async () => {
+test('ttsCalloutHandler omits caller ID when no origin is configured', async () => {
   delete mockEnv.CALLING_LINE_IDENTIFICATION;
 
   const result = await ttsCalloutHandler({
@@ -100,9 +100,13 @@ test('ttsCalloutHandler fails clearly when no origin is configured', async () =>
   });
   const parsed = JSON.parse(result.content[0].text);
 
-  expect(parsed.success).toBeFalse();
-  expect(parsed.error).toContain('Missing origin phone number');
-  expect(mockedGetVoiceV2Client).not.toHaveBeenCalled();
+  expect(startCall.mock.calls[0][0].createCallRequestBody.commands[0]).not.toHaveProperty('from');
+  expect(parsed).toEqual({
+    success: true,
+    session_id: '01BX5ZZKBKACTAV9WEVGEMMVRB',
+    service_id: SERVICE_ID,
+    destination: DESTINATION,
+  });
 });
 
 test('ttsCalloutHandler returns the credential guard response', async () => {

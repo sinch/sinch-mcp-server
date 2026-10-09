@@ -2,8 +2,8 @@ import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { z } from 'zod';
 import { registerTracedTool } from '../../telemetry/register-traced-tool';
 import { IPromptResponse, PromptResponse, Tags } from '../../types';
-import { isPromptResponse, matchesAnyTag } from '../../utils';
-import { getVoiceV2Client } from './utils/voice-v2-client';
+import { matchesAnyTag } from '../../utils';
+import { runVoiceV2Handler } from './utils/voice-v2-handler-helper';
 import { getToolName, VoiceToolKey, voiceToolsConfig } from './utils/voice-tools-helper';
 
 const BATCH_ID_PATTERN = /^[0-9A-HJKMNP-TV-Z]{26}$/i;
@@ -40,15 +40,12 @@ export const registerGetBatchSummary = (server: McpServer, tags: Tags[]) => {
 export const getBatchSummaryHandler = async ({
   batchId,
   includeSessionDetails,
-}: GetBatchSummary): Promise<IPromptResponse> => {
-  const maybeClient = getVoiceV2Client();
-  if (isPromptResponse(maybeClient)) {
-    return maybeClient.promptResponse;
-  }
-
-  try {
-    const summary = await maybeClient.voice.batches.get({ batchId });
-    const details = includeSessionDetails ? await maybeClient.voice.batches.getDetails({ batchId }) : undefined;
+}: GetBatchSummary): Promise<IPromptResponse> =>
+  runVoiceV2Handler(TOOL_NAME, async ({ voice }) => {
+    const [summary, details] = await Promise.all([
+      voice.batches.get({ batchId }),
+      includeSessionDetails ? voice.batches.getDetails({ batchId }) : Promise.resolve(undefined),
+    ]);
 
     return new PromptResponse(
       JSON.stringify({
@@ -57,12 +54,4 @@ export const getBatchSummaryHandler = async ({
         ...(details ? { session_details: details.sessions } : {}),
       }),
     ).promptResponse;
-  } catch (error) {
-    return new PromptResponse(
-      JSON.stringify({
-        success: false,
-        error: error instanceof Error ? error.message : String(error),
-      }),
-    ).promptResponse;
-  }
-};
+  });

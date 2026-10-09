@@ -63,7 +63,6 @@ test('listCallsHandler forwards filters and converts datetimes for the Voice API
       returned_count: 1,
       has_next_page: true,
       next_page: 3,
-      next_page_value: '/v2/projects/project-id/calls?page=3',
     },
   });
 });
@@ -87,9 +86,49 @@ test('listCallsHandler returns terminal-page metadata with default first page', 
       returned_count: 0,
       has_next_page: false,
       next_page: null,
-      next_page_value: null,
     },
   });
+});
+
+test('listCallsHandler uses the numeric next page from one response in a subsequent request', async () => {
+  listCalls
+    .mockResolvedValueOnce({
+      data: [{ callId: 'first-page-call' }],
+      hasNextPage: true,
+      nextPageValue: '/v2/projects/project-id/calls?page=2',
+      nextPage: jest.fn(),
+    })
+    .mockResolvedValueOnce({
+      data: [{ callId: 'second-page-call' }],
+      hasNextPage: false,
+      nextPageValue: '',
+      nextPage: jest.fn(),
+    });
+
+  const firstResult = await listCallsHandler({ pageSize: 25 });
+  const firstPage = JSON.parse(firstResult.content[0].text);
+  const secondResult = await listCallsHandler({
+    page: firstPage.pagination.next_page,
+    pageSize: firstPage.pagination.page_size,
+  });
+  const secondPage = JSON.parse(secondResult.content[0].text);
+
+  expect(firstPage.pagination).toEqual({
+    page: 1,
+    page_size: 25,
+    returned_count: 1,
+    has_next_page: true,
+    next_page: 2,
+  });
+  expect(listCalls).toHaveBeenNthCalledWith(
+    2,
+    expect.objectContaining({
+      page: 2,
+      pageSize: 25,
+    }),
+  );
+  expect(secondPage.calls).toEqual([{ callId: 'second-page-call' }]);
+  expect(secondPage.pagination.next_page).toBeNull();
 });
 
 test('listCallsHandler returns the credential guard response', async () => {

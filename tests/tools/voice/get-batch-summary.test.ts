@@ -61,6 +61,11 @@ test('getBatchSummaryHandler optionally returns per-session details', async () =
     { id: '01AN4Z07BY79KA1307SR9X4MV4', state: 'IN_PROGRESS' },
   ];
   getBatchDetails.mockResolvedValue({ sessions });
+  getBatch.mockImplementationOnce(async () => {
+    await Promise.resolve();
+    expect(getBatchDetails).toHaveBeenCalledWith({ batchId: BATCH_ID });
+    return { batchId: BATCH_ID };
+  });
 
   const result = await getBatchSummaryHandler({
     batchId: BATCH_ID,
@@ -69,6 +74,7 @@ test('getBatchSummaryHandler optionally returns per-session details', async () =
   const parsed = JSON.parse(result.content[0].text);
 
   expect(getBatchDetails).toHaveBeenCalledWith({ batchId: BATCH_ID });
+  expect(parsed.success).toBeTrue();
   expect(parsed.session_details).toEqual(sessions);
 });
 

@@ -12,7 +12,7 @@
     "set-voice-service-webhook",
     "remove-voice-service-webhook",
     "assign-number-to-voice-service",
-    "create-tts-call-batch",
+    "tts-batch-callout",
     "get-voice-batch-summary"
   ],
   "expectedPrompts": []

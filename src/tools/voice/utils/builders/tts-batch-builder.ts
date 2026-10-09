@@ -2,7 +2,7 @@ import type { Voice } from '@sinch/voice';
 import type { TtsFormat } from './tts-call-builder';
 
 export interface BuildTtsBatchRequest {
-  from: string;
+  from?: string;
   destinations: string[];
   message: string;
   voiceName: string;
@@ -31,11 +31,14 @@ export const buildTtsBatchRequest = ({
     commands: [
       {
         command: 'dial',
-        callName: 'tts-batch-call',
-        from: {
-          type: 'PHONE',
-          phone: { number: '@from' },
-        },
+        ...(from !== undefined
+          ? {
+              from: {
+                type: 'PHONE' as const,
+                phone: { number: '@from' },
+              },
+            }
+          : {}),
         to: {
           type: 'PHONE',
           phone: { number: '@to' },
@@ -69,7 +72,10 @@ export const buildTtsBatchRequest = ({
         },
       },
     ],
-    parameters: destinations.map((to) => ({ from, to })),
+    parameters: destinations.map((to) => ({
+      ...(from !== undefined ? { from } : {}),
+      to,
+    })),
     ...(maxCps !== undefined || ttlSeconds !== undefined
       ? {
           batchOptions: {
