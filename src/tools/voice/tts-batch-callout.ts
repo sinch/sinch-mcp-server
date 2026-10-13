@@ -51,7 +51,8 @@ export const registerTtsBatchCallout = (server: McpServer, tags: Tags[]) => {
     {
       description:
         `Create a batch of outbound voice calls that all play the same text-to-speech message. ` +
-        `Accepts 1-${MAX_DESTINATIONS} E.164 destinations; the caller ID is optional.`,
+        `Accepts 1-${MAX_DESTINATIONS} E.164 destinations and returns a batch ID; each destination creates a session, and each session contains one or more call legs. ` +
+        `Use get-voice-batch-summary to retrieve the session IDs for the batch. The caller ID is optional.`,
       inputSchema: TtsBatchCalloutSchema,
     },
     ttsBatchCalloutHandler,

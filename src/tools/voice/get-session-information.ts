@@ -25,7 +25,7 @@ export const registerGetSessionInformation = (server: McpServer, tags: Tags[]) =
     TOOL_NAME,
     {
       description:
-        'Get voice session details by session ID, including all call legs associated with the session. Use get-call-information instead when you have a call ID.',
+        'Get voice session details by session ID, including the call IDs and state of every call leg in the session. Sessions are returned directly by tts-callout or as part of a batch. Use get-call-information with a returned call ID to inspect one leg.',
       inputSchema: GetSessionInformationSchema,
     },
     getSessionInformationHandler,
