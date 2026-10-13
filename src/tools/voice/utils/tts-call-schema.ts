@@ -14,7 +14,7 @@ export const TtsCallOptionsSchema = {
     .describe(
       'The active Sinch Voice number to call from, in E.164 format. Uses CALLING_LINE_IDENTIFICATION when omitted; if neither is set, the call has no caller ID.',
     ),
-  message: z.string().trim().min(1).max(600).describe('The text or SSML message to read on every answered call'),
+  message: z.string().trim().min(1).max(600).describe('The text or SSML message to read when the call is answered'),
   voiceName: z
     .string()
     .trim()

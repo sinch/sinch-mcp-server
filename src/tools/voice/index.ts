@@ -10,7 +10,7 @@ import { registerGetSessionInformation } from './get-session-information';
 import { registerCreateVoiceService } from './create-voice-service';
 import { registerSetVoiceServiceWebhook } from './set-voice-service-webhook';
 import { registerRemoveVoiceServiceWebhook } from './remove-voice-service-webhook';
-import { registerCreateTtsBatch } from './create-tts-batch';
+import { registerTtsBatchCallout } from './tts-batch-callout';
 import { registerGetBatchSummary } from './get-batch-summary';
 import { registerAssignNumberToVoiceService } from './assign-number-to-voice-service';
 
@@ -23,7 +23,7 @@ export const registerVoiceTools = (server: McpServer, tags: Tags[]) => {
   registerSetVoiceServiceWebhook(server, tags);
   registerRemoveVoiceServiceWebhook(server, tags);
   registerAssignNumberToVoiceService(server, tags);
-  registerCreateTtsBatch(server, tags);
+  registerTtsBatchCallout(server, tags);
   registerGetBatchSummary(server, tags);
   registerConferenceCallout(server, tags);
   registerManageConferenceParticipant(server, tags);

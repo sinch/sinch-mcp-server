@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { createTtsBatchHandler, CreateTtsBatchSchema } from '../../../src/tools/voice/create-tts-batch';
+import { TtsBatchCalloutSchema, ttsBatchCalloutHandler } from '../../../src/tools/voice/tts-batch-callout';
 import { getVoiceV2Client, VoiceV2Client } from '../../../src/tools/voice/utils/voice-v2-client';
 import { PromptResponse } from '../../../src/types';
 import { mockEnv, resetMockEnv } from '../../helpers/mock-env';
@@ -34,8 +34,8 @@ beforeEach(() => {
   });
 });
 
-test('createTtsBatchHandler lets the API use the default service when none is selected', async () => {
-  const result = await createTtsBatchHandler({
+test('ttsBatchCalloutHandler lets the API use the default service when none is selected', async () => {
+  const result = await ttsBatchCalloutHandler({
     destinations: DESTINATIONS,
     message: 'Your appointment is tomorrow.',
   });
@@ -60,8 +60,8 @@ test('createTtsBatchHandler lets the API use the default service when none is se
   });
 });
 
-test('createTtsBatchHandler passes optional settings and an explicit service without preflight requests', async () => {
-  await createTtsBatchHandler({
+test('ttsBatchCalloutHandler passes optional settings and an explicit service without preflight requests', async () => {
+  await ttsBatchCalloutHandler({
     from: ORIGIN,
     destinations: [DESTINATIONS[0]],
     message: '<speak>Hello</speak>',
@@ -84,10 +84,10 @@ test('createTtsBatchHandler passes optional settings and an explicit service wit
   );
 });
 
-test('createTtsBatchHandler returns batch API errors as failures', async () => {
+test('ttsBatchCalloutHandler returns batch API errors as failures', async () => {
   startBatch.mockRejectedValue(new Error('The origin number is not configured for the selected service'));
 
-  const result = await createTtsBatchHandler({
+  const result = await ttsBatchCalloutHandler({
     from: ORIGIN,
     destinations: DESTINATIONS,
     message: 'Hello',
@@ -100,10 +100,10 @@ test('createTtsBatchHandler returns batch API errors as failures', async () => {
   });
 });
 
-test('createTtsBatchHandler omits caller ID when no origin is provided or configured', async () => {
+test('ttsBatchCalloutHandler omits caller ID when no origin is provided or configured', async () => {
   delete mockEnv.CALLING_LINE_IDENTIFICATION;
 
-  const result = await createTtsBatchHandler({
+  const result = await ttsBatchCalloutHandler({
     destinations: DESTINATIONS,
     message: 'Hello',
   });
@@ -120,10 +120,10 @@ test('createTtsBatchHandler omits caller ID when no origin is provided or config
   });
 });
 
-test('createTtsBatchHandler rejects an invalid configured origin', async () => {
+test('ttsBatchCalloutHandler rejects an invalid configured origin', async () => {
   mockEnv.CALLING_LINE_IDENTIFICATION = 'invalid-number';
 
-  const result = await createTtsBatchHandler({
+  const result = await ttsBatchCalloutHandler({
     destinations: DESTINATIONS,
     message: 'Hello',
   });
@@ -136,11 +136,11 @@ test('createTtsBatchHandler rejects an invalid configured origin', async () => {
   expect(mockedGetVoiceV2Client).not.toHaveBeenCalled();
 });
 
-test('createTtsBatchHandler returns the credential guard response', async () => {
+test('ttsBatchCalloutHandler returns the credential guard response', async () => {
   const guard = new PromptResponse('Missing env vars: PROJECT_ID, KEY_ID, KEY_SECRET.');
   mockedGetVoiceV2Client.mockReturnValue(guard);
 
-  const result = await createTtsBatchHandler({
+  const result = await ttsBatchCalloutHandler({
     from: ORIGIN,
     destinations: DESTINATIONS,
     message: 'Hello',
@@ -150,8 +150,8 @@ test('createTtsBatchHandler returns the credential guard response', async () => 
   expect(startBatch).not.toHaveBeenCalled();
 });
 
-test('CreateTtsBatchSchema bounds recipient count and batch options', () => {
-  const schema = z.object(CreateTtsBatchSchema);
+test('TtsBatchCalloutSchema bounds recipient count and batch options', () => {
+  const schema = z.object(TtsBatchCalloutSchema);
   const base = { from: ORIGIN, message: 'Hello' };
 
   expect(schema.safeParse({ ...base, destinations: [] }).success).toBeFalse();

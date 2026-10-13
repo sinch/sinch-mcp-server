@@ -68,6 +68,14 @@ Here is the list of tools available in the MCP server (all the phone numbers mus
 | **tts-batch-callout**             | Start a batch of outbound calls that play the same text-to-speech message. <br> _Example prompt_: "Call these numbers in a batch and read this reminder."                                                | voice, notification |
 | **get-voice-batch-summary**       | Get batch execution totals and optionally the state of each session. <br> _Example prompt_: "Get the summary and session details for batch 01BX5ZZKBKACTAV9WEVGEMMVRB."                                | voice, notification |
 
+#### Voice batch, session, and call hierarchy
+
+- A **batch** groups an asynchronous request to initiate calls to multiple destinations. `tts-batch-callout` returns a batch ID, and each destination produces its own session.
+- A **session** represents one call flow and contains one or more calls. `tts-callout` returns a session ID directly; use `get-session-information` to retrieve its call legs.
+- A **call** is one individual leg within a session, identified by a call ID. Use `get-call-information` when you need the status or details of that specific leg.
+
+To inspect a batch from top to bottom: use `get-voice-batch-summary` with session details enabled, pass a returned session ID to `get-session-information`, and then pass any returned call ID to `get-call-information`.
+
 ### RCS Sender Tools
 
 | Tool                              | Description                                                                                                                                                                                                                                        | Tags               |
