@@ -16,10 +16,10 @@ import { getToolName, VoiceToolKey, voiceToolsConfig } from './utils/voice-tools
 import { env } from '../../env';
 
 const MAX_DESTINATIONS = 500;
-const TOOL_KEY: VoiceToolKey = 'createTtsBatch';
+const TOOL_KEY: VoiceToolKey = 'ttsBatchCallout';
 const TOOL_NAME = getToolName(TOOL_KEY);
 
-export const CreateTtsBatchSchema = {
+export const TtsBatchCalloutSchema = {
   destinations: z
     .array(z.string().regex(E164_PATTERN))
     .min(1)
@@ -38,9 +38,9 @@ export const CreateTtsBatchSchema = {
     .describe('Seconds the platform may keep attempting to initiate queued calls'),
 };
 
-type CreateTtsBatch = z.infer<z.ZodObject<typeof CreateTtsBatchSchema>>;
+type TtsBatchCallout = z.infer<z.ZodObject<typeof TtsBatchCalloutSchema>>;
 
-export const registerCreateTtsBatch = (server: McpServer, tags: Tags[]) => {
+export const registerTtsBatchCallout = (server: McpServer, tags: Tags[]) => {
   if (!matchesAnyTag(tags, voiceToolsConfig[TOOL_KEY].tags)) {
     return;
   }
@@ -51,14 +51,15 @@ export const registerCreateTtsBatch = (server: McpServer, tags: Tags[]) => {
     {
       description:
         `Create a batch of outbound voice calls that all play the same text-to-speech message. ` +
-        `Accepts 1-${MAX_DESTINATIONS} E.164 destinations; the caller ID is optional.`,
-      inputSchema: CreateTtsBatchSchema,
+        `Accepts 1-${MAX_DESTINATIONS} E.164 destinations and returns a batch ID; each destination creates a session, and each session contains one or more call legs. ` +
+        `Use get-voice-batch-summary to retrieve the session IDs for the batch. The caller ID is optional.`,
+      inputSchema: TtsBatchCalloutSchema,
     },
-    createTtsBatchHandler,
+    ttsBatchCalloutHandler,
   );
 };
 
-export const createTtsBatchHandler = async ({
+export const ttsBatchCalloutHandler = async ({
   from,
   destinations,
   message,
@@ -69,7 +70,7 @@ export const createTtsBatchHandler = async ({
   ttlSeconds,
   dialTimeoutSeconds,
   maxCallDurationSeconds,
-}: CreateTtsBatch): Promise<IPromptResponse> => {
+}: TtsBatchCallout): Promise<IPromptResponse> => {
   const origin = from ?? env.CALLING_LINE_IDENTIFICATION;
   if (origin !== undefined && !E164_PATTERN.test(origin)) {
     return new PromptResponse(

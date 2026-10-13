@@ -49,7 +49,7 @@ export const voiceToolsConfig: Record<string, ToolsConfig> = {
     name: 'get-active-number-configuration',
     tags: ['all', 'voice', 'configuration', 'get-active-number-configuration'],
   },
-  createTtsBatch: {
+  ttsBatchCallout: {
     name: 'tts-batch-callout',
     tags: ['all', 'voice', 'notification', 'tts-batch-callout'],
   },

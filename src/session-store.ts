@@ -1,5 +1,6 @@
 import Redis from 'ioredis';
 import { env } from './env';
+import { logger } from './telemetry/logger';
 
 const DEFAULT_SESSION_TTL_SECONDS = 1800;
 const REDIS_RETRY_ATTEMPTS = 3;
@@ -40,7 +41,7 @@ const getClient = (): Redis => {
       tls: env.REDIS_PASSWORD ? {} : undefined,
       ...REDIS_CLIENT_OPTIONS,
     });
-    client.on('error', (error) => console.error('Redis client error:', error));
+    client.on('error', (error) => logger.error({ err: error }, 'Redis client error'));
   }
   return client;
 };

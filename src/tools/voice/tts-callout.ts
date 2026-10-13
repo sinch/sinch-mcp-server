@@ -38,7 +38,7 @@ export const registerTtsCallout = (server: McpServer, tags: Tags[]) => {
     TOOL_NAME,
     {
       description:
-        'Place an outbound voice call that speaks a text-to-speech message when answered. Use when the user wants to call a phone number and say something aloud. Do NOT use send-text-message for this. Requires phoneNumber and message; the caller ID is optional.',
+        'Place an outbound voice call that speaks a text-to-speech message when answered and returns a session ID. A session contains one or more call legs; use get-session-information to retrieve their call IDs and states. Use when the user wants to call a phone number and say something aloud. Do NOT use send-text-message for this. Requires phoneNumber and message; the caller ID is optional.',
       inputSchema: TtsCalloutSchema,
     },
     ttsCalloutHandler,

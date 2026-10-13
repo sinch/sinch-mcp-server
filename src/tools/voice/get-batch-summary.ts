@@ -30,7 +30,7 @@ export const registerGetBatchSummary = (server: McpServer, tags: Tags[]) => {
     TOOL_NAME,
     {
       description:
-        'Get the execution summary for an outbound voice-call batch. Optionally include the ID and state of each initiated session.',
+        'Get the execution summary for an outbound voice-call batch by batch ID. Enable session details to return the ID and state of each session in the batch; then use get-session-information to retrieve the call legs in a session.',
       inputSchema: GetBatchSummarySchema,
     },
     getBatchSummaryHandler,

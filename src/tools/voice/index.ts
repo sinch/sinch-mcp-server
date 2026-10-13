@@ -10,10 +10,10 @@ import { registerGetSessionInformation } from './get-session-information';
 import { registerCreateVoiceService } from './create-voice-service';
 import { registerSetVoiceServiceWebhook } from './set-voice-service-webhook';
 import { registerRemoveVoiceServiceWebhook } from './remove-voice-service-webhook';
-import { registerCreateTtsBatch } from './create-tts-batch';
+import { registerGetActiveNumberConfiguration } from './get-active-number-configuration';
+import { registerTtsBatchCallout } from './tts-batch-callout';
 import { registerGetBatchSummary } from './get-batch-summary';
 import { registerAssignNumberToVoiceService } from './assign-number-to-voice-service';
-import { registerGetActiveNumberConfiguration } from './get-active-number-configuration';
 
 export const registerVoiceTools = (server: McpServer, tags: Tags[]) => {
   registerTtsCallout(server, tags);
@@ -25,7 +25,7 @@ export const registerVoiceTools = (server: McpServer, tags: Tags[]) => {
   registerRemoveVoiceServiceWebhook(server, tags);
   registerAssignNumberToVoiceService(server, tags);
   registerGetActiveNumberConfiguration(server, tags);
-  registerCreateTtsBatch(server, tags);
+  registerTtsBatchCallout(server, tags);
   registerGetBatchSummary(server, tags);
   registerConferenceCallout(server, tags);
   registerManageConferenceParticipant(server, tags);

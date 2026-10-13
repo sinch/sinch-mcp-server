@@ -25,7 +25,7 @@ export const registerGetCallInformation = (server: McpServer, tags: Tags[]) => {
     TOOL_NAME,
     {
       description:
-        'Get status and details for one voice call leg by call ID. A call ID is different from the session ID returned by tts-callout. Do not use this to place a call or send an SMS.',
+        'Get status and details for one voice call leg by call ID. A call is one leg within a session: use get-session-information first when you have the session ID returned by tts-callout or obtained from a batch. Do not use this to place a call or send an SMS.',
       inputSchema: GetCallInformationSchema,
     },
     getCallInformationHandler,

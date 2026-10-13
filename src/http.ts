@@ -46,6 +46,8 @@ dotenv.config();
 const MCP_PATH = '/mcp';
 const HEALTH_LIVE_PATH = '/health/live';
 const HEALTH_READY_PATH = '/health/ready';
+const HEALTH_LIVE_PATHS = [HEALTH_LIVE_PATH, `${MCP_PATH}${HEALTH_LIVE_PATH}`];
+const HEALTH_READY_PATHS = [HEALTH_READY_PATH, `${MCP_PATH}${HEALTH_READY_PATH}`];
 const DEFAULT_PORT = 8000;
 const SESSION_STORE_UNAVAILABLE_CODE = -32003;
 
@@ -314,14 +316,14 @@ export const createHttpApp = () => {
   app.use(express.json({ limit: '4mb' }));
 
   // Unauthenticated probes for Kubernetes (must stay outside MCP auth middleware).
-  app.get(HEALTH_LIVE_PATH, (_req, res) => {
+  app.get(HEALTH_LIVE_PATHS, (_req, res) => {
     res.status(200).json({
       status: 'ok',
       uptimeSeconds: Math.floor((Date.now() - startedAtMs) / 1000),
     });
   });
 
-  app.get(HEALTH_READY_PATH, (_req, res) => {
+  app.get(HEALTH_READY_PATHS, (_req, res) => {
     void (async () => {
       if (isShuttingDown) {
         res.status(503).json({ status: 'not_ready', reason: 'shutting_down' });
@@ -344,7 +346,7 @@ export const createHttpApp = () => {
 
   const routeHandler = (req: Request, res: Response) => {
     void handleMcpRequest(req, res).catch((error) => {
-      console.error(`Error handling MCP ${req.method} request:`, error);
+      logger.error({ err: error, method: req.method }, 'Error handling MCP request');
       if (!res.headersSent) {
         res.status(500).json(buildJsonRpcErrorResponse(-32603, 'Internal server error', req.body));
       }
@@ -407,11 +409,11 @@ export const shutdown = async (server: Server, signal: string): Promise<void> =>
   if (isShuttingDown) {
     return;
   }
-  console.error(`Received ${signal}, marking not ready before closing HTTP server`);
+  logger.info({ signal }, 'Received shutdown signal, marking not ready before closing HTTP server');
   isShuttingDown = true;
   const drainMs = getShutdownDrainMs();
   if (drainMs > 0) {
-    console.error(`Draining for ${drainMs}ms before closing listeners`);
+    logger.info({ drain_ms: drainMs }, 'Draining before closing listeners');
     await sleep(drainMs);
   }
   try {
@@ -420,7 +422,7 @@ export const shutdown = async (server: Server, signal: string): Promise<void> =>
     await shutdownTelemetry();
     process.exit(0);
   } catch (error) {
-    console.error('Error during HTTP server shutdown:', error);
+    logger.error({ err: error }, 'Error during HTTP server shutdown');
     process.exit(1);
   }
 };
@@ -428,8 +430,9 @@ export const shutdown = async (server: Server, signal: string): Promise<void> =>
 export const main = async (): Promise<void> => {
   const missingRedisVars = (['REDIS_HOST', 'REDIS_PORT'] as const).filter((key) => !env[key]);
   if (missingRedisVars.length > 0) {
-    console.error(
-      `Fatal: ${missingRedisVars.join(', ')} not set. The HTTP server requires Redis for shared session storage.`,
+    logger.error(
+      { missing_environment_variables: missingRedisVars },
+      'HTTP server requires Redis for shared session storage',
     );
     process.exit(1);
     return;
@@ -444,14 +447,12 @@ export const main = async (): Promise<void> => {
 
   await waitForListening(server);
 
-  console.error(
-    `Sinch MCP HTTP server listening on port ${port} (${MCP_PATH}), session store: ${describeRedisTarget()}`,
-  );
+  logger.info({ port, path: MCP_PATH, session_store: describeRedisTarget() }, 'Sinch MCP HTTP server listening');
 };
 
 if (require.main === module) {
   main().catch((error) => {
-    console.error('Fatal error in HTTP main():', error);
+    logger.error({ err: error }, 'Fatal error in HTTP main()');
     process.exit(1);
   });
 }

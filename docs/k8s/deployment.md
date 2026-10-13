@@ -20,7 +20,11 @@
 
 # Runtime: Streamable HTTP on port 8000, path `/mcp`.
 
-# Probes: `/health/live`, `/health/ready` (no auth).
+# Probes: `/health/live`, `/health/ready` (no auth). The same endpoints are available at
+
+# `/mcp/health/live` and `/mcp/health/ready` for health checks that reach the service through
+
+# the ingress, which only routes the `/mcp` prefix.
 
 # Auth: staging and prod run multi-tenant — the app holds no Sinch credentials, and
 
@@ -146,10 +150,10 @@ collector is unreachable. Traces and metrics go over OTLP gRPC to the collector 
 every cluster, which forwards them to Grafana (Tempo for traces, Prometheus for span metrics).
 They are flushed on shutdown, after the drain.
 
-| Chart value                | Env var                       | Value                                                         |
-| -------------------------- | ----------------------------- | ------------------------------------------------------------- |
-| `otelExporterOtlpEndpoint` | `OTEL_EXPORTER_OTLP_ENDPOINT` | `http://otel-collector.otel-collector.svc.cluster.local:4317` |
-| `otelEnv`                  | `OTEL_ENV`                    | `staging` on `*tst` sites, `production` on the others         |
+| Chart value                | Env var                       | Value                                                                |
+| -------------------------- | ----------------------------- | -------------------------------------------------------------------- |
+| `otelExporterOtlpEndpoint` | `OTEL_EXPORTER_OTLP_ENDPOINT` | `http://otel-collector.otel-collector.svc.cluster.local:4317`        |
+| `otelEnv`                  | `OTEL_ENV`                    | `staging` on `*tst` sites, `production` on the others                |
 | _(derived)_                | `OTEL_SERVICE_NAME`           | `<release>.<namespace>`, e.g. `sinch-mcp-server-agent.mcp-messaging` |
 
 - The endpoint is the chart default, so overlays only set `otelEnv`. Setting the endpoint to `""`
