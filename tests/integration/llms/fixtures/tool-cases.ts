@@ -242,6 +242,13 @@ const numbersCases: ToolTestCase[] = [
     },
   },
   {
+    prompt: 'Show me the configuration and any pending provisioning changes for +14155550123.',
+    expectedToolName: 'get-rented-number-configuration',
+    expectedArguments: {
+      phoneNumber: '+14155550123',
+    },
+  },
+  {
     prompt: 'Which regions can I buy virtual numbers in?',
     expectedToolName: 'list-available-regions',
     expectedArguments: undefined,
@@ -572,13 +579,6 @@ const voiceCases: ToolTestCase[] = [
     expectedArguments: {
       phoneNumber: '+14155550100',
       serviceId: '6e124178-c29d-46a5-943c-5c2ae544aade',
-    },
-  },
-  {
-    prompt: 'Is active number +14155550123 assigned to my Voice service yet, or is provisioning still pending?',
-    expectedToolName: 'get-active-number-configuration',
-    expectedArguments: {
-      phoneNumber: '+14155550123',
     },
   },
   {

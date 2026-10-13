@@ -5,6 +5,7 @@
     "list-rented-numbers",
     "rent-sinch-virtual-numbers",
     "release-rented-number",
+    "get-rented-number-configuration",
     "search-for-available-numbers"
   ],
   "expectedPrompts": []

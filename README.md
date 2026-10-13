@@ -65,7 +65,6 @@ Here is the list of tools available in the MCP server (all the phone numbers mus
 | **set-voice-service-webhook**       | Configure the primary webhook and fallback URLs for a Voice service. <br> _Example prompt_: "Configure the webhook and fallback for service 6e124178-c29d-46a5-943c-5c2ae544aade."                       | voice                |
 | **remove-voice-service-webhook**    | Remove webhook handling from a Voice service. <br> _Example prompt_: "Remove the webhook from service 6e124178-c29d-46a5-943c-5c2ae544aade."                                                             | voice                |
 | **assign-number-to-voice-service**  | Assign an active Sinch number to a Voice service. <br> _Example prompt_: "Assign +14155550100 to Voice service 6e124178-c29d-46a5-943c-5c2ae544aade."                                                    | voice                |
-| **get-active-number-configuration** | Get one active number and its full configuration, including current or scheduled Voice provisioning. <br> _Example prompt_: "Is +12025551234 assigned to my Voice service yet?"                          | voice, configuration |
 | **tts-batch-callout**               | Start a batch of outbound calls that play the same text-to-speech message. <br> _Example prompt_: "Call these numbers in a batch and read this reminder."                                                | voice, notification  |
 | **get-voice-batch-summary**         | Get batch execution totals and optionally the state of each session. <br> _Example prompt_: "Get the summary and session details for batch 01BX5ZZKBKACTAV9WEVGEMMVRB."                                  | voice, notification  |
 
@@ -112,6 +111,7 @@ To inspect a batch from top to bottom: use `get-voice-batch-summary` with sessio
 | **search-for-available-numbers** | Search for phone numbers available to rent, with filters for region, type, pattern, and capabilities. <br> _Example prompt_: "Find available local numbers in the US that support SMS."                  | numbers |
 | **rent-sinch-virtual-numbers**   | Rent (activate) one or more phone numbers by providing them in E.164 format. <br> _Example prompt_: "Rent the phone number +12025551234."                                                                | numbers |
 | **release-rented-number**        | Release a rented phone number from your project. <br> _Example prompt_: "Release the phone number +12025551234."                                                                                         | numbers |
+| **get-rented-number-configuration** | Get one rented number and its current or scheduled service configuration. <br> _Example prompt_: "Show the configuration and provisioning status for +12025551234."                                  | numbers, configuration |
 
 ### Configuration Tools
 

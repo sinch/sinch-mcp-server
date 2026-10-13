@@ -21,6 +21,10 @@ export const toolsConfig = defineToolsConfig({
     name: 'release-rented-number',
     tags: ['all', 'numbers', 'release-rented-number'],
   },
+  getRentedNumberConfiguration: {
+    name: 'get-rented-number-configuration',
+    tags: ['all', 'numbers', 'configuration', 'get-rented-number-configuration'],
+  },
   searchForAvailableNumbers: {
     name: 'search-for-available-numbers',
     tags: ['all', 'numbers', 'search-for-available-numbers'],
