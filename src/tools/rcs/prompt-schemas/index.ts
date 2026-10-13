@@ -80,41 +80,35 @@ const RcsBrand = z
   })
   .describe('Brand information shown to end users.');
 
-// Only optInDescriptionMetadata has a documented shape (`ignore`); the other
-// per-answer metadata objects are accepted as loose records.
+// Shared by every per-answer *Metadata field (RcsSenderDetailsQuestionnaireAnswerMetadataInputDto).
+const RcsAnswerMetadata = z
+  .object({
+    ignore: z.string().min(1).optional().describe('String to ignore on launch, e.g. a custom delimiter.'),
+  })
+  .optional();
+
 const RcsQuestionnaireGeneralAnswers = z
   .object({
     optInDescription: z.string().nullable().optional().describe('How opt-in is obtained. Pass null to delete.'),
-    optInDescriptionMetadata: z
-      .object({
-        ignore: z.string().nullable().optional().describe('String to ignore on launch, e.g. a custom delimiter.'),
-      })
-      .optional()
-      .describe('Metadata for optInDescription.'),
+    optInDescriptionMetadata: RcsAnswerMetadata.describe('Metadata for optInDescription.'),
     triggerDescription: z
       .string()
       .nullable()
       .optional()
       .describe('Actions that trigger messages. Pass null to delete.'),
-    triggerDescriptionMetadata: z
-      .record(z.string(), z.unknown())
-      .optional()
-      .describe('Metadata for triggerDescription.'),
+    triggerDescriptionMetadata: RcsAnswerMetadata.describe('Metadata for triggerDescription.'),
     interactionsDescription: z
       .string()
       .nullable()
       .optional()
       .describe('Description of user interactions. Pass null to delete.'),
-    interactionsDescriptionMetadata: z
-      .record(z.string(), z.unknown())
-      .optional()
-      .describe('Metadata for interactionsDescription.'),
+    interactionsDescriptionMetadata: RcsAnswerMetadata.describe('Metadata for interactionsDescription.'),
     optOutDescription: z
       .string()
       .nullable()
       .optional()
       .describe('Message sent when a user opts out. Pass null to delete.'),
-    optOutDescriptionMetadata: z.record(z.string(), z.unknown()).optional().describe('Metadata for optOutDescription.'),
+    optOutDescriptionMetadata: RcsAnswerMetadata.describe('Metadata for optOutDescription.'),
     videoUris: z.array(z.string()).nullable().optional().describe('Public video URIs for review. Pass null to delete.'),
     screenshotUris: z
       .array(z.string())
@@ -157,10 +151,7 @@ const RcsQuestionnaireGbAnswers = z
       .describe('Registered legal name of the company. Pass null to delete.'),
     companyRegistrationNumber: z.string().nullable().optional().describe('Company registration number.'),
     fullCompanyAddress: z.string().nullable().optional().describe('Full company address. Pass null to delete.'),
-    fullCompanyAddressMetadata: z
-      .record(z.string(), z.unknown())
-      .optional()
-      .describe('Metadata for fullCompanyAddress.'),
+    fullCompanyAddressMetadata: RcsAnswerMetadata.describe('Metadata for fullCompanyAddress.'),
     messagesVolume: z.string().nullable().optional().describe('Estimated messages volume. Pass null to delete.'),
     messagesFrequency: z.string().nullable().optional().describe('Estimated messages frequency. Pass null to delete.'),
     campaignLength: z.string().nullable().optional().describe('Length of campaign. Pass null to delete.'),
@@ -170,10 +161,7 @@ const RcsQuestionnaireGbAnswers = z
 const RcsQuestionnaireFrAnswers = z
   .object({
     fullCompanyAddress: z.string().nullable().optional().describe('Full company address.'),
-    fullCompanyAddressMetadata: z
-      .record(z.string(), z.unknown())
-      .optional()
-      .describe('Metadata for fullCompanyAddress.'),
+    fullCompanyAddressMetadata: RcsAnswerMetadata.describe('Metadata for fullCompanyAddress.'),
     siren: z.string().nullable().optional().describe('Company SIREN number (French business directory ID).'),
   })
   .describe('Answers to the France-specific launch questionnaire.');
@@ -251,10 +239,7 @@ const RcsQuestionnaireUsAnswers = z
     addressCountry: RcsCountryCode.optional().describe('Country (e.g. GB for the United Kingdom).'),
     addressPostalCode: z.string().min(1).max(10).nullable().optional().describe('Postal code. 1-10 characters.'),
     fullCompanyAddress: z.string().nullable().optional(),
-    fullCompanyAddressMetadata: z
-      .record(z.string(), z.unknown())
-      .optional()
-      .describe('Metadata for fullCompanyAddress.'),
+    fullCompanyAddressMetadata: RcsAnswerMetadata.describe('Metadata for fullCompanyAddress.'),
     websiteUrl: z
       .string()
       .max(100)
@@ -341,7 +326,7 @@ export const RcsSenderDetails = z
         'Phone numbers for testing. An agent can send 20 tester requests each day with a total maximum of 200 tester requests. Pass null to delete all.',
       ),
     countries: z
-      .array(RcsSenderCountry)
+      .array(z.union([RcsSenderCountry, z.string()]))
       .nullable()
       .optional()
       .describe(
