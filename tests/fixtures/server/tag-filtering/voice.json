@@ -5,7 +5,15 @@
     "conference-callout",
     "manage-conference-participant",
     "tts-callout",
-    "get-call-information"
+    "get-call-information",
+    "list-calls",
+    "get-session-information",
+    "create-voice-service",
+    "set-voice-service-webhook",
+    "remove-voice-service-webhook",
+    "assign-number-to-voice-service",
+    "tts-batch-callout",
+    "get-voice-batch-summary"
   ],
   "expectedPrompts": []
 }
