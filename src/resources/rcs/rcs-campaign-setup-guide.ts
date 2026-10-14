@@ -94,13 +94,25 @@ Use **list-rcs-senders** to find a sender by region or state, then act based on 
 - \`details.brand.privacyPolicyUrl\` defined.
 - \`details.brand.termsOfServiceUrl\` defined.
 
+The questionnaire fields below are optional on create and update, and are marked as required for launch in the API docs:
+- **verification**: \`name\`, \`email\`, \`website\`. \`phone\` (E.164) is also required for launch when the US questionnaire v2 is used. \`title\` is documented but not marked as required.
+- **gb**: \`brandIndustry\`, \`companyLegalName\`, \`messagesVolume\`. The other GB fields (\`companyRegistrationNumber\`, \`fullCompanyAddress\`, \`messagesFrequency\`) are documented but not marked as required.
+- **us**: ownershipType, legalForm, companyLegalName, companyPhoneNumber, brandName, brandIndustry, taxIdCountry, taxId, addressLine, addressCity, addressCountry, addressPostalCode, websiteUrl, contactFirstName, contactSurname, sampleMessages, messagesVolume, embeddedLink, embeddedPhone, ageGatedContent, directLending, optInConfirmationMessage, helpMessage, callToActionMessage.
+- **fr**: the docs mark no field as required for launch.
+
+US rules from the docs that depend on other answers:
+- \`legalForm\`: only \`CORPORATION\` is allowed when \`ownershipType\` is PUBLIC; PRIVATE allows \`CORPORATION\`, \`LIMITED_LIABILITY_COMPANY\`, \`PARTNERSHIP\` and \`S_CORPORATION\`.
+- \`taxId\`: must match \`XX-XXXXXXX\` when \`taxIdCountry\` is US; for other countries any string up to 25 characters.
+- \`addressState\`: validated when \`taxIdCountry\` is US, ignored otherwise.
+- \`stockExchange\` and \`stockSymbol\`: validated when \`ownershipType\` is PUBLIC.
+
 If \`videoUris\` was not provided in the questionnaire, Sinch Service Implementation will add a video before the review continues — this is not a failure.
 
 ## Questionnaire requirements
 
 Required sections for all senders:
 - **general**: optInDescription, optOutDescription, triggerDescription, interactionsDescription, screenshotUris, videoUris.
-- **verification**: contact name, email, title, website.
+- **verification**: contact name, email, website (and phone for the US questionnaire v2, see Launch requirements).
 
 Country-specific sections:
 - **UK targets** (\`gb\`): brandIndustry, companyLegalName, companyRegistrationNumber, fullCompanyAddress, messagesVolume, messagesFrequency.
