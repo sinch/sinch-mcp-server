@@ -31,8 +31,8 @@ const RcsBrandPhone = z.object({
 });
 
 const RcsBrandWebsite = z.object({
-  label: z.string().describe('Human-readable label for this website.'),
-  url: z.string().describe('Website URL.'),
+  label: z.string().max(25).describe('Human-readable label for this website. Max 25 characters.'),
+  url: z.string().max(255).describe('Website URL. Max 255 characters.'),
 });
 
 const hasUniqueValues = <T>(items: T[], key: (item: T) => string) => new Set(items.map(key)).size === items.length;
@@ -83,35 +83,49 @@ const RcsBrand = z
 // Shared by every per-answer *Metadata field (RcsSenderDetailsQuestionnaireAnswerMetadataInputDto).
 const RcsAnswerMetadata = z
   .object({
-    ignore: z.string().min(1).optional().describe('String to ignore on launch, e.g. a custom delimiter.'),
+    ignore: z
+      .string()
+      .min(1)
+      .nullable()
+      .optional()
+      .describe('String to ignore on launch, e.g. a custom delimiter. Pass null to delete.'),
   })
   .optional();
 
 const RcsQuestionnaireGeneralAnswers = z
   .object({
-    optInDescription: z.string().nullable().optional().describe('How opt-in is obtained. Pass null to delete.'),
+    optInDescription: z.string().min(1).nullable().optional().describe('How opt-in is obtained. Pass null to delete.'),
     optInDescriptionMetadata: RcsAnswerMetadata.describe('Metadata for optInDescription.'),
     triggerDescription: z
       .string()
+      .min(1)
       .nullable()
       .optional()
       .describe('Actions that trigger messages. Pass null to delete.'),
     triggerDescriptionMetadata: RcsAnswerMetadata.describe('Metadata for triggerDescription.'),
     interactionsDescription: z
       .string()
+      .min(1)
       .nullable()
       .optional()
       .describe('Description of user interactions. Pass null to delete.'),
     interactionsDescriptionMetadata: RcsAnswerMetadata.describe('Metadata for interactionsDescription.'),
     optOutDescription: z
       .string()
+      .min(1)
       .nullable()
       .optional()
       .describe('Message sent when a user opts out. Pass null to delete.'),
     optOutDescriptionMetadata: RcsAnswerMetadata.describe('Metadata for optOutDescription.'),
-    videoUris: z.array(z.string()).nullable().optional().describe('Public video URIs for review. Pass null to delete.'),
+    videoUris: z
+      .array(z.string())
+      .min(1)
+      .nullable()
+      .optional()
+      .describe('Public video URIs for review. Pass null to delete.'),
     screenshotUris: z
       .array(z.string())
+      .min(1)
       .nullable()
       .optional()
       .describe('Public screenshot URIs for review. Pass null to delete.'),
@@ -120,21 +134,29 @@ const RcsQuestionnaireGeneralAnswers = z
 
 const RcsQuestionnaireVerificationAnswers = z
   .object({
-    name: z.string().nullable().optional().describe('Name of verification contact. Pass null to delete.'),
-    email: z.string().nullable().optional().describe('Email of verification contact. Pass null to delete.'),
-    title: z.string().nullable().optional().describe('Title of verification contact. Pass null to delete.'),
+    name: z.string().min(1).nullable().optional().describe('Name of verification contact. Pass null to delete.'),
+    email: z.string().max(100).nullable().optional().describe('Email of verification contact. Pass null to delete.'),
+    title: z
+      .string()
+      .min(1)
+      .max(100)
+      .nullable()
+      .optional()
+      .describe('Title of verification contact. Pass null to delete.'),
     website: z.string().nullable().optional().describe('Website of verification contact. Pass null to delete.'),
     partner: z
       .object({
-        companyName: z.string().nullable().optional().describe('Company name of the brand partner.'),
-        contactName: z.string().nullable().optional().describe('Name of the brand partner contact.'),
-        contactEmailAddress: z.string().nullable().optional().describe('Email of the brand partner contact.'),
+        companyName: z.string().min(1).max(100).nullable().optional().describe('Company name of the brand partner.'),
+        contactName: z.string().min(1).max(100).nullable().optional().describe('Name of the brand partner contact.'),
+        contactEmailAddress: z.string().max(100).nullable().optional().describe('Email of the brand partner contact.'),
       })
       .nullable()
       .optional()
       .describe('Brand partner contact details. Reseller (ASP) accounts only; ignored otherwise. Pass null to delete.'),
     phone: z
       .string()
+      .min(1)
+      .max(17)
       .nullable()
       .optional()
       .describe('Phone of verification contact in E.164 format. Required for US launch. Pass null to delete.'),
@@ -143,26 +165,42 @@ const RcsQuestionnaireVerificationAnswers = z
 
 const RcsQuestionnaireGbAnswers = z
   .object({
-    brandIndustry: z.string().nullable().optional().describe('Sector or industry of business. Pass null to delete.'),
+    brandIndustry: z
+      .string()
+      .min(1)
+      .nullable()
+      .optional()
+      .describe('Sector or industry of business. Pass null to delete.'),
     companyLegalName: z
       .string()
+      .min(1)
       .nullable()
       .optional()
       .describe('Registered legal name of the company. Pass null to delete.'),
-    companyRegistrationNumber: z.string().nullable().optional().describe('Company registration number.'),
-    fullCompanyAddress: z.string().nullable().optional().describe('Full company address. Pass null to delete.'),
+    companyRegistrationNumber: z.string().min(1).nullable().optional().describe('Company registration number.'),
+    fullCompanyAddress: z.string().min(1).nullable().optional().describe('Full company address. Pass null to delete.'),
     fullCompanyAddressMetadata: RcsAnswerMetadata.describe('Metadata for fullCompanyAddress.'),
-    messagesVolume: z.string().nullable().optional().describe('Estimated messages volume. Pass null to delete.'),
-    messagesFrequency: z.string().nullable().optional().describe('Estimated messages frequency. Pass null to delete.'),
-    campaignLength: z.string().nullable().optional().describe('Length of campaign. Pass null to delete.'),
+    messagesVolume: z.string().min(1).nullable().optional().describe('Estimated messages volume. Pass null to delete.'),
+    messagesFrequency: z
+      .string()
+      .min(1)
+      .nullable()
+      .optional()
+      .describe('Estimated messages frequency. Pass null to delete.'),
+    campaignLength: z.string().min(1).nullable().optional().describe('Deprecated, do not send. Length of campaign.'),
   })
   .describe('Answers to the UK-specific launch questionnaire.');
 
 const RcsQuestionnaireFrAnswers = z
   .object({
-    fullCompanyAddress: z.string().nullable().optional().describe('Full company address.'),
+    fullCompanyAddress: z.string().min(1).nullable().optional().describe('Full company address.'),
     fullCompanyAddressMetadata: RcsAnswerMetadata.describe('Metadata for fullCompanyAddress.'),
-    siren: z.string().nullable().optional().describe('Company SIREN number (French business directory ID).'),
+    siren: z
+      .string()
+      .length(9)
+      .nullable()
+      .optional()
+      .describe('Company SIREN number (French business directory ID), 9 digits.'),
   })
   .describe('Answers to the France-specific launch questionnaire.');
 
@@ -213,7 +251,6 @@ const RcsQuestionnaireUsAnswers = z
       .nullable()
       .optional()
       .describe('Tax ID, 1-25 characters. For taxIdCountry US the format is XX-XXXXXXX.'),
-    ein: z.string().nullable().optional().describe('US Employer Identification Number (format XX-XXXXXXX).'),
     stockExchange: z
       .string()
       .min(1)
@@ -238,8 +275,6 @@ const RcsQuestionnaireUsAnswers = z
       .describe('Two-letter US state abbreviation, e.g. "CA". Only when taxIdCountry is US; omit otherwise.'),
     addressCountry: RcsCountryCode.optional().describe('Country (e.g. GB for the United Kingdom).'),
     addressPostalCode: z.string().min(1).max(10).nullable().optional().describe('Postal code. 1-10 characters.'),
-    fullCompanyAddress: z.string().nullable().optional(),
-    fullCompanyAddressMetadata: RcsAnswerMetadata.describe('Metadata for fullCompanyAddress.'),
     websiteUrl: z
       .string()
       .max(100)
@@ -261,12 +296,14 @@ const RcsQuestionnaireUsAnswers = z
       .optional()
       .describe('Surname of the responsible contact person. 1-100 characters.'),
     sampleMessages: z
-      .array(z.string())
+      .array(z.string().min(20).max(1024))
       .min(1)
       .max(5)
       .nullable()
       .optional()
-      .describe('Sample messages for each use case or message type sent by the brand. 1-5 messages.'),
+      .describe(
+        'Sample messages for each use case or message type sent by the brand. 1-5 messages, each 20-1024 characters.',
+      ),
     messagesVolume: z.number().nullable().optional().describe('Estimated messages volume.'),
     embeddedLink: z.boolean().nullable().optional().describe('Whether URL links are embedded in messages.'),
     embeddedPhone: z.boolean().nullable().optional().describe('Whether phone numbers are embedded in messages.'),
@@ -293,7 +330,6 @@ const RcsQuestionnaireUsAnswers = z
       .nullable()
       .optional()
       .describe('Call to action message of the campaign. 40-4096 characters.'),
-    smsCampaign: z.string().nullable().optional().describe('US SMS campaign used as fallback.'),
   })
   .describe('Answers to the US-specific launch questionnaire.');
 
@@ -327,6 +363,8 @@ export const RcsSenderDetails = z
       ),
     countries: z
       .array(z.union([RcsSenderCountry, z.string()]))
+      .min(1)
+      .refine((items) => new Set(items).size === items.length, { message: 'Countries must be unique.' })
       .nullable()
       .optional()
       .describe(
