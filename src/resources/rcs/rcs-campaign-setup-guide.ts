@@ -95,7 +95,7 @@ Use **list-rcs-senders** to find a sender by region or state, then act based on 
 - \`details.brand.termsOfServiceUrl\` defined.
 
 The questionnaire fields below are optional on create and update, and are marked as required for launch in the API docs:
-- **verification**: \`name\`, \`email\`, \`website\`. \`phone\` (E.164) is also required for launch when the US questionnaire v2 is used. \`title\` is documented but not marked as required.
+- **verification**: \`name\`, \`email\`, \`website\`. \`phone\` (E.164) is also required for launch for a US sender. \`title\` is documented but not marked as required.
 - **gb**: \`brandIndustry\`, \`companyLegalName\`, \`messagesVolume\`. The other GB fields (\`companyRegistrationNumber\`, \`fullCompanyAddress\`, \`messagesFrequency\`) are documented but not marked as required.
 - **us**: ownershipType, legalForm, companyLegalName, companyPhoneNumber, brandName, brandIndustry, taxIdCountry, taxId, addressLine, addressCity, addressCountry, addressPostalCode, websiteUrl, contactFirstName, contactSurname, sampleMessages, messagesVolume, embeddedLink, embeddedPhone, ageGatedContent, directLending, optInConfirmationMessage, helpMessage, callToActionMessage.
 - **fr**: the docs mark no field as required for launch.
@@ -112,7 +112,7 @@ If \`videoUris\` was not provided in the questionnaire, Sinch Service Implementa
 
 Required sections for all senders:
 - **general**: optInDescription, optOutDescription, triggerDescription, interactionsDescription, screenshotUris, videoUris.
-- **verification**: contact name, email, website (and phone for the US questionnaire v2, see Launch requirements).
+- **verification**: contact name, email, website (and phone for a US sender, see Launch requirements).
 
 Country-specific sections:
 - **UK targets** (\`gb\`): brandIndustry, companyLegalName, companyRegistrationNumber, fullCompanyAddress, messagesVolume, messagesFrequency.
