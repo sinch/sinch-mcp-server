@@ -1,9 +1,6 @@
 {
   "tag": "voice",
   "expectedTools": [
-    "close-conference",
-    "conference-callout",
-    "manage-conference-participant",
     "tts-callout",
     "get-call-information",
     "list-calls",

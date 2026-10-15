@@ -492,7 +492,7 @@ const emailCases: ToolTestCase[] = [
   },
 ];
 
-// Voice: text-to-speech and conference control.
+// Voice.
 const voiceCases: ToolTestCase[] = [
   {
     prompt: "Call the phone number +33612345678 and say: 'Your appointment is tomorrow at 10 AM.'",
@@ -500,29 +500,6 @@ const voiceCases: ToolTestCase[] = [
     expectedArguments: {
       phoneNumber: '+33612345678',
       message: 'Your appointment is tomorrow at 10 AM.',
-    },
-  },
-  {
-    prompt: 'Call John (+33612345678) and Lisa (+34987654321) and connect them to a conference room.',
-    expectedToolName: 'conference-callout',
-    expectedArguments: {
-      phoneNumbers: ['+33612345678', '+34987654321'],
-    },
-  },
-  {
-    prompt: 'Mute the caller xyz789 in the conference abc123.',
-    expectedToolName: 'manage-conference-participant',
-    expectedArguments: {
-      conferenceId: 'abc123',
-      participantId: 'xyz789',
-      action: 'mute',
-    },
-  },
-  {
-    prompt: 'End the current conference call abc123.',
-    expectedToolName: 'close-conference',
-    expectedArguments: {
-      conferenceId: 'abc123',
     },
   },
   {
