@@ -77,8 +77,32 @@ chart-version-bumped:
 
       echo "OK: chart version bumped ${OLD} -> ${NEW}"
   rules:
+    - if: $CI_PIPELINE_SOURCE == "schedule"
+      when: never
     - if: $CI_PIPELINE_SOURCE == "merge_request_event"
     - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+
+# Daily Slack alert once MANIFESTS_REPO_TOKEN expires in 7 days or less.
+# Runs only from the pipeline schedule that sets CHECK_MANIFESTS_TOKEN=true.
+check-manifests-token:
+  stage: validate
+  image: alpine:3.20
+  before_script:
+    - apk add --no-cache curl jq coreutils
+  script:
+    - |
+      set -e
+      TOKEN_INFO=$(curl -fsS -H "PRIVATE-TOKEN: ${MANIFESTS_REPO_TOKEN}" https://gitlab.com/api/v4/personal_access_tokens/self)
+      EXPIRES_AT=$(echo "${TOKEN_INFO}" | jq -r '.expires_at')
+      DAYS_LEFT=$(( ($(date -d "${EXPIRES_AT}" +%s) - $(date +%s)) / 86400 ))
+      echo "MANIFESTS_REPO_TOKEN expires on ${EXPIRES_AT} (${DAYS_LEFT} days left)."
+      if [ "${DAYS_LEFT}" -le 7 ]; then
+        curl -fsS -X POST -H 'Content-Type: application/json' \
+          -d "{\"text\": \":warning: MANIFESTS_REPO_TOKEN expires in ${DAYS_LEFT} days (${EXPIRES_AT}). Please rotate it.\"}" \
+          "${SLACK_WEBHOOK_URL}"
+      fi
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "schedule" && $CHECK_MANIFESTS_TOKEN == "true"
 
 # Produces coverage/lcov.info for the security-scan-sonar stage, which picks it up
 # as an artifact from this earlier stage (see sonar.javascript.lcov.reportPaths).
@@ -93,6 +117,10 @@ unit-tests-coverage:
     expire_in: 1 week
     paths:
       - coverage/lcov.info
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "schedule"
+      when: never
+    - when: on_success
 
 publish-image:
   stage: publish
@@ -116,6 +144,8 @@ publish-image:
     reports:
       dotenv: deploy.env
   rules:
+    - if: $CI_PIPELINE_SOURCE == "schedule"
+      when: never
     - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
     - if: $CI_COMMIT_TAG
 
@@ -162,6 +192,8 @@ publish-chart:
 
       echo "Published ${CHART_NAME}-${CHART_VERSION} to ${NEXUS_HELM_REPO}"
   rules:
+    - if: $CI_PIPELINE_SOURCE == "schedule"
+      when: never
     - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
     - if: $CI_COMMIT_TAG
 
@@ -248,6 +280,8 @@ update-manifests:
       # Non-force push on purpose: if main has moved, fail rather than overwrite.
       git push origin HEAD:main
   rules:
+    - if: $CI_PIPELINE_SOURCE == "schedule"
+      when: never
     - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
 
 # Manual promotion of the version already deployed to staging (via update-manifests)
@@ -329,6 +363,8 @@ promote-prod:
       # Non-force push on purpose: if main has moved, fail rather than overwrite.
       git push origin HEAD:main
   rules:
+    - if: $CI_PIPELINE_SOURCE == "schedule"
+      when: never
     - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
       when: manual
       allow_failure: true
