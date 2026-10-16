@@ -1,4 +1,5 @@
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
+import { registerTracedTool } from '../../telemetry/register-traced-tool';
 import { z } from 'zod';
 import { isPromptResponse, matchesAnyTag } from '../../utils';
 import { getConversationService, setConversationRegion } from './utils/conversation-service-helper';
@@ -25,7 +26,8 @@ export const registerSetWhatsAppChannelOnApp = (server: McpServer, tags: Tags[])
     return;
   }
 
-  server.registerTool(
+  registerTracedTool(
+    server,
     TOOL_NAME,
     {
       description:

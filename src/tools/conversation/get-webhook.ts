@@ -1,4 +1,5 @@
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
+import { registerTracedTool } from '../../telemetry/register-traced-tool';
 import { getConversationService, setConversationRegion } from './utils/conversation-service-helper';
 import { formatWebhook } from './utils/format-webhook-response';
 import { appendRegionHint } from './utils/webhook-tools-helper';
@@ -15,7 +16,8 @@ export const registerGetWebhook = (server: McpServer, tags: Tags[]) => {
     return;
   }
 
-  server.registerTool(
+  registerTracedTool(
+    server,
     TOOL_NAME,
     {
       description:

@@ -1,4 +1,5 @@
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
+import { registerTracedTool } from '../../telemetry/register-traced-tool';
 import { z } from 'zod';
 import { IPromptResponse, PromptResponse, Tags } from '../../types';
 import { matchesAnyTag } from '../../utils';
@@ -21,7 +22,8 @@ export const registerGetRcsSender = (server: McpServer, tags: Tags[]) => {
     return;
   }
 
-  server.registerTool(
+  registerTracedTool(
+    server,
     TOOL_NAME,
     {
       description:
