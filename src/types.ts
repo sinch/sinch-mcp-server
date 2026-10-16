@@ -8,10 +8,11 @@ interface TextResponseContent {
 export interface IPromptResponse {
   [x: string]: unknown;
   content: TextResponseContent[];
+  isError?: boolean;
 }
 
 export class PromptResponse {
-  constructor(content: string) {
+  constructor(content: string, options?: { isError?: boolean }) {
     this.promptResponse = {
       role: 'assistant',
       content: [
@@ -20,6 +21,7 @@ export class PromptResponse {
           text: content,
         },
       ],
+      ...(options?.isError && { isError: true }),
     };
   }
 

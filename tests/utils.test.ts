@@ -1,3 +1,4 @@
+import { PromptResponse } from '../src/types';
 import { extractHeaderValue, matchesAnyTag } from '../src/utils';
 
 describe('extractHeaderValue', () => {
@@ -54,5 +55,27 @@ describe('hasMatchingTag', () => {
     const tags = ['apple 🍎', 'banana 🍌', 'orange 🍊'];
     const filteringTags = ['banana 🍌', 'orange 🍊', 'grape 🍇'];
     expect(matchesAnyTag(tags, filteringTags)).toBeTruthy();
+  });
+});
+
+describe('PromptResponse', () => {
+  test('omits isError by default', () => {
+    expect(new PromptResponse('ok').promptResponse).toEqual({
+      role: 'assistant',
+      content: [{ type: 'text', text: 'ok' }],
+    });
+    expect(new PromptResponse('ok').promptResponse).not.toHaveProperty('isError');
+  });
+
+  test('omits isError when the option is false', () => {
+    expect(new PromptResponse('ok', { isError: false }).promptResponse).not.toHaveProperty('isError');
+  });
+
+  test('sets isError when requested', () => {
+    expect(new PromptResponse('boom', { isError: true }).promptResponse).toEqual({
+      role: 'assistant',
+      content: [{ type: 'text', text: 'boom' }],
+      isError: true,
+    });
   });
 });

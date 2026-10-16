@@ -200,6 +200,7 @@ describe('getConversationAppId', () => {
           text: 'The "CONVERSATION_APP_ID" is not set in the environment variables and the "appId" property is not provided.',
         },
       ],
+      isError: true,
     });
   });
 });

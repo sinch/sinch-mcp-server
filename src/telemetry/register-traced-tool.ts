@@ -44,6 +44,27 @@ const resolveSpanProjectId = (): string | undefined => {
   return env.PROJECT_ID;
 };
 
+const isErrorResult = (result: unknown): boolean =>
+  typeof result === 'object' && result !== null && (result as { isError?: unknown }).isError === true;
+
+// Tools report failures as `{"success":false,...}` JSON text instead of throwing.
+const reportsFailure = (result: unknown): boolean => {
+  if (typeof result !== 'object' || result === null) {
+    return false;
+  }
+  const content = (result as { content?: unknown }).content;
+  const text = Array.isArray(content) ? (content[0] as { text?: unknown } | undefined)?.text : undefined;
+  if (typeof text !== 'string' || !text.includes('"success":false')) {
+    return false;
+  }
+  try {
+    const parsed: unknown = JSON.parse(text);
+    return typeof parsed === 'object' && parsed !== null && (parsed as { success?: unknown }).success === false;
+  } catch {
+    return false;
+  }
+};
+
 const runWithTracing = async <T>(toolName: string, handler: () => T | Promise<T>): Promise<T> => {
   const metrics = getToolMetrics();
   const start = performance.now();
@@ -57,8 +78,28 @@ const runWithTracing = async <T>(toolName: string, handler: () => T | Promise<T>
       span.setAttribute(ATTR_PROJECT_ID, projectId);
     }
 
+    const recordError = (errorType: string) => {
+      span.setStatus({ code: SpanStatusCode.ERROR });
+      metrics.toolCallsTotal.add(1, {
+        'tool.name': toolName,
+        status: 'error',
+      });
+      metrics.toolErrorsTotal.add(1, {
+        'tool.name': toolName,
+        'error.type': errorType,
+      });
+    };
+
     try {
       const result = await handler();
+      if (isErrorResult(result)) {
+        recordError('ToolResultError');
+        return result;
+      }
+      if (reportsFailure(result)) {
+        recordError('ToolResultError');
+        return { ...result, isError: true };
+      }
       span.setStatus({ code: SpanStatusCode.OK });
       metrics.toolCallsTotal.add(1, {
         'tool.name': toolName,
@@ -67,15 +108,7 @@ const runWithTracing = async <T>(toolName: string, handler: () => T | Promise<T>
       return result;
     } catch (error) {
       span.recordException(error instanceof Error ? error : new Error(String(error)));
-      span.setStatus({ code: SpanStatusCode.ERROR });
-      metrics.toolCallsTotal.add(1, {
-        'tool.name': toolName,
-        status: 'error',
-      });
-      metrics.toolErrorsTotal.add(1, {
-        'tool.name': toolName,
-        'error.type': error instanceof Error ? error.name : 'Error',
-      });
+      recordError(error instanceof Error ? error.name : 'Error');
       throw error;
     } finally {
       metrics.toolDurationMs.record(performance.now() - start, {

@@ -29,13 +29,13 @@ const resolveAgentInstallationCredentials = (): SinchOAuthCredentials | PromptRe
   const orderId = getRequestAgentId();
   const projectId = getRequestUserClaims()?.projectId;
   if (!orderId || !projectId) {
-    return new PromptResponse(MISSING_AGENT_INSTALLATION_MESSAGE);
+    return new PromptResponse(MISSING_AGENT_INSTALLATION_MESSAGE, { isError: true });
   }
 
   const credentials = getRequestAgentSinchOAuthCredentials();
   if (!credentials) {
     logger.warn({ agent_id: orderId }, 'No Sinch API credentials configured for this agent installation');
-    return new PromptResponse(MISSING_AGENT_CREDENTIALS_MESSAGE);
+    return new PromptResponse(MISSING_AGENT_CREDENTIALS_MESSAGE, { isError: true });
   }
 
   return credentials;
@@ -50,7 +50,7 @@ export const resolveSinchOAuthCredentials = (): SinchOAuthCredentials | PromptRe
   if (getHttpCredentialSource() === 'request-header') {
     const fromRequest = getRequestSinchOAuthCredentials();
     if (!fromRequest) {
-      return new PromptResponse(MISSING_AUTHORIZATION_CREDENTIALS_MESSAGE);
+      return new PromptResponse(MISSING_AUTHORIZATION_CREDENTIALS_MESSAGE, { isError: true });
     }
     return fromRequest;
   }
@@ -61,5 +61,5 @@ export const resolveSinchOAuthCredentials = (): SinchOAuthCredentials | PromptRe
     return fromEnv;
   }
 
-  return new PromptResponse('Missing env vars: PROJECT_ID, KEY_ID, KEY_SECRET.');
+  return new PromptResponse('Missing env vars: PROJECT_ID, KEY_ID, KEY_SECRET.', { isError: true });
 };

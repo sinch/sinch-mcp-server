@@ -132,6 +132,94 @@ test('registerTracedTool records error metrics when handler throws', async () =>
   });
 });
 
+test('registerTracedTool records an isError result as an error and returns it unchanged', async () => {
+  const server = new McpServer({ name: 'test', version: '1.0.0' });
+  const errorResult = { content: [{ type: 'text', text: '{"success":false}' }], isError: true };
+  const handler = jest.fn().mockResolvedValue(errorResult);
+
+  registerTracedTool(server, 'error-result-tool', { description: 'Returns an error result' }, handler);
+
+  const registeredTool = (
+    server as unknown as {
+      _registeredTools: Record<string, { handler: (...args: unknown[]) => unknown }>;
+    }
+  )._registeredTools['error-result-tool'];
+  const result = await registeredTool.handler({} as never, {} as never);
+
+  expect(result).toBe(errorResult);
+  expect(otelMocks().mockSetStatus).toHaveBeenCalledWith({ code: SpanStatusCode.ERROR });
+  expect(otelMocks().mockSetStatus).not.toHaveBeenCalledWith({ code: SpanStatusCode.OK });
+  expect(otelMocks().mockRecordException).not.toHaveBeenCalled();
+  expect(mockToolCallsAdd).toHaveBeenCalledTimes(1);
+  expect(mockToolCallsAdd).toHaveBeenCalledWith(1, {
+    'tool.name': 'error-result-tool',
+    status: 'error',
+  });
+  expect(mockToolErrorsAdd).toHaveBeenCalledWith(1, {
+    'tool.name': 'error-result-tool',
+    'error.type': 'ToolResultError',
+  });
+  expect(mockToolDurationRecord).toHaveBeenCalled();
+  expect(otelMocks().mockEnd).toHaveBeenCalled();
+});
+
+test('registerTracedTool treats isError: false as a success', async () => {
+  const server = new McpServer({ name: 'test', version: '1.0.0' });
+  const handler = jest.fn().mockResolvedValue({ content: [{ type: 'text', text: 'ok' }], isError: false });
+
+  registerTracedTool(server, 'ok-tool', { description: 'Succeeds' }, handler);
+
+  const registeredTool = (
+    server as unknown as {
+      _registeredTools: Record<string, { handler: (...args: unknown[]) => unknown }>;
+    }
+  )._registeredTools['ok-tool'];
+  await registeredTool.handler({} as never, {} as never);
+
+  expect(otelMocks().mockSetStatus).toHaveBeenCalledWith({ code: SpanStatusCode.OK });
+  expect(mockToolCallsAdd).toHaveBeenCalledWith(1, { 'tool.name': 'ok-tool', status: 'success' });
+  expect(mockToolErrorsAdd).not.toHaveBeenCalled();
+});
+
+const callTool = async (name: string, toolResult: unknown) => {
+  const server = new McpServer({ name: 'test', version: '1.0.0' });
+  registerTracedTool(server, name, { description: name }, jest.fn().mockResolvedValue(toolResult));
+  const registeredTool = (
+    server as unknown as {
+      _registeredTools: Record<string, { handler: (...args: unknown[]) => unknown }>;
+    }
+  )._registeredTools[name];
+  return registeredTool.handler({} as never, {} as never);
+};
+
+test('registerTracedTool flags a success:false JSON result with isError and records an error', async () => {
+  const text = JSON.stringify({ success: false, error: 'boom' });
+
+  const result = await callTool('json-failure-tool', { role: 'assistant', content: [{ type: 'text', text }] });
+
+  expect(result).toEqual({ role: 'assistant', content: [{ type: 'text', text }], isError: true });
+  expect(otelMocks().mockSetStatus).toHaveBeenCalledWith({ code: SpanStatusCode.ERROR });
+  expect(mockToolCallsAdd).toHaveBeenCalledWith(1, { 'tool.name': 'json-failure-tool', status: 'error' });
+  expect(mockToolErrorsAdd).toHaveBeenCalledWith(1, {
+    'tool.name': 'json-failure-tool',
+    'error.type': 'ToolResultError',
+  });
+});
+
+test.each([
+  ['success:true JSON', JSON.stringify({ success: true, data: [] })],
+  ['nested success:false', JSON.stringify({ success: true, data: { success: false } })],
+  ['plain text', 'Message sent'],
+])('registerTracedTool leaves a %s result as a success', async (_label, text) => {
+  const toolResult = { content: [{ type: 'text', text }] };
+
+  const result = await callTool('ok-json-tool', toolResult);
+
+  expect(result).toBe(toolResult);
+  expect(otelMocks().mockSetStatus).toHaveBeenCalledWith({ code: SpanStatusCode.OK });
+  expect(mockToolErrorsAdd).not.toHaveBeenCalled();
+});
+
 test('isTelemetryEnabled returns false without OTEL_EXPORTER_OTLP_ENDPOINT', () => {
   mockEnv.OTEL_EXPORTER_OTLP_ENDPOINT = undefined;
   // eslint-disable-next-line @typescript-eslint/no-require-imports
