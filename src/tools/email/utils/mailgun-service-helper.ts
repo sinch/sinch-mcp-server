@@ -29,7 +29,7 @@ export const getMailgunCredentials = (domain: string | undefined): MailgunCreden
       errorMessage +=
         '"MAILGUN_API_KEY" is not set in the environment variables. The property is required to use the emails related tools.';
     }
-    return new PromptResponse(errorMessage);
+    return new PromptResponse(errorMessage, { isError: true });
   }
 
   return credentials;

@@ -16,13 +16,15 @@ export const getVerificationService = (toolName: string): VerificationService | 
   const applicationSecret = env.APPLICATION_SECRET;
 
   if (!applicationKey && !applicationSecret) {
-    return new PromptResponse('Missing environment variables: "APPLICATION_KEY" and "APPLICATION_SECRET".');
+    return new PromptResponse('Missing environment variables: "APPLICATION_KEY" and "APPLICATION_SECRET".', {
+      isError: true,
+    });
   }
   if (!applicationKey) {
-    return new PromptResponse('Missing environment variable: "APPLICATION_KEY".');
+    return new PromptResponse('Missing environment variable: "APPLICATION_KEY".', { isError: true });
   }
   if (!applicationSecret) {
-    return new PromptResponse('Missing environment variable: "APPLICATION_SECRET".');
+    return new PromptResponse('Missing environment variable: "APPLICATION_SECRET".', { isError: true });
   }
 
   const verificationService = new VerificationService({});
