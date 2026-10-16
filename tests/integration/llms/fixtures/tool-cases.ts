@@ -242,6 +242,13 @@ const numbersCases: ToolTestCase[] = [
     },
   },
   {
+    prompt: 'Show me the configuration and any pending provisioning changes for +14155550123.',
+    expectedToolName: 'get-rented-number-configuration',
+    expectedArguments: {
+      phoneNumber: '+14155550123',
+    },
+  },
+  {
     prompt: 'Which regions can I buy virtual numbers in?',
     expectedToolName: 'list-available-regions',
     expectedArguments: undefined,

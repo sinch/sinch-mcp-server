@@ -42,6 +42,7 @@
     "list-rented-numbers",
     "rent-sinch-virtual-numbers",
     "release-rented-number",
+    "get-rented-number-configuration",
     "search-for-available-numbers",
     "list-rcs-senders",
     "get-rcs-sender",
@@ -60,7 +61,5 @@
     "delete-single-whatsapp-template-language",
     "delete-all-whatsapp-template-languages"
   ],
-  "expectedPrompts": [
-    "conversation-app-id"
-  ]
+  "expectedPrompts": ["conversation-app-id"]
 }

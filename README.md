@@ -108,6 +108,7 @@ To inspect a batch from top to bottom: use `get-voice-batch-summary` with sessio
 | **search-for-available-numbers** | Search for phone numbers available to rent, with filters for region, type, pattern, and capabilities. <br> _Example prompt_: "Find available local numbers in the US that support SMS."                  | numbers |
 | **rent-sinch-virtual-numbers**   | Rent (activate) one or more phone numbers by providing them in E.164 format. <br> _Example prompt_: "Rent the phone number +12025551234."                                                                | numbers |
 | **release-rented-number**        | Release a rented phone number from your project. <br> _Example prompt_: "Release the phone number +12025551234."                                                                                         | numbers |
+| **get-rented-number-configuration** | Get one rented number and its current or scheduled service configuration. <br> _Example prompt_: "Show the configuration and provisioning status for +12025551234."                                  | numbers, configuration |
 
 ### Configuration Tools
 
