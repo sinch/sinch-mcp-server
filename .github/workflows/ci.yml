@@ -40,6 +40,7 @@ jobs:
   sonarqube:
     name: SonarQube
     needs: build-and-test
+    if: github.actor != 'dependabot[bot]'
     runs-on: ubuntu-latest
     permissions:
       contents: read
