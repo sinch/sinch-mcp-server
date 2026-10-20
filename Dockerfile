@@ -1,6 +1,6 @@
 # syntax=docker/dockerfile:1.7
 
-FROM node:20.19.4-bookworm-slim AS build
+FROM node:24.22.0-bookworm-slim AS build
 
 WORKDIR /app
 
@@ -13,7 +13,7 @@ COPY package.json ./
 
 RUN npx tsc --project tsconfig.build.json && npm prune --omit=dev
 
-FROM node:20.19.4-bookworm-slim AS runtime
+FROM node:24.22.0-bookworm-slim AS runtime
 
 ENV NODE_ENV=production \
     PORT=8000

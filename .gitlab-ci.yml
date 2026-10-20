@@ -108,7 +108,7 @@ check-manifests-token:
 # as an artifact from this earlier stage (see sonar.javascript.lcov.reportPaths).
 unit-tests-coverage:
   stage: test-coverage
-  image: node:20
+  image: node:24
   script:
     - npm ci
     - npm run test:coverage

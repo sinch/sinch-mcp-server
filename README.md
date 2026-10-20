@@ -120,7 +120,7 @@ To inspect a batch from top to bottom: use `get-voice-batch-summary` with sessio
 
 ### Prerequisites
 
-- [Node.js 20.x or 22.x (LTS)](https://nodejs.org/en/download)
+- [Node.js 20.18.1 or later, up to 26.x (LTS: 20.x, 22.x, 24.x)](https://nodejs.org/en/download)
 - A provisioned [Sinch Build account](https://dashboard.sinch.com/dashboard)
 - Claude Desktop (or any other MCP client). This README is focused on [Claude Desktop](https://claude.ai/download), but the MCP server can be used with any MCP client.
 
