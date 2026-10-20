@@ -525,3 +525,7 @@ After the `initialize` response, include the `mcp-session-id` header returned by
 ## Contributing
 
 See [CONTRIBUTING.md](CONTRIBUTING.md) for contributor guidelines, including how to add new tools and pin GitHub Actions.
+
+## License
+
+This project is licensed under the [Apache License 2.0](LICENSE).
