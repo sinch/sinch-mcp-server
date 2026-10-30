@@ -2,24 +2,19 @@ import { McpServer, RegisteredTool } from '@modelcontextprotocol/sdk/server/mcp.
 import { SpanStatusCode, trace } from '@opentelemetry/api';
 import { ZodRawShape } from 'zod';
 import { ATTR_AUTH_METHOD, ATTR_PROJECT_ID, ATTR_TOOL_NAME, SPAN_TOOL_PREFIX, TRACER_NAME } from './constants';
-import { getAuthMode } from '../auth/auth-mode';
-import { getRequestSinchOAuthCredentials } from '../auth/credential-context';
 import { env } from '../env';
 import { getToolMetrics } from './metrics';
 
 const tracer = trace.getTracer(TRACER_NAME);
 
-/**
- * An auth mode is set only on a multi-tenant deployment, where the server holds no credentials
- * of its own and the mode names how the caller authenticated. The env-credential branches below
- * describe a single-tenant or stdio process and must not be consulted otherwise — reading
- * PROJECT_ID there would report the server's own account for somebody else's call.
- */
-const resolveAuthMethod = (): string => {
-  const authMode = getAuthMode();
-  if (authMode) {
-    return authMode;
-  }
+export type SpanContext = {
+  authMethod: string;
+  projectId?: string | undefined;
+};
+
+export type SpanContextResolver = () => SpanContext;
+
+const envAuthMethod = (): string => {
   if (env.PROJECT_ID && env.KEY_ID && env.KEY_SECRET) {
     return 'oauth2_project_credentials';
   }
@@ -32,16 +27,13 @@ const resolveAuthMethod = (): string => {
   return 'unconfigured';
 };
 
-/**
- * Multi-tenant: the project is whoever called, resolved per request from the Authorization
- * header — never the environment. Undefined on a sinchid-agent deployment, where credentials
- * come from the agent installation and that lookup does not exist yet (DEVEXP-1631).
- */
-const resolveSpanProjectId = (): string | undefined => {
-  if (getAuthMode()) {
-    return getRequestSinchOAuthCredentials()?.projectId;
-  }
-  return env.PROJECT_ID;
+let resolveSpanContext: SpanContextResolver = () => ({
+  authMethod: envAuthMethod(),
+  projectId: env.PROJECT_ID,
+});
+
+export const setSpanContextResolver = (resolver: SpanContextResolver): void => {
+  resolveSpanContext = resolver;
 };
 
 const isErrorResult = (result: unknown): boolean =>
@@ -70,10 +62,9 @@ const runWithTracing = async <T>(toolName: string, handler: () => T | Promise<T>
   const start = performance.now();
 
   return tracer.startActiveSpan(`${SPAN_TOOL_PREFIX}/${toolName}`, async (span) => {
+    const { authMethod, projectId } = resolveSpanContext();
     span.setAttribute(ATTR_TOOL_NAME, toolName);
-    span.setAttribute(ATTR_AUTH_METHOD, resolveAuthMethod());
-
-    const projectId = resolveSpanProjectId();
+    span.setAttribute(ATTR_AUTH_METHOD, authMethod);
     if (projectId) {
       span.setAttribute(ATTR_PROJECT_ID, projectId);
     }

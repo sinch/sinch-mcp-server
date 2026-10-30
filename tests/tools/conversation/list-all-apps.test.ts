@@ -109,7 +109,7 @@ test('listAllAppsHandler returns formatted app list for all regions', async () =
   expect(result.content[0].text).toBe(expectedResponse);
 });
 
-test('listAllAppsHandler queries only the pinned region in multi-tenant mode', async () => {
+test('listAllAppsHandler queries only the pinned region when the deployment pins the region', async () => {
   // Given
   (resolveConversationRegionsToList as jest.Mock).mockReturnValue(['eu']);
   mockListApps.mockResolvedValue({
@@ -149,7 +149,9 @@ test('listAllAppsHandler queries only the pinned region in multi-tenant mode', a
 test('listAllAppsHandler returns an error response when the region cannot be resolved', async () => {
   // Given
   (resolveConversationRegionsToList as jest.Mock).mockImplementation(() => {
-    throw new Error('CONVERSATION_REGION must be set in multi-tenant mode; no default region is applied.');
+    throw new Error(
+      'CONVERSATION_REGION must be set when the deployment pins the conversation region; no default region is applied.',
+    );
   });
 
   // When
@@ -160,7 +162,8 @@ test('listAllAppsHandler returns an error response when the region cannot be res
   expect(result.content[0].text).toBe(
     JSON.stringify({
       success: false,
-      error: 'CONVERSATION_REGION must be set in multi-tenant mode; no default region is applied.',
+      error:
+        'CONVERSATION_REGION must be set when the deployment pins the conversation region; no default region is applied.',
     }),
   );
 });

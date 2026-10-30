@@ -6,6 +6,7 @@ import parser from '@typescript-eslint/parser';
 import jest from 'eslint-plugin-jest';
 import jestFormatting from 'eslint-plugin-jest-formatting';
 import jestExtended from 'eslint-plugin-jest-extended';
+import importPlugin from 'eslint-plugin-import';
 import globals from 'globals';
 
 /** @type {import("eslint").Linter.FlatConfig[]} */
@@ -51,9 +52,51 @@ export default [
     },
   },
   {
+    files: ['scripts/**/*.js'],
+    languageOptions: {
+      sourceType: 'commonjs',
+      globals: { ...globals.node },
+    },
+  },
+  {
     files: ['src/**/*.ts'],
     rules: {
       'no-console': 'error',
     },
-  }
+  },
+  {
+    files: ['src/**/*.ts', 'tests/**/*.ts'],
+    ignores: ['src/platform/**/*.ts', 'tests/platform/**/*.ts'],
+    plugins: { import: importPlugin },
+    settings: {
+      'import/resolver': {
+        node: { extensions: ['.ts', '.js', '.json'] },
+      },
+    },
+    rules: {
+      'import/no-restricted-paths': [
+        'error',
+        {
+          zones: [
+            {
+              target: './src',
+              from: './src/platform',
+              message:
+                'Shared code must not import src/platform: deleting src/platform has to leave a ' +
+                'working stdio server. Give the shared module a default plus a setter, and let ' +
+                'the HTTP entrypoint register the platform behaviour at startup.',
+            },
+            {
+              target: './tests',
+              from: './src/platform',
+              message:
+                'Only tests under tests/platform may import src/platform: deleting src/platform ' +
+                'and tests/platform has to leave a green suite for the stdio server. Test the ' +
+                'shared module through its default behaviour instead.',
+            },
+          ],
+        },
+      ],
+    },
+  },
 ];

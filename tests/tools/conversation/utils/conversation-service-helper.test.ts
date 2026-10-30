@@ -3,17 +3,13 @@ import { ConversationService } from '@sinch/conversation';
 import {
   getConversationService,
   getConversationAppId,
+  pinConversationRegionToDeployment,
   resolveConversationRegionsToList,
   setConversationRegion,
   setTemplateRegion,
 } from '../../../../src/tools/conversation/utils/conversation-service-helper';
 import { PromptResponse } from '../../../../src/types';
 import { formatUserAgent } from '../../../../src/utils';
-import {
-  clearHttpCredentialSourceForTests,
-  getHttpCredentialSource,
-  setHttpCredentialSource,
-} from '../../../../src/auth/http-credential-mode';
 import { mockEnv, resetMockEnv } from '../../../helpers/mock-env';
 
 jest.mock(
@@ -101,77 +97,6 @@ describe('getConversationService / getConversationTemplateService', () => {
   });
 });
 
-describe('region resolution in multi-tenant mode', () => {
-  const TOOL_NAME = 'dummy-tool';
-
-  let service: ConversationService;
-
-  beforeEach(() => {
-    resetMockEnv();
-    mockEnv.PROJECT_ID = 'test-project';
-    mockEnv.KEY_ID = 'test-key-id';
-    mockEnv.KEY_SECRET = 'test-secret';
-    // Build the service before switching to multi-tenant, as credentials
-    // come from request headers (not env) in that mode.
-    service = getConversationService(TOOL_NAME) as ConversationService;
-    setHttpCredentialSource('request-header');
-  });
-
-  afterEach(() => {
-    clearHttpCredentialSourceForTests();
-  });
-
-  test('setConversationRegion ignores the prompt region and uses the env region', () => {
-    mockEnv.CONVERSATION_REGION = 'br';
-    const usedRegion = setConversationRegion('eu', service);
-
-    // The prompt region ("eu") is discarded because the server runs in multi-tenant mode
-    expect(getHttpCredentialSource()).toBe('request-header');
-    expect(usedRegion).toBe('br');
-    expect(service.lazyConversationClient.apiFetchClient!.apiClientOptions.hostname).toBe(
-      'https://br.conversation.api.sinch.com',
-    );
-  });
-
-  test('setTemplateRegion ignores the prompt region and uses the env region', () => {
-    mockEnv.CONVERSATION_REGION = 'br';
-    const usedRegion = setTemplateRegion('eu', service);
-
-    // The prompt region ("eu") is discarded because the server runs in multi-tenant mode
-    expect(getHttpCredentialSource()).toBe('request-header');
-    expect(usedRegion).toBe('br');
-    expect(service.lazyConversationTemplateClient.apiFetchClient!.apiClientOptions.hostname).toBe(
-      'https://br.template.api.sinch.com',
-    );
-  });
-
-  test('resolveConversationRegionsToList returns only the pinned region', () => {
-    mockEnv.CONVERSATION_REGION = 'eu';
-    expect(resolveConversationRegionsToList()).toEqual(['eu']);
-  });
-
-  test('resolveConversationRegionsToList throws when CONVERSATION_REGION is not set', () => {
-    mockEnv.CONVERSATION_REGION = undefined;
-    expect(() => resolveConversationRegionsToList()).toThrow(
-      'CONVERSATION_REGION must be set in multi-tenant mode; no default region is applied.',
-    );
-  });
-
-  test('setConversationRegion throws instead of defaulting when CONVERSATION_REGION is not set', () => {
-    mockEnv.CONVERSATION_REGION = undefined;
-    expect(() => setConversationRegion('eu', service)).toThrow(
-      'CONVERSATION_REGION must be set in multi-tenant mode; no default region is applied.',
-    );
-  });
-
-  test('setTemplateRegion throws instead of defaulting when CONVERSATION_REGION is not set', () => {
-    mockEnv.CONVERSATION_REGION = undefined;
-    expect(() => setTemplateRegion('eu', service)).toThrow(
-      'CONVERSATION_REGION must be set in multi-tenant mode; no default region is applied.',
-    );
-  });
-});
-
 describe('getConversationAppId', () => {
   beforeEach(() => {
     resetMockEnv();
@@ -202,5 +127,70 @@ describe('getConversationAppId', () => {
       ],
       isError: true,
     });
+  });
+});
+
+// Keep last: pinning the region is module state and one-way, so it applies to every test below it.
+describe('region resolution when the deployment pins the region', () => {
+  const TOOL_NAME = 'dummy-tool';
+
+  let service: ConversationService;
+
+  beforeEach(() => {
+    resetMockEnv();
+    mockEnv.PROJECT_ID = 'test-project';
+    mockEnv.KEY_ID = 'test-key-id';
+    mockEnv.KEY_SECRET = 'test-secret';
+    mockEnv.CONVERSATION_REGION = 'br';
+    service = getConversationService(TOOL_NAME) as ConversationService;
+    pinConversationRegionToDeployment();
+  });
+
+  test('setConversationRegion ignores the prompt region and uses the env region', () => {
+    mockEnv.CONVERSATION_REGION = 'br';
+    const usedRegion = setConversationRegion('eu', service);
+
+    // The prompt region ("eu") is discarded because the deployment pins the region
+    expect(usedRegion).toBe('br');
+    expect(service.lazyConversationClient.apiFetchClient!.apiClientOptions.hostname).toBe(
+      'https://br.conversation.api.sinch.com',
+    );
+  });
+
+  test('setTemplateRegion ignores the prompt region and uses the env region', () => {
+    mockEnv.CONVERSATION_REGION = 'br';
+    const usedRegion = setTemplateRegion('eu', service);
+
+    // The prompt region ("eu") is discarded because the deployment pins the region
+    expect(usedRegion).toBe('br');
+    expect(service.lazyConversationTemplateClient.apiFetchClient!.apiClientOptions.hostname).toBe(
+      'https://br.template.api.sinch.com',
+    );
+  });
+
+  test('resolveConversationRegionsToList returns only the pinned region', () => {
+    mockEnv.CONVERSATION_REGION = 'eu';
+    expect(resolveConversationRegionsToList()).toEqual(['eu']);
+  });
+
+  test('resolveConversationRegionsToList throws when CONVERSATION_REGION is not set', () => {
+    mockEnv.CONVERSATION_REGION = undefined;
+    expect(() => resolveConversationRegionsToList()).toThrow(
+      'CONVERSATION_REGION must be set when the deployment pins the conversation region; no default region is applied.',
+    );
+  });
+
+  test('setConversationRegion throws instead of defaulting when CONVERSATION_REGION is not set', () => {
+    mockEnv.CONVERSATION_REGION = undefined;
+    expect(() => setConversationRegion('eu', service)).toThrow(
+      'CONVERSATION_REGION must be set when the deployment pins the conversation region; no default region is applied.',
+    );
+  });
+
+  test('setTemplateRegion throws instead of defaulting when CONVERSATION_REGION is not set', () => {
+    mockEnv.CONVERSATION_REGION = undefined;
+    expect(() => setTemplateRegion('eu', service)).toThrow(
+      'CONVERSATION_REGION must be set when the deployment pins the conversation region; no default region is applied.',
+    );
   });
 });

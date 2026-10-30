@@ -10,20 +10,25 @@ import {
   SupportedConversationRegion,
 } from '@sinch/sdk-client';
 import { ConversationService } from '@sinch/conversation';
-import { getHttpCredentialSource } from '../../../auth/http-credential-mode';
 import { getSharedOauth2TokenRequest } from '../../../auth/oauth-token-cache';
 import { resolveSinchOAuthCredentials } from '../../../auth/resolve-sinch-oauth-credentials';
 import { env } from '../../../env';
 import { PromptResponse } from '../../../types';
 import { formatUserAgent } from '../../../utils';
 
+let regionPinnedToDeployment = false;
+
+export const pinConversationRegionToDeployment = (): void => {
+  regionPinnedToDeployment = true;
+};
+
 export const resolveConversationRegion = (promptRegion: string | undefined): string => {
-  // Multi-tenant HTTP: the region is pinned by the deployment (one deployment per region)
-  // and must neither be overridable per request nor fall back to a default region.
-  if (getHttpCredentialSource() === 'request-header') {
+  if (regionPinnedToDeployment) {
     const region = env.CONVERSATION_REGION;
     if (!region) {
-      throw new Error('CONVERSATION_REGION must be set in multi-tenant mode; no default region is applied.');
+      throw new Error(
+        'CONVERSATION_REGION must be set when the deployment pins the conversation region; no default region is applied.',
+      );
     }
     return region;
   }
@@ -31,7 +36,7 @@ export const resolveConversationRegion = (promptRegion: string | undefined): str
 };
 
 export const resolveConversationRegionsToList = (): string[] => {
-  if (getHttpCredentialSource() === 'request-header') {
+  if (regionPinnedToDeployment) {
     return [resolveConversationRegion(undefined)];
   }
   return Object.values(SupportedConversationRegion);
@@ -63,8 +68,8 @@ export const getConversationService = (toolName: string): ConversationService | 
   fetcher.apiClientOptions.requestPlugins?.shift();
   templateFetcher.apiClientOptions.requestPlugins?.shift();
 
-  // Replace the region placeholder with the resolved region (env-pinned in multi-tenant mode,
-  // env value or US default otherwise)
+  // Replace the region placeholder with the resolved region (the pinned env region, or the env
+  // value with a US default when no region is pinned)
   const defaultRegion = resolveConversationRegion(undefined);
   fetcher.apiClientOptions.hostname = CONVERSATION_HOSTNAME.replace(REGION_PATTERN, `${defaultRegion}.`);
   templateFetcher.apiClientOptions.hostname = CONVERSATION_TEMPLATES_HOSTNAME.replace(

@@ -1,8 +1,12 @@
 {
   "name": "@sinch/mcp",
-  "version": "0.0.1-alpha.6",
+  "version": "0.0.1-beta.7",
   "description": "Sinch MCP server",
-  "homepage": "",
+  "homepage": "https://github.com/sinch/sinch-mcp-server#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/sinch/sinch-mcp-server.git"
+  },
   "files": [
     "dist",
     "bin"
@@ -23,25 +27,12 @@
   ],
   "license": "Apache-2.0",
   "dependencies": {
-    "@google-cloud/secret-manager": "7.1.0",
     "@modelcontextprotocol/sdk": "1.32.1",
     "@opentelemetry/api": "1.9.1",
-    "@opentelemetry/exporter-metrics-otlp-grpc": "0.218.0",
-    "@opentelemetry/exporter-trace-otlp-grpc": "0.218.0",
-    "@opentelemetry/instrumentation-http": "0.218.0",
-    "@opentelemetry/instrumentation-undici": "0.28.0",
-    "@opentelemetry/resources": "2.7.1",
-    "@opentelemetry/sdk-metrics": "2.7.1",
-    "@opentelemetry/sdk-node": "0.221.0",
-    "@opentelemetry/semantic-conventions": "1.41.1",
     "@sinch/sdk-core": "1.6.0",
     "@t3-oss/env-core": "0.13.11",
     "axios": "1.20.0",
     "dotenv": "16.5.0",
-    "express": "5.1.0",
-    "ioredis": "5.11.1",
-    "jsonwebtoken": "9.0.3",
-    "jwks-rsa": "3.2.2",
     "pino": "10.3.1",
     "undici": "7.29.1",
     "zod": "3.25.76"
@@ -52,10 +43,7 @@
     "@eslint/js": "9.26.0",
     "@google/genai": "1.15.0",
     "@mcpjam/sdk": "1.28.0",
-    "@types/express": "5.0.3",
-    "@types/ioredis-mock": "8.2.8",
     "@types/jest": "29.5.14",
-    "@types/jsonwebtoken": "9.0.10",
     "@typescript-eslint/eslint-plugin": "8.64.0",
     "@typescript-eslint/parser": "8.64.0",
     "@typescript/native": "npm:typescript@7.0.2",
@@ -68,7 +56,6 @@
     "eslint-plugin-prettier": "5.4.1",
     "globals": "16.2.0",
     "husky": "9.1.7",
-    "ioredis-mock": "8.13.1",
     "jest": "29.7.0",
     "jest-extended": "4.0.2",
     "lint-staged": "15.5.2",
@@ -82,19 +69,17 @@
     "build": "tsc --project tsconfig.build.json && tsc --project tsconfig.tests.json",
     "start:stdio": "tsc --project tsconfig.build.json && node dist/index.js",
     "start:sse": "tsc --project tsconfig.build.json && npx -y supergateway --stdio \"node dist/index.js\" --port 8000 --baseUrl http://localhost:8000 --ssePath /sse --messagePath /message",
-    "start:http:server": "tsc --project tsconfig.build.json && node dist/http.js",
     "lint": "eslint src/ tests/ --ext .ts --max-warnings 0",
     "lint:fix": "eslint src/ tests/ --ext .ts --fix",
     "prettier": "prettier './**/*.{js,ts,md}' --write",
     "format:write": "npm run lint:fix && npm run prettier",
     "test": "jest --testPathIgnorePatterns='/tests/(integration|eval)/'",
-    "test:helm": "bash tests/helm/template.sh",
     "test:coverage": "jest --coverage --testPathIgnorePatterns='/tests/(integration|eval)/'",
     "test:integration": "NODE_OPTIONS=--experimental-vm-modules jest --config jest.integration.config.ts --runInBand",
     "test:eval": "NODE_OPTIONS=--experimental-vm-modules jest --config jest.eval.config.ts --runInBand",
     "prepare": "husky"
   },
   "engines": {
-    "node": ">=20.18.1 < 23"
+    "node": ">=20.18.1 <27.0.0"
   }
 }

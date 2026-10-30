@@ -64,7 +64,7 @@ jest.mock('../../src/telemetry/metrics', () => ({
 }));
 
 /* eslint-disable @typescript-eslint/no-require-imports -- load after jest mocks are registered */
-const { registerTracedTool } =
+const { registerTracedTool, setSpanContextResolver } =
   require('../../src/telemetry/register-traced-tool') as typeof import('../../src/telemetry/register-traced-tool');
 /* eslint-enable @typescript-eslint/no-require-imports */
 
@@ -220,16 +220,15 @@ test.each([
   expect(mockToolErrorsAdd).not.toHaveBeenCalled();
 });
 
-test('isTelemetryEnabled returns false without OTEL_EXPORTER_OTLP_ENDPOINT', () => {
-  mockEnv.OTEL_EXPORTER_OTLP_ENDPOINT = undefined;
-  // eslint-disable-next-line @typescript-eslint/no-require-imports
-  const { isTelemetryEnabled } = require('../../src/telemetry/config');
-  expect(isTelemetryEnabled()).not.toBeTruthy();
-});
+// Keep last: the resolver is module state, so this replaces the default for every test below it.
+test('a registered span context resolver replaces the env-based default', async () => {
+  mockEnv.PROJECT_ID = 'server-project';
+  mockEnv.KEY_ID = 'key-id';
+  mockEnv.KEY_SECRET = 'key-secret';
+  setSpanContextResolver(() => ({ authMethod: 'client-credentials', projectId: 'caller-project' }));
 
-test('isTelemetryEnabled returns true when OTEL_EXPORTER_OTLP_ENDPOINT is set', () => {
-  mockEnv.OTEL_EXPORTER_OTLP_ENDPOINT = 'http://collector:4317';
-  // eslint-disable-next-line @typescript-eslint/no-require-imports
-  const { isTelemetryEnabled } = require('../../src/telemetry/config');
-  expect(isTelemetryEnabled()).toBeTruthy();
+  await callTool('resolver-tool', { content: [{ type: 'text', text: 'ok' }] });
+
+  expect(otelMocks().mockSetAttribute).toHaveBeenCalledWith(ATTR_AUTH_METHOD, 'client-credentials');
+  expect(otelMocks().mockSetAttribute).toHaveBeenCalledWith('project.id', 'caller-project');
 });
