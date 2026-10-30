@@ -30,6 +30,7 @@ jobs:
       # npm versions cannot be reused, so a tag that disagrees with package.json
       # has to stop here rather than burn the wrong number.
       - name: Check the tag matches package.json
+        id: version
         run: |
           set -euo pipefail
           tag="${GITHUB_REF_NAME#v}"
@@ -39,6 +40,14 @@ jobs:
             exit 1
           fi
           echo "Publishing ${pkg}"
+          # npm refuses to publish a prerelease without an explicit dist-tag, and
+          # a prerelease must never take over "latest".
+          case "${pkg}" in
+            *-*) dist_tag="$(echo "${pkg#*-}" | cut -d. -f1)" ;;
+            *) dist_tag="latest" ;;
+          esac
+          echo "dist_tag=${dist_tag}" >> "${GITHUB_OUTPUT}"
+          echo "Using dist-tag ${dist_tag}"
 
       - name: Install dependencies
         run: npm ci
@@ -50,4 +59,4 @@ jobs:
         run: npm test
 
       - name: Publish to npm
-        run: npm publish --access public
+        run: npm publish --access public --tag "${{ steps.version.outputs.dist_tag }}"
