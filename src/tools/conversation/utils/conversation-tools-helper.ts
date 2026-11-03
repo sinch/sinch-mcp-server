@@ -37,9 +37,13 @@ export const toolsConfig = defineToolsConfig({
     name: 'list-messaging-templates',
     tags: ['all', 'conversation', 'notification', 'list-messaging-templates'],
   },
-  sendCardOrChoiceMessage: {
+  sendChoiceMessage: {
     name: 'send-choice-message',
     tags: ['all', 'conversation', 'notification', 'send-choice-message'],
+  },
+  sendCardMessage: {
+    name: 'send-card-message',
+    tags: ['all', 'conversation', 'notification', 'send-card-message'],
   },
   sendLocationMessage: {
     name: 'send-location-message',

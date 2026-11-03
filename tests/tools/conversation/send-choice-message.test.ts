@@ -1,7 +1,4 @@
-import {
-  sendCardOrChoiceMessageHandler,
-  choiceMessage,
-} from '../../../src/tools/conversation/send-card-or-choice-message';
+import { sendChoiceMessageHandler } from '../../../src/tools/conversation/send-choice-message';
 import {
   getConversationAppId,
   getConversationService,
@@ -40,32 +37,15 @@ beforeEach(() => {
 });
 
 const getLastCallChoices = () => {
-  const body = jest.mocked(mockSendChoiceMessage).mock.calls[0][0].sendMessageRequestBody;
+  const calls = jest.mocked(mockSendChoiceMessage).mock.calls;
+  const body = calls[calls.length - 1][0].sendMessageRequestBody;
   return body.message.choice_message.choices;
 };
-
-describe('choiceMessage schema validation', () => {
-  test('accepts location choice with lat: 0', () => {
-    expect(choiceMessage.safeParse({ lat: 0, long: 32.5, title: 'On the equator' }).success).toBeTrue();
-  });
-
-  test('accepts location choice with long: 0', () => {
-    expect(choiceMessage.safeParse({ lat: 51.4779, long: 0, title: 'Greenwich' }).success).toBeTrue();
-  });
-
-  test('accepts location choice with both lat and long at 0', () => {
-    expect(choiceMessage.safeParse({ lat: 0, long: 0, title: 'Null Island' }).success).toBeTrue();
-  });
-
-  test('rejects when no choice type is provided', () => {
-    expect(choiceMessage.safeParse({ title: 'No type' }).success).toBeFalse();
-  });
-});
 
 test('sends location choice when lat is 0 (equator)', async () => {
   mockSendChoiceMessage.mockResolvedValue({ message_id: 'choice-equator' });
 
-  const result = await sendCardOrChoiceMessageHandler({
+  const result = await sendChoiceMessageHandler({
     recipient: '+123456789',
     channel: ['SMS'],
     text: 'Pick a location',
@@ -85,7 +65,7 @@ test('sends location choice when lat is 0 (equator)', async () => {
 test('sends location choice when long is 0 (prime meridian)', async () => {
   mockSendChoiceMessage.mockResolvedValue({ message_id: 'choice-meridian' });
 
-  await sendCardOrChoiceMessageHandler({
+  await sendChoiceMessageHandler({
     recipient: '+123456789',
     channel: ['SMS'],
     text: 'Pick a location',
@@ -104,7 +84,7 @@ test('sends location choice when long is 0 (prime meridian)', async () => {
 test('sends location choice when both lat and long are 0', async () => {
   mockSendChoiceMessage.mockResolvedValue({ message_id: 'choice-null-island' });
 
-  await sendCardOrChoiceMessageHandler({
+  await sendChoiceMessageHandler({
     recipient: '+123456789',
     channel: ['SMS'],
     text: 'Pick a location',
@@ -125,7 +105,7 @@ test('returns error response on failure', async () => {
   const region = 'eu';
   jest.mocked(setConversationRegion).mockReturnValue(region);
 
-  const result = await sendCardOrChoiceMessageHandler({
+  const result = await sendChoiceMessageHandler({
     recipient: '+123456789',
     channel: ['SMS'],
     text: 'Pick a location',

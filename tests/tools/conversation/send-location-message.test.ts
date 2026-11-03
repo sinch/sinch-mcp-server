@@ -39,7 +39,8 @@ beforeEach(() => {
 });
 
 const getLastCallCoordinates = () => {
-  const body = jest.mocked(mockSendLocationMessage).mock.calls[0][0].sendMessageRequestBody;
+  const calls = jest.mocked(mockSendLocationMessage).mock.calls;
+  const body = calls[calls.length - 1][0].sendMessageRequestBody;
   return body.message.location_message;
 };
 

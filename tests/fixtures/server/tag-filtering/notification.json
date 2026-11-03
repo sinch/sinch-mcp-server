@@ -13,6 +13,7 @@
     "send-text-message",
     "send-location-message",
     "send-choice-message",
+    "send-card-message",
     "send-media-message",
     "send-template-message",
     "send-whatsapp-template-message",

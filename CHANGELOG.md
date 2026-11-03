@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.0.1-beta.8
+
+### Added — Conversation tools
+
+- `send-card-message` sends a media card with a `title` of up to 200 characters, an optional `description` of up to 2000, and an optional list of choices. It takes over the card half of `send-choice-message`.
+
+### Breaking changes
+
+- **`send-choice-message`:** no longer accepts `mediaUrl`. Passing it turned the request into a card message, which put the whole `text` into the card title. RCS caps that title at 200 characters, so a longer text was accepted with `success: true` and then failed at delivery with `BAD_REQUEST` / `TEXT_TOO_LONG` — a failure only visible through a webhook, so the message was silently lost. Use `send-card-message`, which keeps `title` and `description` apart and rejects an oversized title before the request is sent.
+- A text choice carrying a `title`, and a location choice carrying both `lat`/`long` and `address`, are now rejected. Both combinations were accepted before and the extra value was dropped without a word.
+
 ## 0.0.1-beta.7
 
 This release covers everything since `0.0.1-alpha.6`. It adds 37 tools, removes 3, and renames none.

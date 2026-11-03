@@ -161,6 +161,7 @@ Use this to verify the device can handle the message type you plan to send befor
 - **Plain text** — \`send-text-message\` — \`channel: RCS\`, \`recipient\`, \`message\`
 - **Image or video** — \`send-media-message\` — \`channel: RCS\`, \`recipient\`, \`url\`
 - **Interactive choices** — \`send-choice-message\` — \`channel: RCS\`, \`text\`, \`choiceContent\`
+- **Rich card** — \`send-card-message\` — \`channel: RCS\`, \`title\` (200 characters max), \`description\` (2000 characters max, optional), \`mediaUrl\`, \`choiceContent\`
 - **Pre-approved template** — \`send-template-message\` — \`channel: RCS\`, \`templateId\`, \`language\` (BCP-47, optional), \`parameters\` (key-value map, optional)
 
 Always pass \`channel: RCS\` explicitly.

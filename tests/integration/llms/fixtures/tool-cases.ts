@@ -83,6 +83,21 @@ const messagingCases: ToolTestCase[] = [
   },
   {
     prompt:
+      'Send a RCS card to +33612345678 with the image https://example.com/flavor.jpg, the title "Pick a flavor", a description saying that all three are made with organic milk, and the choices Vanilla, Strawberry, Hazelnut',
+    expectedToolName: 'send-card-message',
+    expectedArguments: {
+      recipient: '+33612345678',
+      channel: ['RCS'],
+      mediaUrl: 'https://example.com/flavor.jpg',
+      choiceContent: [{ text: 'Vanilla' }, { text: 'Strawberry' }, { text: 'Hazelnut' }],
+    },
+    pathMatchers: {
+      title: /pick a flavor/i,
+      description: /organic milk/i,
+    },
+  },
+  {
+    prompt:
       'Send a pin to the Guggenheim Museum location, Avenida Abandoibarra, 2 - 48009 Bilbao, Spain by SMS to the phone number +33612345678.',
     expectedToolName: 'send-location-message',
     expectedArguments: {
