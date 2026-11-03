@@ -1,5 +1,6 @@
 import { metrics, type Counter, type Histogram } from '@opentelemetry/api';
 import {
+  METRIC_SESSION_STORE_DEGRADED_TOTAL,
   METRIC_SINCH_API_DURATION_MS,
   METRIC_TOOL_CALLS_TOTAL,
   METRIC_TOOL_DURATION_MS,
@@ -14,7 +15,12 @@ export interface ToolMetrics {
   sinchApiDurationMs: Histogram;
 }
 
+export interface SessionStoreMetrics {
+  degradedTotal: Counter;
+}
+
 let toolMetrics: ToolMetrics | undefined;
+let sessionStoreMetrics: SessionStoreMetrics | undefined;
 
 export const getToolMetrics = (): ToolMetrics => {
   if (!toolMetrics) {
@@ -37,4 +43,21 @@ export const getToolMetrics = (): ToolMetrics => {
     };
   }
   return toolMetrics;
+};
+
+export const getSessionStoreMetrics = (): SessionStoreMetrics => {
+  if (!sessionStoreMetrics) {
+    const meter = metrics.getMeter(METER_NAME);
+    sessionStoreMetrics = {
+      degradedTotal: meter.createCounter(METRIC_SESSION_STORE_DEGRADED_TOTAL, {
+        description: 'Total number of requests handled in degraded mode because the session store was unavailable',
+      }),
+    };
+  }
+  return sessionStoreMetrics;
+};
+
+/** Exposed for unit tests. */
+export const resetSessionStoreMetricsForTests = (): void => {
+  sessionStoreMetrics = undefined;
 };

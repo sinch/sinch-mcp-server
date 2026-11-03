@@ -57,7 +57,7 @@ describe('logger', () => {
 
     logger.info('Started');
 
-    expect(mockPino).toHaveBeenCalledWith({ level: 'info' }, mockDestination);
+    expect(mockPino).toHaveBeenCalledWith(expect.objectContaining({ level: 'info' }), mockDestination);
     expect(mockPinoLogger.warn).not.toHaveBeenCalled();
   });
 
@@ -68,7 +68,7 @@ describe('logger', () => {
     logger.info('Started');
 
     expect(mockPino.destination).toHaveBeenCalledWith(2);
-    expect(mockPino).toHaveBeenCalledWith({ level: 'info' }, mockDestination);
+    expect(mockPino).toHaveBeenCalledWith(expect.objectContaining({ level: 'info' }), mockDestination);
     expect(mockPinoLogger.warn).toHaveBeenCalledWith(
       {
         configured_log_level: 'verbose',
@@ -109,7 +109,7 @@ describe('logger', () => {
 
     logger.info('Ready');
 
-    expect(mockPino).toHaveBeenCalledWith({ level: 'trace' }, mockDestination);
+    expect(mockPino).toHaveBeenCalledWith(expect.objectContaining({ level: 'trace' }), mockDestination);
   });
 
   it('delegates every exported log method', () => {

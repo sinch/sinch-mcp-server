@@ -46,6 +46,7 @@ This release covers everything since `0.0.1-alpha.6`. It adds 37 tools, removes 
 
 - Tool results that report a failure now set `isError: true` on the MCP response, so clients can tell an error from a normal answer without parsing the text.
 - Logs are now structured JSON written to stderr, with the trace and span id attached when a span is active. They went through `console` before.
+- Logs redact credential fields (authorization headers, passwords, tokens, API keys) and log errors without request config or URL query strings.
 - Environment variables are validated once at startup against a typed schema. An invalid value stops the server instead of failing later inside a tool call.
 - **Breaking for `CONVERSATION_REGION`:** the accepted values are now `us`, `eu` and `br`. Anything else is a startup error; before, an unknown region reached the API and failed per call.
 - `list-messaging-templates` returns only the templates of the configured region.

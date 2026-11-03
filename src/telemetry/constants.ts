@@ -13,3 +13,4 @@ export const METRIC_TOOL_CALLS_TOTAL = 'tool.calls.total';
 export const METRIC_TOOL_ERRORS_TOTAL = 'tool.errors.total';
 export const METRIC_TOOL_DURATION_MS = 'tool.duration.ms';
 export const METRIC_SINCH_API_DURATION_MS = 'sinch_api.duration.ms';
+export const METRIC_SESSION_STORE_DEGRADED_TOTAL = 'session_store.degraded.total';
