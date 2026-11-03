@@ -9,6 +9,7 @@ import { registerListAllApps } from './list-all-apps';
 import { registerListOmniChannelTemplates } from './list-messaging-templates';
 import { registerSendChoiceMessage } from './send-choice-message';
 import { registerSendCardMessage } from './send-card-message';
+import { registerSendCarouselMessage } from './send-carousel-message';
 import { registerSendLocationMessage } from './send-location-message';
 import { registerSendMediaMessage } from './send-media-message';
 import { registerSendTemplateMessage } from './send-template-message';
@@ -27,6 +28,7 @@ export const registerConversationTools = (server: McpServer, tags: Tags[]) => {
   registerSendLocationMessage(server, tags);
   registerSendChoiceMessage(server, tags);
   registerSendCardMessage(server, tags);
+  registerSendCarouselMessage(server, tags);
   registerSendTemplateMessage(server, tags);
   registerSendWhatsAppTemplateMessage(server, tags);
   registerListAllApps(server, tags);

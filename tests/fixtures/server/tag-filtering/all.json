@@ -16,6 +16,7 @@
     "list-messaging-templates",
     "send-choice-message",
     "send-card-message",
+    "send-carousel-message",
     "send-location-message",
     "send-media-message",
     "send-template-message",

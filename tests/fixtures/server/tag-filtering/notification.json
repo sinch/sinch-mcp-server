@@ -14,6 +14,7 @@
     "send-location-message",
     "send-choice-message",
     "send-card-message",
+    "send-carousel-message",
     "send-media-message",
     "send-template-message",
     "send-whatsapp-template-message",

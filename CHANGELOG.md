@@ -5,6 +5,7 @@
 ### Added — Conversation tools
 
 - `send-card-message` sends a media card with a `title` of up to 200 characters, an optional `description` of up to 2000, and an optional list of choices. It takes over the card half of `send-choice-message`.
+- `send-carousel-message` sends a carousel of 1 to 10 swipeable cards. Each card takes a media URL, a `title` of up to 200 characters, an optional `description` of up to 2000, an optional `height` of `SHORT`, `MEDIUM`, or `TALL`, and up to 4 choices, the RCS limit. An optional `thumbnailUrl` sets a preview image for the media, which the channel uses when it supports it. The carousel takes up to 3 choices of its own, shown below the cards. An optional `metadata` string of up to 1024 characters comes back in the delivery receipt. The carousel is drawn natively on RCS; on the other channels the Conversation API transcodes it.
 
 ### Breaking changes
 

@@ -45,6 +45,10 @@ export const toolsConfig = defineToolsConfig({
     name: 'send-card-message',
     tags: ['all', 'conversation', 'notification', 'send-card-message'],
   },
+  sendCarouselMessage: {
+    name: 'send-carousel-message',
+    tags: ['all', 'conversation', 'notification', 'send-carousel-message'],
+  },
   sendLocationMessage: {
     name: 'send-location-message',
     tags: ['all', 'conversation', 'notification', 'send-location-message'],

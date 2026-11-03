@@ -8,7 +8,8 @@ import {
 } from './utils/conversation-service-helper';
 import { ConversationToolKey, getToolName, toolsConfig } from './utils/conversation-tools-helper';
 import { buildMessageBase, formatSendError } from './utils/send-message-builder';
-import { buildChoices, choiceMessage } from './utils/choice-builder';
+import { choiceMessage } from './utils/choice-builder';
+import { buildCard, cardDescription, cardMediaUrl, cardTitle } from './utils/card-builder';
 import {
   Recipient,
   ConversationAppIdOverride,
@@ -19,24 +20,12 @@ import {
 import { isPromptResponse, matchesAnyTag } from '../../utils';
 import { IPromptResponse, PromptResponse, Tags } from '../../types';
 
-const CARD_TITLE_MAX_LENGTH = 200;
-const CARD_DESCRIPTION_MAX_LENGTH = 2000;
-
 export const SendCardMessageSchema = {
   recipient: Recipient,
   choiceContent: z.array(choiceMessage).max(10).optional().describe('The list of choices to send to the user'),
-  title: z
-    .string()
-    .max(CARD_TITLE_MAX_LENGTH)
-    .describe(`The title of the card, displayed above the description. Up to ${CARD_TITLE_MAX_LENGTH} characters.`),
-  description: z
-    .string()
-    .max(CARD_DESCRIPTION_MAX_LENGTH)
-    .optional()
-    .describe(
-      `The text displayed below the title on the card. Up to ${CARD_DESCRIPTION_MAX_LENGTH} characters. Put the long part of the content here, not in the title.`,
-    ),
-  mediaUrl: z.string().url().describe('The media URL to be displayed on the card'),
+  title: cardTitle,
+  description: cardDescription,
+  mediaUrl: cardMediaUrl,
   channel: ConversationChannel,
   appId: ConversationAppIdOverride,
   sender: MessageSenderNumberOverride,
@@ -89,7 +78,7 @@ export const sendCardMessageHandler = async ({
   const conversationService = maybeService;
   const usedRegion = setConversationRegion(region, conversationService);
 
-  const choices = await buildChoices(choiceContent);
+  const card = await buildCard({ title, description, mediaUrl, choiceContent });
 
   try {
     const requestBase = await buildMessageBase(conversationService, conversationAppId, recipient, channel, sender);
@@ -97,14 +86,7 @@ export const sendCardMessageHandler = async ({
       sendMessageRequestBody: {
         ...requestBase,
         message: {
-          card_message: {
-            choices,
-            title,
-            description,
-            media_message: {
-              url: mediaUrl,
-            },
-          },
+          card_message: card,
         },
       },
     });

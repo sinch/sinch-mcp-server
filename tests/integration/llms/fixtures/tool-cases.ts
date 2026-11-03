@@ -98,6 +98,21 @@ const messagingCases: ToolTestCase[] = [
   },
   {
     prompt:
+      'Send a RCS carousel to +33612345678 with two cards: "Vanilla" with the image https://example.com/vanilla.jpg and "Chocolate" with the image https://example.com/chocolate.jpg. Each card needs a short description and a button to order that flavor on https://example.com/order.',
+    expectedToolName: 'send-carousel-message',
+    expectedArguments: {
+      recipient: '+33612345678',
+      channel: ['RCS'],
+    },
+    pathMatchers: {
+      'cards.0.title': /vanilla/i,
+      'cards.0.mediaUrl': 'https://example.com/vanilla.jpg',
+      'cards.1.title': /chocolate/i,
+      'cards.1.mediaUrl': 'https://example.com/chocolate.jpg',
+    },
+  },
+  {
+    prompt:
       'Send a pin to the Guggenheim Museum location, Avenida Abandoibarra, 2 - 48009 Bilbao, Spain by SMS to the phone number +33612345678.',
     expectedToolName: 'send-location-message',
     expectedArguments: {
