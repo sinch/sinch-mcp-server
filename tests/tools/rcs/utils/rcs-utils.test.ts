@@ -36,6 +36,7 @@ describe('formatRcsSender', () => {
   test('summary omits credentials', () => {
     expect(formatRcsSenderSummary(sender)).toEqual({
       id: 'sender-1',
+      name: 'Acme',
       state: 'DRAFT',
       region: 'EU',
       billingCategory: 'NON_CONVERSATIONAL',

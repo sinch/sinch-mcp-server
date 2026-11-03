@@ -25,6 +25,7 @@ export const formatRcsSender = (sender: RcsSender) => ({
 // operations that need brand details, credentials, test numbers or country status.
 export const formatRcsSenderSummary = (sender: RcsSender) => ({
   id: sender.id,
+  name: sender.details?.brand?.name,
   state: sender.state,
   region: sender.region,
   billingCategory: sender.billingCategory,

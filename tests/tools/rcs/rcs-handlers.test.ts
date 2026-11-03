@@ -32,6 +32,7 @@ test('listRcsSendersHandler returns summarized senders', async () => {
         useCase: 'OTP',
         state: 'DRAFT',
         authToken: 'secret',
+        details: { brand: { name: 'Acme' } },
       },
     ],
     nextPageToken: 'next',
@@ -46,6 +47,7 @@ test('listRcsSendersHandler returns summarized senders', async () => {
     senders: [
       {
         id: 's1',
+        name: 'Acme',
         state: 'DRAFT',
         region: 'EU',
         billingCategory: 'NON_CONVERSATIONAL',
