@@ -1,4 +1,5 @@
 import { HttpStatus } from './http-status';
+import { timedFetchSinchApi } from './telemetry/sinch-api-metrics';
 import { formatUserAgent } from './utils';
 
 const PROVISIONING_HOST = 'https://provisioning.api.sinch.com';
@@ -46,7 +47,7 @@ export abstract class BaseProvisioningClient {
   }
 
   protected async request<T>(method: string, path: string, body?: unknown): Promise<T> {
-    const response = await fetch(`${this.baseUrl()}${path}`, {
+    const response = await timedFetchSinchApi('provisioning', `${this.baseUrl()}${path}`, {
       method,
       headers: this.headers(),
       ...(body !== undefined && { body: JSON.stringify(body) }),

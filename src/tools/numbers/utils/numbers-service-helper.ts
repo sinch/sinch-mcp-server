@@ -4,6 +4,7 @@ import { getSharedOauth2TokenRequest } from '../../../auth/oauth-token-cache';
 import { resolveSinchOAuthCredentials } from '../../../auth/resolve-sinch-oauth-credentials';
 import { PromptResponse } from '../../../types';
 import { formatUserAgent } from '../../../utils';
+import { timedSdkFetchClient } from '../../../telemetry/sinch-api-metrics';
 
 export function getNumbersService(toolName: string): NumbersService | PromptResponse {
   const maybeCredentials = resolveSinchOAuthCredentials();
@@ -13,15 +14,18 @@ export function getNumbersService(toolName: string): NumbersService | PromptResp
   const { projectId } = maybeCredentials;
 
   const numbersService = new NumbersService({});
-  const fetcher = new ApiFetchClient({
-    projectId,
-    requestPlugins: [
-      getSharedOauth2TokenRequest(maybeCredentials),
-      new AdditionalHeadersRequest({
-        headers: buildHeader('User-Agent', formatUserAgent(toolName, projectId)),
-      }),
-    ],
-  });
+  const fetcher = timedSdkFetchClient(
+    new ApiFetchClient({
+      projectId,
+      requestPlugins: [
+        getSharedOauth2TokenRequest(maybeCredentials),
+        new AdditionalHeadersRequest({
+          headers: buildHeader('User-Agent', formatUserAgent(toolName, projectId)),
+        }),
+      ],
+    }),
+    'numbers',
+  );
   // Remove the VersionRequest plugin, as we override the user-agent header
   fetcher.apiClientOptions.requestPlugins?.shift();
   fetcher.apiClientOptions.hostname = NUMBERS_HOSTNAME;

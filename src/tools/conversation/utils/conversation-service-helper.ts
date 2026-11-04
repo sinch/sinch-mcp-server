@@ -15,6 +15,7 @@ import { resolveSinchOAuthCredentials } from '../../../auth/resolve-sinch-oauth-
 import { env } from '../../../env';
 import { PromptResponse } from '../../../types';
 import { formatUserAgent } from '../../../utils';
+import { timedSdkFetchClient } from '../../../telemetry/sinch-api-metrics';
 
 let regionPinnedToDeployment = false;
 
@@ -55,14 +56,20 @@ export const getConversationService = (toolName: string): ConversationService | 
     headers: buildHeader('User-Agent', formatUserAgent(toolName, projectId)),
   });
 
-  const fetcher = new ApiFetchClient({
-    projectId,
-    requestPlugins: [authenticationPlugin, additionalHeadersPlugin],
-  });
-  const templateFetcher = new ApiFetchClient({
-    projectId,
-    requestPlugins: [authenticationPlugin, additionalHeadersPlugin],
-  });
+  const fetcher = timedSdkFetchClient(
+    new ApiFetchClient({
+      projectId,
+      requestPlugins: [authenticationPlugin, additionalHeadersPlugin],
+    }),
+    'conversation',
+  );
+  const templateFetcher = timedSdkFetchClient(
+    new ApiFetchClient({
+      projectId,
+      requestPlugins: [authenticationPlugin, additionalHeadersPlugin],
+    }),
+    'conversation',
+  );
 
   // Remove the VersionRequest plugin, as we override the user-agent header
   fetcher.apiClientOptions.requestPlugins?.shift();

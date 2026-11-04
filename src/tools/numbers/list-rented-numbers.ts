@@ -6,6 +6,7 @@ import { resolveSinchOAuthCredentials } from '../../auth/resolve-sinch-oauth-cre
 import { formatUserAgent, isPromptResponse, matchesAnyTag } from '../../utils';
 import { getToolName, NumbersToolKey, toolsConfig } from './utils/numbers-tools-helper';
 import { Numbers } from '@sinch/numbers';
+import { timedFetchSinchApi } from '../../telemetry/sinch-api-metrics';
 
 const ListRentedNumbersSchema = {
   regionCode: z
@@ -89,7 +90,8 @@ export const listRentedNumbersHandler = async ({
       queryParams.append('pageSize', size.toString());
     }
 
-    const response = await fetch(
+    const response = await timedFetchSinchApi(
+      'numbers',
       `https://numbers.api.sinch.com/v1/projects/${projectId}/activeNumbers${queryParams.toString() ? '?' + queryParams.toString() : ''}`,
       {
         method: 'GET',

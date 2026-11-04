@@ -10,6 +10,7 @@ import {
 } from '@sinch/sdk-client';
 import { VerificationService } from '@sinch/verification';
 import { formatUserAgent } from '../../../utils';
+import { timedSdkFetchClient } from '../../../telemetry/sinch-api-metrics';
 
 export const getVerificationService = (toolName: string): VerificationService | PromptResponse => {
   const applicationKey = env.APPLICATION_KEY;
@@ -28,15 +29,18 @@ export const getVerificationService = (toolName: string): VerificationService | 
   }
 
   const verificationService = new VerificationService({});
-  const fetcher = new ApiFetchClient({
-    requestPlugins: [
-      new XTimestampRequest(),
-      new SigningRequest(applicationKey, applicationSecret),
-      new AdditionalHeadersRequest({
-        headers: buildHeader('User-Agent', formatUserAgent(toolName, applicationKey)),
-      }),
-    ],
-  });
+  const fetcher = timedSdkFetchClient(
+    new ApiFetchClient({
+      requestPlugins: [
+        new XTimestampRequest(),
+        new SigningRequest(applicationKey, applicationSecret),
+        new AdditionalHeadersRequest({
+          headers: buildHeader('User-Agent', formatUserAgent(toolName, applicationKey)),
+        }),
+      ],
+    }),
+    'verification',
+  );
   // Remove the VersionRequest plugin, as we override the user-agent header
   fetcher.apiClientOptions.requestPlugins?.shift();
   fetcher.apiClientOptions.hostname = VERIFICATION_HOSTNAME;

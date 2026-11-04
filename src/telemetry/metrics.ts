@@ -6,6 +6,7 @@ import {
   METRIC_TOOL_DURATION_MS,
   METRIC_TOOL_ERRORS_TOTAL,
   METER_NAME,
+  DURATION_BUCKETS_MS,
 } from './constants';
 
 export interface ToolMetrics {
@@ -22,6 +23,10 @@ export interface SessionStoreMetrics {
 let toolMetrics: ToolMetrics | undefined;
 let sessionStoreMetrics: SessionStoreMetrics | undefined;
 
+export const resetToolMetricsForTests = (): void => {
+  toolMetrics = undefined;
+};
+
 export const getToolMetrics = (): ToolMetrics => {
   if (!toolMetrics) {
     const meter = metrics.getMeter(METER_NAME);
@@ -35,10 +40,12 @@ export const getToolMetrics = (): ToolMetrics => {
       toolDurationMs: meter.createHistogram(METRIC_TOOL_DURATION_MS, {
         description: 'MCP tool invocation duration in milliseconds',
         unit: 'ms',
+        advice: { explicitBucketBoundaries: DURATION_BUCKETS_MS },
       }),
       sinchApiDurationMs: meter.createHistogram(METRIC_SINCH_API_DURATION_MS, {
         description: 'Sinch API call duration in milliseconds',
         unit: 'ms',
+        advice: { explicitBucketBoundaries: DURATION_BUCKETS_MS },
       }),
     };
   }

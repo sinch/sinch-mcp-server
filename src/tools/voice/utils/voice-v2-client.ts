@@ -11,6 +11,7 @@ import { getSharedOauth2TokenRequest } from '../../../auth/oauth-token-cache';
 import { resolveSinchOAuthCredentials } from '../../../auth/resolve-sinch-oauth-credentials';
 import { PromptResponse } from '../../../types';
 import { formatUserAgent, isPromptResponse } from '../../../utils';
+import { timedSdkFetchClient } from '../../../telemetry/sinch-api-metrics';
 
 export interface VoiceV2Client {
   voice: VoiceV2Service;
@@ -28,14 +29,20 @@ export const getVoiceV2Client = (toolName: string): VoiceV2Client | PromptRespon
     headers: buildHeader('User-Agent', formatUserAgent(toolName, projectId)),
   });
 
-  const voiceFetcher = new ApiFetchClient({
-    projectId,
-    requestPlugins: [authenticationPlugin, additionalHeadersPlugin],
-  });
-  const numbersFetcher = new ApiFetchClient({
-    projectId,
-    requestPlugins: [authenticationPlugin, additionalHeadersPlugin],
-  });
+  const voiceFetcher = timedSdkFetchClient(
+    new ApiFetchClient({
+      projectId,
+      requestPlugins: [authenticationPlugin, additionalHeadersPlugin],
+    }),
+    'voice',
+  );
+  const numbersFetcher = timedSdkFetchClient(
+    new ApiFetchClient({
+      projectId,
+      requestPlugins: [authenticationPlugin, additionalHeadersPlugin],
+    }),
+    'numbers',
+  );
 
   // Remove the VersionRequest plugins, as we override the user-agent header.
   voiceFetcher.apiClientOptions.requestPlugins?.shift();
