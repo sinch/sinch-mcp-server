@@ -6,9 +6,9 @@ import {
   buildHeader,
   XTimestampRequest,
   SigningRequest,
-  VERIFICATION_HOSTNAME,
 } from '@sinch/sdk-client';
 import { VerificationService } from '@sinch/verification';
+import { getSinchVerificationUrl } from '../../../sinch-api-hosts';
 import { formatUserAgent } from '../../../utils';
 import { timedSdkFetchClient } from '../../../telemetry/sinch-api-metrics';
 
@@ -43,7 +43,7 @@ export const getVerificationService = (toolName: string): VerificationService | 
   );
   // Remove the VersionRequest plugin, as we override the user-agent header
   fetcher.apiClientOptions.requestPlugins?.shift();
-  fetcher.apiClientOptions.hostname = VERIFICATION_HOSTNAME;
+  fetcher.apiClientOptions.hostname = getSinchVerificationUrl();
 
   verificationService.lazyClient.apiFetchClient = fetcher;
 

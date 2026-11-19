@@ -2,11 +2,9 @@ import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { registerTracedTool } from '../../telemetry/register-traced-tool';
 import { z } from 'zod';
 import { PromptResponse, Tags } from '../../types';
-import { resolveSinchOAuthCredentials } from '../../auth/resolve-sinch-oauth-credentials';
-import { formatUserAgent, isPromptResponse, matchesAnyTag } from '../../utils';
+import { isPromptResponse, matchesAnyTag } from '../../utils';
 import { getToolName, NumbersToolKey, toolsConfig } from './utils/numbers-tools-helper';
-import { Numbers } from '@sinch/numbers';
-import { timedFetchSinchApi } from '../../telemetry/sinch-api-metrics';
+import { getNumbersService } from './utils/numbers-service-helper';
 
 const ListRentedNumbersSchema = {
   regionCode: z
@@ -63,61 +61,26 @@ export const listRentedNumbersHandler = async ({
   capability,
   size,
 }: ListRentedNumbers) => {
-  const maybeCredentials = resolveSinchOAuthCredentials();
-  if (isPromptResponse(maybeCredentials)) {
-    return maybeCredentials.promptResponse;
+  const maybeService = getNumbersService(TOOL_NAME);
+  if (isPromptResponse(maybeService)) {
+    return maybeService.promptResponse;
   }
-  const { projectId, keyId, keySecret } = maybeCredentials;
+  const numbersService = maybeService;
 
   try {
-    const queryParams = new URLSearchParams();
-    if (regionCode) {
-      queryParams.append('regionCode', regionCode);
-    }
-    if (type) {
-      queryParams.append('type', type);
-    }
-    if (searchPattern) {
-      queryParams.append('numberPattern.pattern', searchPattern);
-    }
-    if (patternPosition) {
-      queryParams.append('numberPattern.searchPattern', patternPosition);
-    }
-    if (capability) {
-      queryParams.append('capability', capability);
-    }
-    if (size) {
-      queryParams.append('pageSize', size.toString());
-    }
-
-    const response = await timedFetchSinchApi(
-      'numbers',
-      `https://numbers.api.sinch.com/v1/projects/${projectId}/activeNumbers${queryParams.toString() ? '?' + queryParams.toString() : ''}`,
-      {
-        method: 'GET',
-        headers: {
-          Authorization: 'Basic ' + Buffer.from(`${keyId}:${keySecret}`).toString('base64'),
-          'User-Agent': formatUserAgent(TOOL_NAME, projectId),
-        },
-      },
-    );
-
-    if (!response.ok) {
-      const errorText = await response.text();
-      return new PromptResponse(
-        JSON.stringify({
-          success: false,
-          error: `(${response.status} - ${response.statusText}) Failed to list the rented numbers: ${errorText}`,
-        }),
-      ).promptResponse;
-    }
-
-    const parsedResponse = (await response.json()) as Numbers.ActiveNumbersResponse;
+    const page = await numbersService.list({
+      regionCode,
+      type,
+      'numberPattern.pattern': searchPattern,
+      'numberPattern.searchPattern': patternPosition,
+      capability,
+      pageSize: size,
+    });
 
     return new PromptResponse(
       JSON.stringify({
         success: true,
-        data: parsedResponse.activeNumbers,
+        data: page.data,
       }),
     ).promptResponse;
   } catch (error) {

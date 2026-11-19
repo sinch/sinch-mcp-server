@@ -1,6 +1,7 @@
 import { createEnv, type StandardSchemaV1 } from '@t3-oss/env-core';
 import { config } from 'dotenv';
 import { z } from 'zod';
+import { sinchApiUrlSchema } from './sinch-api-url-schema';
 import { logger } from './telemetry/logger';
 
 config();
@@ -22,6 +23,14 @@ export const env = createEnv({
     MAILGUN_SENDER_ADDRESS: z.string().optional(),
     OTEL_PROPAGATORS: z.string().optional(),
     MCP_TAGS: z.string().optional(),
+    SINCH_AUTH_URL: sinchApiUrlSchema.optional(),
+    SINCH_CONVERSATION_URL: sinchApiUrlSchema.optional(),
+    SINCH_TEMPLATES_URL: sinchApiUrlSchema.optional(),
+    SINCH_NUMBERS_URL: sinchApiUrlSchema.optional(),
+    SINCH_VOICE_URL: sinchApiUrlSchema.optional(),
+    SINCH_NUMBER_LOOKUP_URL: sinchApiUrlSchema.optional(),
+    SINCH_VERIFICATION_URL: sinchApiUrlSchema.optional(),
+    SINCH_PROVISIONING_URL: sinchApiUrlSchema.optional(),
   },
   runtimeEnvStrict: {
     PROJECT_ID: process.env.PROJECT_ID,
@@ -39,6 +48,14 @@ export const env = createEnv({
     MAILGUN_SENDER_ADDRESS: process.env.MAILGUN_SENDER_ADDRESS,
     OTEL_PROPAGATORS: process.env.OTEL_PROPAGATORS,
     MCP_TAGS: process.env.MCP_TAGS,
+    SINCH_AUTH_URL: process.env.SINCH_AUTH_URL,
+    SINCH_CONVERSATION_URL: process.env.SINCH_CONVERSATION_URL,
+    SINCH_TEMPLATES_URL: process.env.SINCH_TEMPLATES_URL,
+    SINCH_NUMBERS_URL: process.env.SINCH_NUMBERS_URL,
+    SINCH_VOICE_URL: process.env.SINCH_VOICE_URL,
+    SINCH_NUMBER_LOOKUP_URL: process.env.SINCH_NUMBER_LOOKUP_URL,
+    SINCH_VERIFICATION_URL: process.env.SINCH_VERIFICATION_URL,
+    SINCH_PROVISIONING_URL: process.env.SINCH_PROVISIONING_URL,
   },
   emptyStringAsUndefined: true,
   onValidationError: (issues: readonly StandardSchemaV1.Issue[]) => {

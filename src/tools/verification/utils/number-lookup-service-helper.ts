@@ -1,7 +1,8 @@
-import { AdditionalHeadersRequest, ApiFetchClient, buildHeader, NUMBER_LOOKUP_HOSTNAME } from '@sinch/sdk-client';
+import { AdditionalHeadersRequest, ApiFetchClient, buildHeader } from '@sinch/sdk-client';
 import { NumberLookupService } from '@sinch/number-lookup';
 import { getSharedOauth2TokenRequest } from '../../../auth/oauth-token-cache';
 import { resolveSinchOAuthCredentials } from '../../../auth/resolve-sinch-oauth-credentials';
+import { getSinchNumberLookupUrl } from '../../../sinch-api-hosts';
 import { PromptResponse } from '../../../types';
 import { formatUserAgent } from '../../../utils';
 import { timedSdkFetchClient } from '../../../telemetry/sinch-api-metrics';
@@ -28,7 +29,7 @@ export function getNumberLookupService(toolName: string): NumberLookupService | 
   );
   // Remove the VersionRequest plugin, as we override the user-agent header
   fetcher.apiClientOptions.requestPlugins?.shift();
-  fetcher.apiClientOptions.hostname = NUMBER_LOOKUP_HOSTNAME;
+  fetcher.apiClientOptions.hostname = getSinchNumberLookupUrl();
 
   numberLookupService.lazyClient.apiFetchClient = fetcher;
 

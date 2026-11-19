@@ -83,6 +83,45 @@ describe('getConversationService / getConversationTemplateService', () => {
     );
   });
 
+  test('fills the region into the SINCH_CONVERSATION_URL and SINCH_TEMPLATES_URL overrides', () => {
+    mockEnv.SINCH_CONVERSATION_URL = 'https://{region}conversation.example.test';
+    mockEnv.SINCH_TEMPLATES_URL = 'https://{region}template.example.test';
+    const service = getConversationService(TOOL_NAME) as ConversationService;
+
+    expect(service.lazyConversationClient.apiFetchClient!.apiClientOptions.hostname).toBe(
+      'https://us.conversation.example.test',
+    );
+    expect(service.lazyConversationTemplateClient.apiFetchClient!.apiClientOptions.hostname).toBe(
+      'https://us.template.example.test',
+    );
+
+    setConversationRegion('br', service);
+    setTemplateRegion('eu', service);
+
+    expect(service.lazyConversationClient.apiFetchClient!.apiClientOptions.hostname).toBe(
+      'https://br.conversation.example.test',
+    );
+    expect(service.lazyConversationTemplateClient.apiFetchClient!.apiClientOptions.hostname).toBe(
+      'https://eu.template.example.test',
+    );
+  });
+
+  test('keeps a fixed SINCH_CONVERSATION_URL and SINCH_TEMPLATES_URL when the region changes', () => {
+    mockEnv.SINCH_CONVERSATION_URL = 'https://api.eu1tst.conversation-api.example.test';
+    mockEnv.SINCH_TEMPLATES_URL = 'https://api.eu1tst.template-store.example.test';
+    const service = getConversationService(TOOL_NAME) as ConversationService;
+
+    setConversationRegion('eu', service);
+    setTemplateRegion('br', service);
+
+    expect(service.lazyConversationClient.apiFetchClient!.apiClientOptions.hostname).toBe(
+      'https://api.eu1tst.conversation-api.example.test',
+    );
+    expect(service.lazyConversationTemplateClient.apiFetchClient!.apiClientOptions.hostname).toBe(
+      'https://api.eu1tst.template-store.example.test',
+    );
+  });
+
   test('resolveConversationRegionsToList returns every supported region', () => {
     expect(resolveConversationRegionsToList()).toEqual(Object.values(SupportedConversationRegion));
   });

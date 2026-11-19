@@ -5,6 +5,7 @@ import {
   setOauthTokenCacheMaxEntriesForTests,
 } from '../../src/auth/oauth-token-cache';
 import { buildCredentialCacheKey } from '../../src/auth/sinch-oauth-credentials';
+import { mockEnv, resetMockEnv } from '../helpers/mock-env';
 
 const makeCreds = (projectId: string, keyId: string, keySecret: string) => ({
   projectId,
@@ -15,7 +16,22 @@ const makeCreds = (projectId: string, keyId: string, keySecret: string) => ({
 
 describe('oauth-token-cache', () => {
   beforeEach(() => {
+    resetMockEnv();
     clearOauthTokenCacheForTests();
+  });
+
+  const authHostnameOf = (plugin: Oauth2TokenRequest): string =>
+    (plugin as unknown as { apiClient: { apiClientOptions: { hostname: string } } }).apiClient.apiClientOptions
+      .hostname;
+
+  it('requests tokens from the production auth host by default', () => {
+    expect(authHostnameOf(getSharedOauth2TokenRequest(makeCreds('p', 'k', 's')))).toBe('https://auth.sinch.com');
+  });
+
+  it('requests tokens from SINCH_AUTH_URL when set', () => {
+    mockEnv.SINCH_AUTH_URL = 'https://auth.example.test';
+
+    expect(authHostnameOf(getSharedOauth2TokenRequest(makeCreds('p', 'k', 's')))).toBe('https://auth.example.test');
   });
 
   it('reuses Oauth2TokenRequest for the same credential cache key', () => {

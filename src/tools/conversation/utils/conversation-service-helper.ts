@@ -2,8 +2,6 @@ import {
   AdditionalHeadersRequest,
   ApiFetchClient,
   buildHeader,
-  CONVERSATION_HOSTNAME,
-  CONVERSATION_TEMPLATES_HOSTNAME,
   ConversationRegion,
   formatRegionalizedHostname,
   REGION_PATTERN,
@@ -13,6 +11,7 @@ import { ConversationService } from '@sinch/conversation';
 import { getSharedOauth2TokenRequest } from '../../../auth/oauth-token-cache';
 import { resolveSinchOAuthCredentials } from '../../../auth/resolve-sinch-oauth-credentials';
 import { env } from '../../../env';
+import { getSinchConversationTemplatesUrl, getSinchConversationUrl } from '../../../sinch-api-hosts';
 import { PromptResponse } from '../../../types';
 import { formatUserAgent } from '../../../utils';
 import { timedSdkFetchClient } from '../../../telemetry/sinch-api-metrics';
@@ -78,8 +77,8 @@ export const getConversationService = (toolName: string): ConversationService | 
   // Replace the region placeholder with the resolved region (the pinned env region, or the env
   // value with a US default when no region is pinned)
   const defaultRegion = resolveConversationRegion(undefined);
-  fetcher.apiClientOptions.hostname = CONVERSATION_HOSTNAME.replace(REGION_PATTERN, `${defaultRegion}.`);
-  templateFetcher.apiClientOptions.hostname = CONVERSATION_TEMPLATES_HOSTNAME.replace(
+  fetcher.apiClientOptions.hostname = getSinchConversationUrl().replace(REGION_PATTERN, `${defaultRegion}.`);
+  templateFetcher.apiClientOptions.hostname = getSinchConversationTemplatesUrl().replace(
     REGION_PATTERN,
     `${defaultRegion}.`,
   );
@@ -108,7 +107,7 @@ export const setConversationRegion = (promptRegion: string | undefined, conversa
   conversationService.lazyConversationClient.sharedConfig.conversationRegion = region;
   const formattedRegion = region !== '' ? `${region}.` : '';
   conversationService.lazyConversationClient.apiFetchClient!.apiClientOptions.hostname = formatRegionalizedHostname(
-    CONVERSATION_HOSTNAME,
+    getSinchConversationUrl(),
     formattedRegion,
   );
   return region;
@@ -119,6 +118,6 @@ export const setTemplateRegion = (promptRegion: string | undefined, conversation
   conversationService.lazyConversationTemplateClient.sharedConfig.conversationRegion = region;
   const formattedRegion = region !== '' ? `${region}.` : '';
   conversationService.lazyConversationTemplateClient.apiFetchClient!.apiClientOptions.hostname =
-    formatRegionalizedHostname(CONVERSATION_TEMPLATES_HOSTNAME, formattedRegion);
+    formatRegionalizedHostname(getSinchConversationTemplatesUrl(), formattedRegion);
   return region;
 };

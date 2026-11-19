@@ -14,6 +14,14 @@ export type MockServerEnv = {
   MAILGUN_SENDER_ADDRESS?: string;
   OTEL_PROPAGATORS?: string;
   MCP_TAGS?: string;
+  SINCH_AUTH_URL?: string;
+  SINCH_CONVERSATION_URL?: string;
+  SINCH_TEMPLATES_URL?: string;
+  SINCH_NUMBERS_URL?: string;
+  SINCH_VOICE_URL?: string;
+  SINCH_NUMBER_LOOKUP_URL?: string;
+  SINCH_VERIFICATION_URL?: string;
+  SINCH_PROVISIONING_URL?: string;
 };
 
 export const mockEnv: MockServerEnv = {};

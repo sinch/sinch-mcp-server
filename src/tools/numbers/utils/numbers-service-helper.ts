@@ -1,7 +1,8 @@
-import { AdditionalHeadersRequest, ApiFetchClient, buildHeader, NUMBERS_HOSTNAME } from '@sinch/sdk-client';
+import { AdditionalHeadersRequest, ApiFetchClient, buildHeader } from '@sinch/sdk-client';
 import { NumbersService } from '@sinch/numbers';
 import { getSharedOauth2TokenRequest } from '../../../auth/oauth-token-cache';
 import { resolveSinchOAuthCredentials } from '../../../auth/resolve-sinch-oauth-credentials';
+import { getSinchNumbersUrl } from '../../../sinch-api-hosts';
 import { PromptResponse } from '../../../types';
 import { formatUserAgent } from '../../../utils';
 import { timedSdkFetchClient } from '../../../telemetry/sinch-api-metrics';
@@ -28,7 +29,7 @@ export function getNumbersService(toolName: string): NumbersService | PromptResp
   );
   // Remove the VersionRequest plugin, as we override the user-agent header
   fetcher.apiClientOptions.requestPlugins?.shift();
-  fetcher.apiClientOptions.hostname = NUMBERS_HOSTNAME;
+  fetcher.apiClientOptions.hostname = getSinchNumbersUrl();
 
   numbersService.lazyClient.apiFetchClient = fetcher;
 

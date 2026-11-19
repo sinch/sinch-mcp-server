@@ -1,8 +1,7 @@
 import { HttpStatus } from './http-status';
+import { getSinchProvisioningUrl } from './sinch-api-hosts';
 import { timedFetchSinchApi } from './telemetry/sinch-api-metrics';
 import { formatUserAgent } from './utils';
-
-const PROVISIONING_HOST = 'https://provisioning.api.sinch.com';
 
 // Shared error-response shape, used to build each client's ApiError via buildApiError().
 export interface ProvisioningErrorBody {
@@ -25,7 +24,7 @@ export abstract class BaseProvisioningClient {
   protected abstract buildApiError(status: number, statusText: string, errorCode?: string, resolution?: string): Error;
 
   private baseUrl(): string {
-    return `${PROVISIONING_HOST}/v1/projects/${this.projectId}/${this.resource}`;
+    return `${getSinchProvisioningUrl()}/v1/projects/${this.projectId}/${this.resource}`;
   }
 
   private headers(): Record<string, string> {

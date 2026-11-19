@@ -51,6 +51,16 @@ describe('getVoiceV2Client', () => {
     );
   });
 
+  it('uses SINCH_VOICE_URL and SINCH_NUMBERS_URL when set', () => {
+    mockEnv.SINCH_VOICE_URL = 'https://voice.example.test';
+    mockEnv.SINCH_NUMBERS_URL = 'https://numbers.example.test';
+
+    const client = getVoiceV2Client(TOOL_NAME) as VoiceV2Client;
+
+    expect(client.voice.lazyClient.apiFetchClient!.apiClientOptions.hostname).toBe('https://voice.example.test');
+    expect(client.numbers.lazyClient.apiFetchClient!.apiClientOptions.hostname).toBe('https://numbers.example.test');
+  });
+
   it('reuses the cached OAuth plugin across client instances', () => {
     const first = getVoiceV2Client(TOOL_NAME) as VoiceV2Client;
     const second = getVoiceV2Client(TOOL_NAME) as VoiceV2Client;

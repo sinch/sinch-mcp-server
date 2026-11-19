@@ -39,4 +39,12 @@ describe('getVerificationService', () => {
     const expectedUserAgent = formatUserAgent(TOOL_NAME, APPLICATION_KEY);
     expect((await (userAgentPlugin as any).additionalHeaders.headers)['User-Agent']).toBe(expectedUserAgent);
   });
+
+  test('uses SINCH_VERIFICATION_URL when set', () => {
+    mockEnv.SINCH_VERIFICATION_URL = 'https://verification.example.test';
+
+    const service = getVerificationService(TOOL_NAME) as VerificationService;
+
+    expect(service.lazyClient.apiFetchClient!.apiClientOptions.hostname).toBe('https://verification.example.test');
+  });
 });

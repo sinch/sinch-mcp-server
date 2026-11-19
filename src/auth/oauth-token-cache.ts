@@ -1,4 +1,5 @@
 import { Oauth2TokenRequest } from '@sinch/sdk-client';
+import { getSinchAuthUrl } from '../sinch-api-hosts';
 import type { SinchOAuthCredentials } from './sinch-oauth-credentials';
 
 const DEFAULT_MAX_ENTRIES = 256;
@@ -35,7 +36,7 @@ export const getSharedOauth2TokenRequest = (credentials: SinchOAuthCredentials):
     evictOldestEntry();
   }
 
-  const plugin = new Oauth2TokenRequest(credentials.keyId, credentials.keySecret);
+  const plugin = new Oauth2TokenRequest(credentials.keyId, credentials.keySecret, getSinchAuthUrl());
   oauthPluginsByCacheKey.set(credentials.cacheKey, plugin);
   return plugin;
 };

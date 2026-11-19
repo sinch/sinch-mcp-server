@@ -39,6 +39,14 @@ describe('getNumbersService', () => {
     expect((await (userAgentPlugin as any).additionalHeaders.headers)['User-Agent']).toBe(expectedUserAgent);
   });
 
+  it('uses SINCH_NUMBERS_URL when set', () => {
+    mockEnv.SINCH_NUMBERS_URL = 'https://numbers.example.test';
+
+    const service = getNumbersService(TOOL_NAME) as NumbersService;
+
+    expect(service.lazyClient.apiFetchClient!.apiClientOptions.hostname).toBe('https://numbers.example.test');
+  });
+
   it('returns prompt response when credentials are missing', () => {
     mockEnv.PROJECT_ID = undefined;
 

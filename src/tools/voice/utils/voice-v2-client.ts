@@ -1,14 +1,7 @@
-import {
-  AdditionalHeadersRequest,
-  ApiFetchClient,
-  buildHeader,
-  DEFAULT_VOICE_V2_HOSTNAME,
-  NUMBERS_HOSTNAME,
-  NumbersService,
-  VoiceV2Service,
-} from '@sinch/sdk-core';
+import { AdditionalHeadersRequest, ApiFetchClient, buildHeader, NumbersService, VoiceV2Service } from '@sinch/sdk-core';
 import { getSharedOauth2TokenRequest } from '../../../auth/oauth-token-cache';
 import { resolveSinchOAuthCredentials } from '../../../auth/resolve-sinch-oauth-credentials';
+import { getSinchNumbersUrl, getSinchVoiceUrl } from '../../../sinch-api-hosts';
 import { PromptResponse } from '../../../types';
 import { formatUserAgent, isPromptResponse } from '../../../utils';
 import { timedSdkFetchClient } from '../../../telemetry/sinch-api-metrics';
@@ -47,8 +40,8 @@ export const getVoiceV2Client = (toolName: string): VoiceV2Client | PromptRespon
   // Remove the VersionRequest plugins, as we override the user-agent header.
   voiceFetcher.apiClientOptions.requestPlugins?.shift();
   numbersFetcher.apiClientOptions.requestPlugins?.shift();
-  voiceFetcher.apiClientOptions.hostname = DEFAULT_VOICE_V2_HOSTNAME;
-  numbersFetcher.apiClientOptions.hostname = NUMBERS_HOSTNAME;
+  voiceFetcher.apiClientOptions.hostname = getSinchVoiceUrl();
+  numbersFetcher.apiClientOptions.hostname = getSinchNumbersUrl();
 
   const voice = new VoiceV2Service({});
   voice.lazyClient.apiFetchClient = voiceFetcher;
