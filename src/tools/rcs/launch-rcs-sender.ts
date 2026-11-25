@@ -8,6 +8,7 @@ import { RcsSenderId } from './prompt-schemas';
 import { formatRcsSender } from './utils/format-rcs-sender-response';
 import { getMissingLaunchRequirements } from './utils/launch-requirements';
 import { runRcsHandler } from './utils/rcs-handler-helper';
+import { summarizeValidationErrors } from './utils/rcs-error-helper';
 import { RcsApiError } from './utils/rcs-provisioning-client';
 import { getToolName, RcsToolKey, toolsConfig } from './utils/rcs-tools-helper';
 
@@ -30,7 +31,7 @@ export const registerLaunchRcsSender = (server: McpServer, tags: Tags[]) => {
     TOOL_NAME,
     {
       description:
-        'Submit an RCS sender for Google and carrier review. Before calling this tool, verify ALL of the following are set via update-rcs-sender — the launch is rejected if any item is missing: (1) details.brand.name; (2) details.brand.logoUrl (JPEG/PNG, max 50 KB, 224×224 px); (3) details.brand.bannerUrl (JPEG/PNG, max 200 KB, 1440×448 px); (4) details.brand.privacyPolicyUrl; (5) details.brand.termsOfServiceUrl; (6) at least one of details.brand.phones or details.brand.emails; (7) details.countries with at least one supported country code; (8) details.questionnaire.general.answers — all fields; (9) details.questionnaire.verification.answers — all fields; (10) country-specific questionnaire section for each country in details.countries (e.g. questionnaire.gb for GB, questionnaire.us for US, questionnaire.fr for FR). Use get-rcs-sender to review current values before launching. If the launch is rejected, the response lists exactly which required details are still missing so they can be filled in and the launch retried.',
+        'Submit an RCS sender for Google and carrier review. Before calling this tool, verify ALL of the following are set via update-rcs-sender — the launch is rejected if any item is missing: (1) details.brand.logoUrl (JPEG/PNG, max 50 KB, 224×224 px); (2) details.brand.bannerUrl (JPEG/PNG, max 200 KB, 1440×448 px); (3) details.brand.privacyPolicyUrl; (4) details.brand.termsOfServiceUrl; (5) at least one of details.brand.phones, details.brand.emails or details.brand.websites; (6) details.countries with at least one supported country code; (7) details.questionnaire.general.answers: optInDescription, triggerDescription, interactionsDescription and optOutDescription; (8) details.questionnaire.verification.answers: name, email (valid email) and website (valid URL), plus phone in E.164 format for a US sender; (9) the country-specific questionnaire section for each country in details.countries (e.g. questionnaire.us for US; a US launch is rejected until its required answers are filled). The exact fields are listed in the rcs-campaign-setup resource under "Launch requirements" — read it before launching. Use get-rcs-sender to review current values before launching. If the launch is rejected, validationErrors in the response lists exactly what the API still requires so it can be filled in and the launch retried.',
       inputSchema: LaunchRcsSenderSchema,
     },
     launchRcsSenderHandler,
@@ -49,10 +50,23 @@ export const launchRcsSenderHandler = async ({ senderId }: LaunchRcsSender): Pro
         }),
       ).promptResponse;
     } catch (error) {
-      // A precondition failure means launch requirements are unmet. Return which
-      // fields are still missing plus the current sender, not the HTTP status.
+      // A precondition failure means launch requirements are unmet. Return the API's
+      // validation errors (or a local check as fallback) plus the current sender.
       if (error instanceof RcsApiError && error.status === HttpStatus.PRECONDITION_FAILED) {
         const sender = await client.getSender(senderId);
+
+        if (error.validationErrors?.length) {
+          return new PromptResponse(
+            JSON.stringify({
+              success: false,
+              error:
+                'The launch was rejected: fix the items in validationErrors via update-rcs-sender, then retry the launch.',
+              validationErrors: summarizeValidationErrors(error.validationErrors),
+              sender: formatRcsSender(sender),
+            }),
+          ).promptResponse;
+        }
+
         const missingRequirements = getMissingLaunchRequirements(sender);
 
         const MISSING_REQUIREMENTS_ERROR =

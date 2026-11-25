@@ -20,9 +20,6 @@ export const getMissingLaunchRequirements = (sender: RcsSender): string[] => {
   const countries = sender.details?.countries ?? [];
   const questionnaire = (sender.details?.questionnaire ?? {}) as Record<string, { answers?: unknown } | undefined>;
 
-  if (!brand?.name) {
-    missing.push('details.brand.name');
-  }
   if (!brand?.logoUrl) {
     missing.push('details.brand.logoUrl (JPEG/PNG, max 50 KB, 224×224 px)');
   }
@@ -35,8 +32,8 @@ export const getMissingLaunchRequirements = (sender: RcsSender): string[] => {
   if (!brand?.termsOfServiceUrl) {
     missing.push('details.brand.termsOfServiceUrl');
   }
-  if (!brand?.phones?.length && !brand?.emails?.length) {
-    missing.push('at least one of details.brand.phones or details.brand.emails');
+  if (!brand?.phones?.length && !brand?.emails?.length && !brand?.websites?.length) {
+    missing.push('at least one of details.brand.phones, details.brand.emails or details.brand.websites');
   }
   if (countries.length === 0) {
     missing.push('at least one entry in details.countries');

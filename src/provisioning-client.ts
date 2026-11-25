@@ -8,6 +8,7 @@ export interface ProvisioningErrorBody {
   errorCode?: string;
   message?: string;
   resolution?: string;
+  additionalInformation?: { validationErrors?: string[] };
 }
 
 // Base REST client for Sinch provisioning APIs (Basic auth, project-scoped
@@ -21,7 +22,13 @@ export abstract class BaseProvisioningClient {
     private readonly toolName: string,
   ) {}
 
-  protected abstract buildApiError(status: number, statusText: string, errorCode?: string, resolution?: string): Error;
+  protected abstract buildApiError(
+    status: number,
+    statusText: string,
+    errorCode?: string,
+    resolution?: string,
+    validationErrors?: string[],
+  ): Error;
 
   private baseUrl(): string {
     return `${getSinchProvisioningUrl()}/v1/projects/${this.projectId}/${this.resource}`;
@@ -42,7 +49,13 @@ export abstract class BaseProvisioningClient {
     } catch {
       // ignore JSON parse errors
     }
-    return this.buildApiError(response.status, body.message ?? response.statusText, body.errorCode, body.resolution);
+    return this.buildApiError(
+      response.status,
+      body.message ?? response.statusText,
+      body.errorCode,
+      body.resolution,
+      body.additionalInformation?.validationErrors,
+    );
   }
 
   protected async request<T>(method: string, path: string, body?: unknown): Promise<T> {

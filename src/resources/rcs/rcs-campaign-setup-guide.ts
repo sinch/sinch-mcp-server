@@ -53,7 +53,7 @@ There are two variants depending on whether all information is available upfront
 Use when the user has all brand details, questionnaire answers, countries, and test numbers ready.
 
 1. **list-rcs-senders** — Check if a sender already exists in the target region.
-2. **create-rcs-sender** — Provide \`region\`, \`billingCategory\`, \`useCase\`, and the full \`details\` object (brand, questionnaire, countries, testNumbers) in one call. If complete, sender lands directly in \`IN_TEST\`.
+2. **create-rcs-sender** — Provide \`region\`, \`billingCategory\`, \`useCase\`, and the full \`details\` object (brand, questionnaire, countries, testNumbers) in one call. If complete, sender lands directly in \`IN_TEST\`. The US questionnaire section is not accepted on create: for a US launch, add it with **update-rcs-sender** right after.
 3. **set-rcs-channel-on-app** — Use the sender's \`authName\` (\`senderId\`) and \`authToken\` (\`bearerToken\`). Do not use the sender's \`id\`.
 4. Test messaging via Conversation API with \`channel: RCS\` on test numbers.
 5. **launch-rcs-sender** — No request body. Check launch requirements first (see below).
@@ -86,26 +86,38 @@ Use **list-rcs-senders** to find a sender by region or state, then act based on 
 
 ## Launch requirements (all must be met or 412 is returned)
 
-- Questionnaire completed.
-- \`details.countries\` has at least 1 value.
-- At least one \`details.brand.phones\` OR \`details.brand.emails\` (both recommended).
-- \`details.brand.bannerUrl\` defined.
-- \`details.brand.logoUrl\` defined.
-- \`details.brand.privacyPolicyUrl\` defined.
-- \`details.brand.termsOfServiceUrl\` defined.
+The API checks these at launch and returns every unmet one in the 412 response, under \`additionalInformation.validationErrors\` (\`validationErrors\` in the tool response). Fill what it lists via update-rcs-sender and retry:
+
+- \`details.countries\` has at least 1 supported, unique value.
+- At least one of \`details.brand.phones\`, \`details.brand.emails\` or \`details.brand.websites\` (all three recommended).
+- \`details.brand.bannerUrl\`, \`logoUrl\`, \`privacyPolicyUrl\` and \`termsOfServiceUrl\` defined.
+- \`questionnaire.general.answers\`: \`optInDescription\`, \`triggerDescription\`, \`interactionsDescription\`, \`optOutDescription\`.
+- \`questionnaire.verification.answers\`: \`name\`, \`email\` (valid email), \`website\` (valid URL). A US sender also needs \`phone\` (E.164).
+- The country-specific section for each country in \`details.countries\`.
+
+Country-specific fields:
+- **gb**: \`brandIndustry\`, \`companyLegalName\`, \`messagesVolume\`. The other GB fields (\`companyRegistrationNumber\`, \`fullCompanyAddress\`, \`messagesFrequency\`) are documented but not marked as required.
+- **us**: ownershipType, legalForm, companyLegalName, companyPhoneNumber, companyEmailAddress, brandName, brandIndustry, taxIdCountry, taxId, addressLine, addressCity, addressCountry, addressPostalCode, websiteUrl, contactFirstName, contactSurname, sampleMessages, messagesVolume, optInConfirmationMessage, helpMessage, callToActionMessage. Also \`addressState\` when \`taxIdCountry\` is US, and \`stockExchange\` and \`stockSymbol\` when \`ownershipType\` is PUBLIC. \`embeddedLink\`, \`embeddedPhone\`, \`ageGatedContent\` and \`directLending\` are optional.
+- **fr**: the docs mark no field as required for launch.
+
+US rules from the docs that depend on other answers:
+- \`legalForm\`: only \`CORPORATION\` is allowed when \`ownershipType\` is PUBLIC; PRIVATE allows \`CORPORATION\`, \`LIMITED_LIABILITY_COMPANY\`, \`PARTNERSHIP\` and \`S_CORPORATION\`.
+- \`taxId\`: must match \`XX-XXXXXXX\` when \`taxIdCountry\` is US; for other countries any string up to 25 characters.
+- \`addressState\`: required when \`taxIdCountry\` is US, ignored otherwise.
+- \`stockExchange\` and \`stockSymbol\`: required when \`ownershipType\` is PUBLIC, not allowed for PRIVATE.
 
 If \`videoUris\` was not provided in the questionnaire, Sinch Service Implementation will add a video before the review continues — this is not a failure.
 
 ## Questionnaire requirements
 
 Required sections for all senders:
-- **general**: optInDescription, optOutDescription, triggerDescription, interactionsDescription, screenshotUris, videoUris.
-- **verification**: contact name, email, title, website.
+- **general**: optInDescription, optOutDescription, triggerDescription, interactionsDescription. screenshotUris and videoUris are optional.
+- **verification**: contact name, email, website (and phone for a US sender, see Launch requirements).
 
 Country-specific sections:
 - **UK targets** (\`gb\`): brandIndustry, companyLegalName, companyRegistrationNumber, fullCompanyAddress, messagesVolume, messagesFrequency.
 - **France targets** (\`fr\`): fullCompanyAddress, SIREN number.
-- **US targets** (\`us\`): ~25 fields including EIN or tax ID, brandName, legalForm, full address, contact details, useCaseDescription, sampleMessages, callToActionDescription, callToActionScreenshotUrl, opt-in/opt-out flows, and Verizon-specific fields if applicable.
+- **US targets** (\`us\`): ownershipType, legalForm, taxId with taxIdCountry, brandName, brandIndustry, company contact and address details, sampleMessages, messagesVolume, and the opt-in confirmation, help and call-to-action messages (the embeddedLink/embeddedPhone/ageGatedContent/directLending flags are optional). US-registered companies also need addressState, and PUBLIC companies need stockExchange and stockSymbol. The verification section also needs a phone number.
 
 ## Test numbers
 
@@ -142,7 +154,7 @@ Only report a successful or completed launch when state is \`LAUNCHED\`. For all
 
 ## Supported countries for launch
 
-\`details.countries\` on update accepts only a specific set of supported countries, not all ISO 3166 codes. Supported values include: AT, BE, BR, CA, CZ, DK, FI, FR, DE, GR, HU, IT, MX, NL, NO, PE, PL, PT, SG, SK, ES, SE, US, GB.
+\`details.countries\` on update accepts only a specific set of supported countries, not all ISO 3166 codes. Supported values include: AT, AU, BE, BR, CA, CZ, DK, FI, FR, DE, GR, HR, HU, IT, LT, MX, NL, NO, PE, PL, PT, SG, SK, ES, SE, US, GB.
 
 If the user requests a country outside this list, inform them it is not currently supported for RCS launch.
 

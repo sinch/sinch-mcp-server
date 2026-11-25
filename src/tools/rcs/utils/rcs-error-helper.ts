@@ -2,12 +2,31 @@ import { HttpStatus } from '../../../http-status';
 import { RcsApiError } from './rcs-provisioning-client';
 
 const LAUNCH_CHECKLIST_HINT =
-  'Launch checklist — use update-rcs-sender to fill any missing items: brand.name, brand.logoUrl (224×224 px), brand.bannerUrl (1440×448 px), brand.privacyPolicyUrl, brand.termsOfServiceUrl, at least one of brand.phones or brand.emails, at least one entry in countries, questionnaire.general.answers (all fields), questionnaire.verification.answers (all fields), and the country-specific questionnaire section for each country in countries.';
+  'Launch checklist — use update-rcs-sender to fill any missing items: brand.logoUrl (224×224 px), brand.bannerUrl (1440×448 px), brand.privacyPolicyUrl, brand.termsOfServiceUrl, at least one of brand.phones, brand.emails or brand.websites, at least one entry in countries, questionnaire.general.answers (optInDescription, triggerDescription, interactionsDescription, optOutDescription), questionnaire.verification.answers (name, email, website; phone for US) and the country-specific questionnaire section for each country in countries.';
 
 const ERROR_HINTS: Record<string, string> = {
   rbm_has_not_been_used: 'RCS is not enabled on this project. Contact si-richmessaging@sinch.com.',
   rbm_too_many_requests: 'Test number invite limit reached (20/day, 200 total). Wait 24h and retry.',
 };
+
+const MAX_LISTED_VALUES = 30;
+const SHOWN_VALUES = 10;
+const ALLOWED_VALUES_MARKER = 'must be one of the following values: ';
+
+// Country lists run to ~250 codes; the tool schema already carries them.
+export const summarizeValidationErrors = (errors: string[]): string[] =>
+  errors.map((message) => {
+    const at = message.indexOf(ALLOWED_VALUES_MARKER);
+    if (at === -1) {
+      return message;
+    }
+    const prefixEnd = at + ALLOWED_VALUES_MARKER.length;
+    const values = message.slice(prefixEnd).split(', ');
+    if (values.length <= MAX_LISTED_VALUES) {
+      return message;
+    }
+    return `${message.slice(0, prefixEnd)}${values.slice(0, SHOWN_VALUES).join(', ')}, … (${values.length} values in total, see the tool schema)`;
+  });
 
 export const formatRcsError = (error: unknown): string => {
   if (error instanceof RcsApiError) {
@@ -24,6 +43,9 @@ export const formatRcsError = (error: unknown): string => {
     }
     if (error.status === HttpStatus.CONFLICT) {
       parts.push('A sender may already exist. Use list-rcs-senders and get-rcs-sender instead of create.');
+    }
+    if (error.validationErrors?.length) {
+      parts.push(`validationErrors: ${summarizeValidationErrors(error.validationErrors).join('; ')}.`);
     }
     if (error.status === HttpStatus.PRECONDITION_FAILED) {
       parts.push(LAUNCH_CHECKLIST_HINT);

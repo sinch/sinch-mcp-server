@@ -3,7 +3,7 @@ import { registerTracedTool } from '../../telemetry/register-traced-tool';
 import { z } from 'zod';
 import { IPromptResponse, PromptResponse, Tags } from '../../types';
 import { matchesAnyTag } from '../../utils';
-import { RcsBillingCategory, RcsRegion, RcsSenderDetails, RcsUseCase } from './prompt-schemas';
+import { RcsBillingCategory, RcsCreateSenderDetails, RcsRegion, RcsUseCase } from './prompt-schemas';
 import { CreateSenderRequest } from './types/rcs-api';
 import { formatRcsSender } from './utils/format-rcs-sender-response';
 import { runRcsHandler } from './utils/rcs-handler-helper';
@@ -13,7 +13,7 @@ const CreateRcsSenderSchema = {
   region: RcsRegion,
   billingCategory: RcsBillingCategory,
   useCase: RcsUseCase,
-  details: RcsSenderDetails,
+  details: RcsCreateSenderDetails,
 };
 
 type CreateRcsSender = z.infer<z.ZodObject<typeof CreateRcsSenderSchema>>;
@@ -31,7 +31,7 @@ export const registerCreateRcsSender = (server: McpServer, tags: Tags[]) => {
     TOOL_NAME,
     {
       description:
-        'Create an RCS sender. Required fields: region, billingCategory, useCase. You can also pass details (brand, questionnaire, countries) in the same call to fill them upfront, or use update-rcs-sender to add them incrementally — either way, all details must be complete before the sender can be launched.',
+        'Create an RCS sender. Required fields: region, billingCategory, useCase. You can also pass details (brand, questionnaire, countries) in the same call to fill them upfront, or use update-rcs-sender to add them incrementally — either way, all details must be complete before the sender can be launched. The US questionnaire section (questionnaire.us) is not accepted here: add it with update-rcs-sender after creating the sender.',
       inputSchema: CreateRcsSenderSchema,
     },
     createRcsSenderHandler,

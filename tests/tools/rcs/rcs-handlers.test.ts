@@ -144,12 +144,37 @@ test('launchRcsSenderHandler returns the missing requirements (not the HTTP stat
     'details.brand.bannerUrl (JPEG/PNG, max 200 KB, 1440×448 px)',
     'details.brand.privacyPolicyUrl',
     'details.brand.termsOfServiceUrl',
-    'at least one of details.brand.phones or details.brand.emails',
+    'at least one of details.brand.phones, details.brand.emails or details.brand.websites',
     'at least one entry in details.countries',
     'details.questionnaire.general.answers',
     'details.questionnaire.verification.answers',
   ]);
   expect(parsed.sender).toMatchObject({ id: 's1', state: 'DRAFT' });
+});
+
+test('launchRcsSenderHandler returns the API validationErrors on a precondition failure', async () => {
+  const validationErrors = [
+    'details.brand.termsOfServiceUrl must be a string',
+    'details.questionnaire.verification.answers.email must be an email',
+  ];
+  mockClient.launchSender.mockRejectedValue(
+    new RcsApiError(412, 'Launch precondition failed.', 'launch_precondition_failed', undefined, validationErrors),
+  );
+  mockClient.getSender.mockResolvedValue({
+    id: 's1',
+    region: 'US',
+    billingCategory: 'NON_CONVERSATIONAL',
+    useCase: 'TRANSACTIONAL',
+    state: 'IN_TEST',
+  });
+
+  const result = await launchRcsSenderHandler({ senderId: 's1' });
+  const parsed = JSON.parse(result.content[0].text);
+
+  expect(parsed.success).toBeFalse();
+  expect(parsed.validationErrors).toEqual(validationErrors);
+  expect(parsed).not.toHaveProperty('missingRequirements');
+  expect(parsed.sender).toMatchObject({ id: 's1', state: 'IN_TEST' });
 });
 
 test('launchRcsSenderHandler returns an actionable message when 412 but no requirements are computed as missing', async () => {

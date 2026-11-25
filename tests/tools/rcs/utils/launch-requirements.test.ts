@@ -46,7 +46,19 @@ test('flags missing brand fields', () => {
   ]);
 });
 
-test('flags missing contact when both phones and emails are absent', () => {
+test('accepts a website as the only brand contact', () => {
+  const sender = {
+    ...completeSender,
+    details: {
+      ...completeSender.details,
+      brand: { ...completeSender.details.brand, phones: null, websites: [{ label: 'Site', url: 'https://acme.com' }] },
+    },
+  } satisfies RcsSender;
+
+  expect(getMissingLaunchRequirements(sender)).toEqual([]);
+});
+
+test('flags missing contact when phones, emails and websites are all absent', () => {
   const sender = {
     ...completeSender,
     details: {
@@ -56,7 +68,7 @@ test('flags missing contact when both phones and emails are absent', () => {
   } satisfies RcsSender;
 
   expect(getMissingLaunchRequirements(sender)).toContain(
-    'at least one of details.brand.phones or details.brand.emails',
+    'at least one of details.brand.phones, details.brand.emails or details.brand.websites',
   );
 });
 

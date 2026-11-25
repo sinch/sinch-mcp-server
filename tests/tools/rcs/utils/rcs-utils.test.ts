@@ -1,4 +1,4 @@
-import { formatRcsError } from '../../../../src/tools/rcs/utils/rcs-error-helper';
+import { formatRcsError, summarizeValidationErrors } from '../../../../src/tools/rcs/utils/rcs-error-helper';
 import { RcsApiError } from '../../../../src/tools/rcs/utils/rcs-provisioning-client';
 import { formatRcsSender, formatRcsSenderSummary } from '../../../../src/tools/rcs/utils/format-rcs-sender-response';
 import { RcsSender } from '../../../../src/tools/rcs/types/rcs-api';
@@ -50,10 +50,18 @@ describe('formatRcsError', () => {
     const error = new RcsApiError(412, 'Precondition Failed');
     expect(formatRcsError(error)).toBe(
       'HTTP 412: RCS API error (412 Precondition Failed) Launch checklist — use update-rcs-sender to fill any missing items: ' +
-        'brand.name, brand.logoUrl (224×224 px), brand.bannerUrl (1440×448 px), brand.privacyPolicyUrl, ' +
-        'brand.termsOfServiceUrl, at least one of brand.phones or brand.emails, at least one entry in countries, ' +
-        'questionnaire.general.answers (all fields), questionnaire.verification.answers (all fields), and the ' +
-        'country-specific questionnaire section for each country in countries.',
+        'brand.logoUrl (224×224 px), brand.bannerUrl (1440×448 px), brand.privacyPolicyUrl, ' +
+        'brand.termsOfServiceUrl, at least one of brand.phones, brand.emails or brand.websites, at least one entry in countries, ' +
+        'questionnaire.general.answers (optInDescription, triggerDescription, interactionsDescription, optOutDescription), ' +
+        'questionnaire.verification.answers (name, email, website; phone for US) and the country-specific ' +
+        'questionnaire section for each country in countries.',
+    );
+  });
+
+  test('includes the API validationErrors when present', () => {
+    const error = new RcsApiError(400, 'Bad Request', undefined, undefined, ['a must be a string', 'b is required']);
+    expect(formatRcsError(error)).toBe(
+      'HTTP 400: RCS API error (400 Bad Request) validationErrors: a must be a string; b is required.',
     );
   });
 
@@ -71,5 +79,29 @@ describe('formatRcsError', () => {
       'HTTP 409: RCS API error (409 Conflict) A sender may already exist. ' +
         'Use list-rcs-senders and get-rcs-sender instead of create.',
     );
+  });
+});
+
+describe('summarizeValidationErrors', () => {
+  const codes = (count: number) => Array.from({ length: count }, (_, i) => `C${i}`);
+
+  test('shortens very long allowed-value lists', () => {
+    const [shortened] = summarizeValidationErrors([
+      `details.x.country must be one of the following values: ${codes(250).join(', ')}`,
+    ]);
+
+    expect(shortened).toBe(
+      'details.x.country must be one of the following values: C0, C1, C2, C3, C4, C5, C6, C7, C8, C9, … ' +
+        '(250 values in total, see the tool schema)',
+    );
+  });
+
+  test('keeps short allowed-value lists and other messages untouched', () => {
+    const errors = [
+      `details.x.industry must be one of the following values: ${codes(23).join(', ')}`,
+      'details.x.taxId must be a string',
+    ];
+
+    expect(summarizeValidationErrors(errors)).toEqual(errors);
   });
 });
